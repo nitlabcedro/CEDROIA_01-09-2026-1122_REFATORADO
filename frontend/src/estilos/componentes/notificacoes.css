@@ -1,0 +1,477 @@
+/*
+ * Reservado para toasts e notificações reutilizáveis.
+ * A migração visual dos toasts será feita aqui, sem voltar a poluir Aplicacao.tsx.
+ */
+
+/* === INICIO ESTRUTURA MIGRADA DO JSX ===
+   Regras estruturais migradas do JSX para CSS dedicado.
+   Não adicionar utilitários no JSX; evoluir estes seletores semanticamente.
+   ============================================================ */
+
+.notificacao-ti__notificacao-ti-pendente-estrutura {
+  position: fixed;
+  bottom: 6rem;
+  left: 1rem;
+  right: 1rem;
+  z-index: 65;
+}
+
+@media (min-width: 640px) {
+  .notificacao-ti__notificacao-ti-pendente-estrutura {
+  left: auto;
+  right: 1.5rem;
+  width: 390px;
+}
+}
+
+@media (min-width: 1024px) {
+  .notificacao-ti__notificacao-ti-pendente-estrutura {
+  bottom: 1.5rem;
+}
+}
+
+.notificacao-ti__grupo {
+  overflow: hidden;
+  border-radius: 1rem;
+  border-width: 2px;
+  border-style: solid;
+  border-color: #fcd34d;
+  background-color: white;
+  box-shadow: 0 18px 55px rgba(17,24,39,0.18);
+}
+
+.notificacao-ti__grupo-2 {
+  height: 0.375rem;
+  background-image: linear-gradient(to right, var(--gradiente-inicio, transparent), var(--gradiente-meio, var(--gradiente-fim, transparent)), var(--gradiente-fim, transparent));
+  --gradiente-inicio: #075618;
+  --gradiente-meio: #075618;
+  --gradiente-fim: #F29222;
+}
+
+.notificacao-ti__grupo-3 {
+  padding: 1rem;
+}
+
+.notificacao-ti__grupo-4 {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.notificacao-ti__grupo-5 {
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: .75rem;
+  background-color: #fffbeb;
+  color: #d97706;
+  box-shadow: 0 0 0 1px var(--cor-anel, rgba(7,86,24,.16));
+  --cor-anel: #fde68a;
+}
+
+.notificacao-ti__grupo-informacoes-solicitadas-pela-t {
+  min-width: 0rem;
+  flex: 1 1 0%;
+}
+
+.notificacao-ti__descricao-informacoes-solicitadas-pela-t {
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #d97706;
+}
+
+.notificacao-ti__titulo-item {
+  margin-top: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .875rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.notificacao-ti__descricao-a-equipe-de-ti-enviou-pergunta {
+  margin-top: 0.25rem;
+  font-size: .75rem;
+  font-weight: 500;
+  line-height: 1.625;
+  color: #475569;
+}
+
+.notificacao-ti__grupo-de-respondidas {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.notificacao-ti__texto-de-respondidas {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.notificacao-ti__botao {
+  border-radius: .75rem;
+  background-color: #075618;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  color: white;
+  box-shadow: 0 1px 3px rgb(0 0 0 / .10), 0 1px 2px rgb(0 0 0 / .06);
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+  transition-duration: 150ms;
+}
+
+.notificacao-ti__botao:hover {
+  background-color: #064817;
+}
+
+.notificacao-ti__botao:active {
+  --escala: 0.95;
+  transform: translate(var(--transladar-x, 0), var(--transladar-y, 0)) scale(var(--escala, 1)) rotate(var(--rotacao, 0deg));
+}
+
+.notificacao-ti__grupo-6 {
+  position: fixed;
+  top: 0rem;
+  right: 0rem;
+  bottom: 0rem;
+  left: 0rem;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 63, 29, 0.55);
+  padding: 0.75rem;
+  backdrop-filter: none;
+}
+
+@media (min-width: 640px) {
+  .notificacao-ti__grupo-6 {
+  padding: 1.5rem;
+}
+}
+
+.notificacao-ti__elemento-fechar-formulario-de-respostas {
+  position: absolute;
+  top: 0rem;
+  right: 0rem;
+  bottom: 0rem;
+  left: 0rem;
+  cursor: default;
+}
+
+.notificacao-ti__elemento {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  max-height: 90vh;
+  width: 100%;
+  max-width: 42rem;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 26px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #e2e8f0;
+  background-color: white;
+  box-shadow: 0 30px 90px rgba(17,17,17,0.24);
+}
+
+.notificacao-ti__grupo-7 {
+  height: 0.375rem;
+  flex-shrink: 0;
+  background-image: linear-gradient(to right, var(--gradiente-inicio, transparent), var(--gradiente-meio, var(--gradiente-fim, transparent)), var(--gradiente-fim, transparent));
+  --gradiente-inicio: #075618;
+  --gradiente-meio: #075618;
+  --gradiente-fim: #F29222;
+}
+
+.notificacao-ti__cabecalho-etapa-2-ti-rodada {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom-width: 1px;
+  border-style: solid;
+  border-color: #e2e8f0;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+@media (min-width: 640px) {
+  .notificacao-ti__cabecalho-etapa-2-ti-rodada {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+}
+
+.notificacao-ti__descricao-etapa-2-ti-rodada {
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #075618;
+}
+
+.notificacao-ti__titulo-bloco-informacoes-solicitadas-pela-t {
+  margin-top: 0.25rem;
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.notificacao-ti__descricao {
+  margin-top: 0.25rem;
+  font-size: .75rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.notificacao-ti__botao-fechar-e-continuar-depois {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #e2e8f0;
+  background-color: #f8fafc;
+  color: #64748b;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+  transition-duration: 150ms;
+}
+
+.notificacao-ti__botao-fechar-e-continuar-depois:hover {
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+.notificacao-ti__grupo-responda-todas-as-perguntas-vo {
+  flex: 1 1 0%;
+}
+
+.notificacao-ti__grupo-responda-todas-as-perguntas-vo > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1rem;
+}
+
+.notificacao-ti__grupo-responda-todas-as-perguntas-vo {
+  overflow-y: auto;
+  background-color: #F6F8F5;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .notificacao-ti__grupo-responda-todas-as-perguntas-vo {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+}
+
+.notificacao-ti__grupo-responda-todas-as-perguntas-vo-2 {
+  border-radius: 1rem;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #fde68a;
+  background-color: rgba(255, 251, 235, 0.7);
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.notificacao-ti__descricao-responda-todas-as-perguntas-vo {
+  font-size: .75rem;
+  font-weight: 600;
+  line-height: 1.625;
+  color: #78350f;
+}
+
+.notificacao-ti__grupo-8 {
+  border-radius: 1rem;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #e2e8f0;
+  background-color: white;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgb(0 0 0 / .10), 0 1px 2px rgb(0 0 0 / .06);
+}
+
+.notificacao-ti__texto {
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: .5rem;
+  background-color: rgba(7, 86, 24, 0.1);
+  font-size: 10px;
+  font-weight: 900;
+  color: #075618;
+}
+
+.notificacao-ti__descricao-2 {
+  font-size: .875rem;
+  font-weight: 700;
+  line-height: 1.625;
+  color: #0f172a;
+}
+
+.notificacao-ti__rotulo-sua-resposta {
+  margin-top: 0.75rem;
+  display: block;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.notificacao-ti__campo-texto-digite-sua-resposta {
+  margin-top: 0.375rem;
+  min-height: 105px;
+  width: 100%;
+  resize: vertical;
+  border-radius: .75rem;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #e2e8f0;
+  background-color: #f8fafc;
+  padding: 0.75rem;
+  font-size: .875rem;
+  font-weight: 500;
+  line-height: 1.625;
+  color: #1e293b;
+  outline: none;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+  transition-duration: 150ms;
+}
+
+.notificacao-ti__campo-texto-digite-sua-resposta:focus {
+  border-color: #075618;
+  border-style: solid;
+  background-color: white;
+  box-shadow: 0 0 0 4px var(--cor-anel, rgba(7,86,24,.16));
+  --cor-anel: rgba(7, 86, 24, 0.1);
+}
+
+.notificacao-ti__grupo-9 {
+  border-radius: .75rem;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #fecdd3;
+  background-color: #fff1f2;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  font-size: .75rem;
+  font-weight: 700;
+  color: #be123c;
+}
+
+.notificacao-ti__rodape {
+  flex-shrink: 0;
+  border-top-width: 1px;
+  border-style: solid;
+  border-color: #e2e8f0;
+  background-color: white;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+@media (min-width: 640px) {
+  .notificacao-ti__rodape {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+}
+
+.notificacao-ti__grupo-de-respondidas-2 {
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.notificacao-ti__texto-de-respondidas-2 {
+  color: #075618;
+}
+
+.notificacao-ti__texto-de-respondidas-3 {
+  color: #64748b;
+}
+
+.notificacao-ti__texto-2 {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: #94a3b8;
+}
+
+.notificacao-ti__icone-loader2 {
+  animation: cedro-girar 1s linear infinite;
+}
+
+.notificacao-ti__botao-2 {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 1rem;
+  background-color: #075618;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  padding-top: 0.875rem;
+  padding-bottom: 0.875rem;
+  font-size: .75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: white;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / .10), 0 2px 4px -2px rgb(0 0 0 / .10);
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
+  transition-duration: 150ms;
+}
+
+.notificacao-ti__botao-2:enabled:hover {
+  background-color: #064817;
+}
+
+.notificacao-ti__botao-2:enabled:active {
+  --escala: 0.99;
+  transform: translate(var(--transladar-x, 0), var(--transladar-y, 0)) scale(var(--escala, 1)) rotate(var(--rotacao, 0deg));
+}
+
+.notificacao-ti__botao-2:disabled {
+  cursor: not-allowed;
+  background-color: #cbd5e1;
+  box-shadow: none;
+}

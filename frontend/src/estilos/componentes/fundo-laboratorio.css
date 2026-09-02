@@ -1,0 +1,89 @@
+
+
+/* === INICIO ESTRUTURA MIGRADA DO JSX ===
+   Regras estruturais migradas do JSX para CSS dedicado.
+   Não adicionar utilitários no JSX; evoluir estes seletores semanticamente.
+   ============================================================ */
+
+.fundo-laboratorio {
+  position: absolute;
+  top: 0rem;
+  right: 0rem;
+  bottom: 0rem;
+  left: 0rem;
+  pointer-events: none;
+  overflow: hidden;
+  user-select: none;
+  z-index: 0;
+}
+
+.fundo-laboratorio__grade {
+  position: absolute;
+  top: 0rem;
+  right: 0rem;
+  bottom: 0rem;
+  left: 0rem;
+  background-image: linear-gradient(to right,#e2e8f0 1px,transparent 1px),linear-gradient(to bottom,#e2e8f0 1px,transparent 1px);
+  background-size: 4rem 4rem;
+  mask-image: radial-gradient(ellipse 60% 50% at 50% 50%,#000 70%,transparent 100%);
+  opacity: 0.15;
+}
+
+.fundo-laboratorio__bolha {
+  position: absolute;
+  border-radius: 9999px;
+}
+
+.fundo-laboratorio__molecula {
+  position: absolute;
+}
+
+.fundo-laboratorio__molecula-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.fundo-laboratorio__brilho-base {
+  position: absolute;
+  bottom: 0rem;
+  left: 0rem;
+  right: 0rem;
+  height: 6rem;
+  background-image: linear-gradient(to top, var(--gradiente-inicio, transparent), var(--gradiente-meio, var(--gradiente-fim, transparent)), var(--gradiente-fim, transparent));
+  --gradiente-inicio: rgba(7, 86, 24, 0.03);
+  --gradiente-fim: transparent;
+  filter: none;
+  pointer-events: none;
+}
+
+.fundo-laboratorio__padrao {
+  position: fixed;
+  z-index: -10;
+  top: 0rem;
+  right: 0rem;
+  bottom: 0rem;
+  left: 0rem;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.25;
+}
+
+.dark .fundo-laboratorio__padrao {
+  opacity: 0.35;
+}
+
+.fundo-laboratorio__padrao-icone--primario {
+  color: rgba(7, 86, 24, 0.9);
+}
+
+.fundo-laboratorio__padrao-icone--secundario {
+  color: rgba(6, 182, 212, 0.9);
+}
+
+.fundo-laboratorio__padrao-icone--neutro {
+  color: rgba(71, 85, 105, 0.5);
+}
+
+.dark .fundo-laboratorio__padrao-icone--neutro {
+  color: rgba(148, 163, 184, 0.4);
+}

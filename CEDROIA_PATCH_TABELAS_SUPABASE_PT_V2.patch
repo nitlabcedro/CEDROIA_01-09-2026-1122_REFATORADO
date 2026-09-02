@@ -1,0 +1,56 @@
+--- frontend/src/constantes/supabase.ts	2026-09-01 14:36:55.000000000 +0000
++++ frontend/src/constantes/supabase.ts	2026-09-01 17:02:19.233147075 +0000
+@@ -3,18 +3,18 @@
+  *
+  * Centralizar estes identificadores evita strings espalhadas pela aplicação e
+  * torna uma futura migração/renomeação de tabelas muito mais segura.
+- * Os valores permanecem iguais ao schema atual para não exigir migração de banco.
++ * Os valores refletem o schema atual em português após a migração de banco.
+  */
+ export const TABELAS_SUPABASE = {
+-  PERFIS: "profiles",
+-  REGISTROS_IA: "ia_records",
+-  CONFIGURACAO_APROVACAO: "approval_config",
+-  FLUXOS_APROVACAO: "approval_workflows",
+-  ETAPAS_APROVACAO: "approval_steps",
+-  MENSAGENS: "messages",
++  PERFIS: "perfis",
++  REGISTROS_IA: "registros_ia",
++  CONFIGURACAO_APROVACAO: "configuracao_aprovacao",
++  FLUXOS_APROVACAO: "fluxos_aprovacao",
++  ETAPAS_APROVACAO: "etapas_aprovacao",
++  MENSAGENS: "mensagens",
+   SETORES: "setores",
+-  SOLICITACOES_TI: "ti_information_requests",
+-  PERGUNTAS_TI: "ti_information_questions",
++  SOLICITACOES_TI: "solicitacoes_ti",
++  PERGUNTAS_TI: "perguntas_ti",
+ } as const;
+ 
+ export const BUCKETS_SUPABASE = {
+--- backend/src/configuracoes/schema-supabase.ts	2026-09-01 14:36:55.000000000 +0000
++++ backend/src/configuracoes/schema-supabase.ts	2026-09-01 17:02:19.233348214 +0000
+@@ -5,15 +5,15 @@
+  * migrações futuras sem alterar dezenas de consultas isoladas.
+  */
+ export const TABELAS_SUPABASE = {
+-  PERFIS: "profiles",
+-  REGISTROS_IA: "ia_records",
+-  CONFIGURACAO_APROVACAO: "approval_config",
+-  FLUXOS_APROVACAO: "approval_workflows",
+-  ETAPAS_APROVACAO: "approval_steps",
+-  MENSAGENS: "messages",
++  PERFIS: "perfis",
++  REGISTROS_IA: "registros_ia",
++  CONFIGURACAO_APROVACAO: "configuracao_aprovacao",
++  FLUXOS_APROVACAO: "fluxos_aprovacao",
++  ETAPAS_APROVACAO: "etapas_aprovacao",
++  MENSAGENS: "mensagens",
+   SETORES: "setores",
+-  SOLICITACOES_TI: "ti_information_requests",
+-  PERGUNTAS_TI: "ti_information_questions",
++  SOLICITACOES_TI: "solicitacoes_ti",
++  PERGUNTAS_TI: "perguntas_ti",
+   OBJETOS_STORAGE: "storage.objects",
+ } as const;
+ 

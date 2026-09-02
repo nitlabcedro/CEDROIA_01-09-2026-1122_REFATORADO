@@ -1,0 +1,51 @@
+--- a/frontend/src/paginas/relatorios/pdf/gerarRelatorioPdf.ts
++++ b/frontend/src/paginas/relatorios/pdf/gerarRelatorioPdf.ts
+@@ -190,7 +190,8 @@
+ 
+   const base = new URL(".", document.baseURI);
+   const candidatos = [
+-    "NIT.webp"
++    "LOGOCEDRO.webp",
++    "LOGOCEDRO.png",
+   ];
+ 
+   for (const arquivo of candidatos) {
+@@ -279,8 +280,10 @@
+   private desenharMarcaCedro(caixa: Caixa) {
+     if (this.logoCedro) {
+       // Mantém a logo contida no bloco reservado sem afetar os demais elementos.
+-      const largura = Math.min(caixa.largura, 76);
+-      const altura = Math.min(caixa.altura, 25.7);
++      // A logo oficial do Laboratorio Cedro tem proporcao aproximada de 3:1.
++      // Mantemos essa proporcao para evitar distorcao no cabecalho do PDF.
++      const largura = Math.min(caixa.largura, 64);
++      const altura = largura / 3;
+       try {
+         this.doc.addImage(this.logoCedro, "JPEG", caixa.x, caixa.y, largura, altura);
+         return;
+@@ -470,12 +473,8 @@
+       altura: 278,
+     };
+ 
+-    // Elementos decorativos isolados da grade de conteúdo.
+-    setFillHex(this.doc, CORES.verdeSuave);
+-    this.doc.circle(190, 17, 13, "F");
+-    setFillHex(this.doc, CORES.verdeLinha);
+-    this.doc.circle(201, 27, 7, "F");
+-
++    // Cabecalho institucional sem elementos decorativos: a identidade visual
++    // fica concentrada na logo oficial do Laboratorio Cedro.
+     const caixaLogo = caixaFilha(paginaUtil, 0, 1, 78, 27);
+     this.desenharMarcaCedro(caixaLogo);
+ 
+@@ -486,8 +485,8 @@
+     this.doc.text("RELATÓRIO DE AVALIAÇÃO", caixaTitulo.x, caixaTitulo.y + 3);
+     this.doc.text("DE INTELIGÊNCIA ARTIFICIAL", caixaTitulo.x, caixaTitulo.y + 12);
+ 
+-    setDrawHex(this.doc, CORES.verdeLinha);
+-    this.doc.setLineWidth(0.45);
++    setDrawHex(this.doc, CORES.verde);
++    this.doc.setLineWidth(0.55);
+     this.doc.line(paginaUtil.x, caixaTitulo.y + 19, paginaUtil.x + paginaUtil.largura, caixaTitulo.y + 19);
+ 
+     const caixaIdentificacao = caixaFilha(paginaUtil, 0, 62, paginaUtil.largura, 24);

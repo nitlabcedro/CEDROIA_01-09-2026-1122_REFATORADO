@@ -1,0 +1,66 @@
+:root {
+  /* ==========================================================
+     CEDRO IA — TOKENS DE IDENTIDADE E INTERFACE
+     ========================================================== */
+  --cedro-cor-verde-990: #011a07;
+  --cedro-cor-verde-980: #02270a;
+  --cedro-cor-verde-950: #03350d;
+  --cedro-cor-verde-900: #075618;
+  --cedro-cor-verde-800: #0b6e20;
+  --cedro-cor-verde-700: #11862b;
+  --cedro-cor-verde-500: #42a856;
+  --cedro-cor-verde-100: #dff2e4;
+  --cedro-cor-verde-50: #f0f8f2;
+  --cedro-cor-laranja: #f29222;
+  --cedro-cor-laranja-escuro: #bd6710;
+
+  /* Neutros com leve temperatura verde */
+  --cedro-cor-texto: #172b1d;
+  --cedro-cor-texto-forte: #0f2415;
+  --cedro-cor-texto-secundario: #647268;
+  --cedro-cor-texto-suave: #879189;
+  --cedro-cor-borda: #d2ddd4;
+  --cedro-cor-borda-forte: #b8cbbd;
+  --cedro-cor-fundo: #e9f0eb;
+  --cedro-cor-fundo-profundo: #dfe8e1;
+  --cedro-cor-superficie: #ffffff;
+  --cedro-cor-superficie-suave: #f6f9f6;
+  --cedro-cor-superficie-verde: #edf5ef;
+
+  /* Navegação institucional — propositalmente profunda */
+  --cedro-sidebar-fundo-inicio: #011a07;
+  --cedro-sidebar-fundo-meio: #022f0b;
+  --cedro-sidebar-fundo-fim: #044711;
+  --cedro-sidebar-texto: #f7fff8;
+  --cedro-sidebar-texto-secundario: rgba(238, 250, 241, .72);
+  --cedro-sidebar-texto-suave: rgba(238, 250, 241, .48);
+  --cedro-sidebar-borda: rgba(255, 255, 255, .10);
+  --cedro-sidebar-hover: rgba(255, 255, 255, .085);
+  --cedro-sidebar-ativo-fundo: rgba(255, 255, 255, .135);
+  --cedro-sidebar-ativo-texto: #ffffff;
+  --cedro-sidebar-rodape: rgba(0, 20, 5, .24);
+  --cedro-navbar-inicio: #011a07;
+  --cedro-navbar-meio: #02330c;
+  --cedro-navbar-fim: #044b12;
+
+  /* Layout */
+  --cedro-largura-barra-lateral: 288px;
+  --cedro-largura-barra-lateral-recolhida: 84px;
+  --cedro-altura-barra-superior: 76px;
+  --cedro-altura-cabecalho-mobile: 80px;
+
+  /* Forma e profundidade */
+  --cedro-raio-pequeno: 9px;
+  --cedro-raio-medio: 13px;
+  --cedro-raio-grande: 18px;
+  --cedro-raio-extra: 24px;
+  --cedro-sombra-suave: 0 7px 20px rgba(2, 43, 13, .065);
+  --cedro-sombra-media: 0 14px 34px rgba(2, 43, 13, .10);
+  --cedro-sombra-forte: 0 24px 56px rgba(2, 43, 13, .14);
+  --cedro-sidebar-sombra: 14px 0 38px rgba(0, 24, 6, .22);
+  --cedro-foco: 0 0 0 3px rgba(7, 86, 24, .12);
+
+  /* Movimento */
+  --cedro-transicao-rapida: 140ms ease;
+  --cedro-transicao-padrao: 200ms ease;
+}

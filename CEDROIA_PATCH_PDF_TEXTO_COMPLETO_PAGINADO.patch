@@ -1,0 +1,222 @@
+--- a/frontend/src/paginas/relatorios/pdf/gerarRelatorioPdf.ts
++++ b/frontend/src/paginas/relatorios/pdf/gerarRelatorioPdf.ts
+@@ -348,39 +348,124 @@
+     });
+   }
+ 
+-  private desenharBlocoTexto(caixa: Caixa, titulo: string, texto: string) {
+-    setFillHex(this.doc, CORES.branco);
+-    setDrawHex(this.doc, CORES.cinzaLinha);
+-    this.doc.setLineWidth(0.25);
+-    this.doc.roundedRect(caixa.x, caixa.y, caixa.largura, caixa.altura, 4, 4, "FD");
+-
+-    setFillHex(this.doc, CORES.verdeSuave);
+-    this.doc.roundedRect(caixa.x, caixa.y, 5, caixa.altura, 4, 0, "F");
++  private desenharRodapeAtual() {
++    const caixaRodape: Caixa = {
++      x: MARGEM_X,
++      y: 278,
++      largura: LARGURA_UTIL,
++      altura: 10,
++    };
+ 
+-    const conteudo = caixaFilha(caixa, 10, 5, caixa.largura - 15, caixa.altura - 10);
++    setDrawHex(this.doc, CORES.verdeLinha);
++    this.doc.setLineWidth(0.35);
++    this.doc.line(caixaRodape.x, caixaRodape.y, caixaRodape.x + caixaRodape.largura, caixaRodape.y);
+ 
+-    setTextHex(this.doc, CORES.verde);
++    setTextHex(this.doc, CORES.cinza);
+     this.doc.setFont(FONTE, "bold");
+-    this.doc.setFontSize(8);
+-    this.doc.text(titulo.toUpperCase(), conteudo.x, conteudo.y + 3);
+-
+-    const caixaTexto = caixaFilha(conteudo, 0, 7, conteudo.largura, conteudo.altura - 7);
+-    const ajustado = ajustarTextoNaCaixa(
+-      this.doc,
+-      textoSeguro(texto, "Não informado."),
+-      caixaTexto.largura,
+-      caixaTexto.altura,
+-      10,
+-      7.5,
+-      1.22,
++    this.doc.setFontSize(7.2);
++    this.doc.text(`PROTOCOLO: ${textoSeguro(this.dados.protocolo)}`, caixaRodape.x, caixaRodape.y + 7);
++    this.doc.text(
++      `ATUALIZADO EM: ${textoSeguro(this.dados.atualizadoEm)}`,
++      caixaRodape.x + caixaRodape.largura,
++      caixaRodape.y + 7,
++      { align: "right" },
+     );
++  }
++
++  private iniciarPaginaInformacoesContinuacao() {
++    this.doc.addPage();
++    setFillHex(this.doc, CORES.branco);
++    this.doc.rect(0, 0, PAGINA_LARGURA, PAGINA_ALTURA, "F");
+ 
+     setTextHex(this.doc, CORES.grafite);
++    this.doc.setFont(FONTE, "bold");
++    this.doc.setFontSize(9.2);
++    this.doc.text("INFORMAÇÕES DA SOLICITAÇÃO — CONTINUAÇÃO", MARGEM_X, 18);
++
++    setDrawHex(this.doc, CORES.verdeLinha);
++    this.doc.setLineWidth(0.35);
++    this.doc.line(MARGEM_X, 23, MARGEM_X + LARGURA_UTIL, 23);
++
++    return 29;
++  }
++
++  /**
++   * Desenha o conteúdo textual sem reticências. A altura do card acompanha a
++   * quantidade real de linhas e, quando não há espaço, o texto continua em uma
++   * nova página. Assim nenhuma parte da descrição, objetivos ou benefícios é perdida.
++   */
++  private desenharBlocoTextoPaginado(titulo: string, texto: string, yInicial: number) {
++    const tamanhoFonte = 9.2;
++    const lineHeightFactor = 1.22;
++    const alturaLinhaMm = tamanhoFonte * 0.3528 * lineHeightFactor;
++    const limiteConteudoY = 270;
++    const margemEntreBlocos = 5;
++    const alturaCabecalho = 12;
++    const paddingInferior = 5;
++    const larguraTexto = LARGURA_UTIL - 25;
++
+     this.doc.setFont(FONTE, "normal");
+-    this.doc.setFontSize(ajustado.tamanho);
+-    this.doc.text(ajustado.linhas, caixaTexto.x, caixaTexto.y + ajustado.alturaLinhaMm, {
+-      lineHeightFactor: 1.22,
+-    });
++    this.doc.setFontSize(tamanhoFonte);
++    const linhas = this.doc.splitTextToSize(
++      textoSeguro(texto, "Não informado."),
++      larguraTexto,
++    ) as string[];
++
++    let indiceLinha = 0;
++    let y = yInicial;
++    let parte = 1;
++
++    while (indiceLinha < linhas.length) {
++      const alturaMinima = alturaCabecalho + alturaLinhaMm + paddingInferior;
++      if (y + alturaMinima > limiteConteudoY) {
++        this.desenharRodapeAtual();
++        y = this.iniciarPaginaInformacoesContinuacao();
++      }
++
++      const alturaDisponivel = limiteConteudoY - y - alturaCabecalho - paddingInferior;
++      const quantidadeLinhas = Math.max(1, Math.floor(alturaDisponivel / alturaLinhaMm));
++      const trecho = linhas.slice(indiceLinha, indiceLinha + quantidadeLinhas);
++      const alturaCard = alturaCabecalho + trecho.length * alturaLinhaMm + paddingInferior;
++      const caixa: Caixa = {
++        x: MARGEM_X,
++        y,
++        largura: LARGURA_UTIL,
++        altura: alturaCard,
++      };
++
++      setFillHex(this.doc, CORES.branco);
++      setDrawHex(this.doc, CORES.cinzaLinha);
++      this.doc.setLineWidth(0.25);
++      this.doc.roundedRect(caixa.x, caixa.y, caixa.largura, caixa.altura, 4, 4, "FD");
++
++      setFillHex(this.doc, CORES.verdeSuave);
++      this.doc.roundedRect(caixa.x, caixa.y, 5, caixa.altura, 4, 0, "F");
++
++      const conteudoX = caixa.x + 10;
++      const tituloExibido = parte === 1 ? titulo : `${titulo} — CONTINUAÇÃO`;
++      setTextHex(this.doc, CORES.verde);
++      this.doc.setFont(FONTE, "bold");
++      this.doc.setFontSize(8);
++      this.doc.text(tituloExibido.toUpperCase(), conteudoX, caixa.y + 8);
++
++      setTextHex(this.doc, CORES.grafite);
++      this.doc.setFont(FONTE, "normal");
++      this.doc.setFontSize(tamanhoFonte);
++      this.doc.text(trecho, conteudoX, caixa.y + alturaCabecalho + alturaLinhaMm, {
++        lineHeightFactor,
++      });
++
++      indiceLinha += trecho.length;
++      y += alturaCard + margemEntreBlocos;
++      parte += 1;
++
++      if (indiceLinha < linhas.length) {
++        this.desenharRodapeAtual();
++        y = this.iniciarPaginaInformacoesContinuacao();
++      }
++    }
++
++    return y;
+   }
+ 
+   private desenharFluxoAprovacao(caixa: Caixa) {
+@@ -531,8 +616,9 @@
+     const caixaFluxo = caixaFilha(paginaUtil, 0, 119, paginaUtil.largura, 43);
+     this.desenharFluxoAprovacao(caixaFluxo);
+ 
+-    // Área de informações da solicitação com sub-blocos empilhados dentro da mesma caixa pai.
+-    const caixaInformacoes = caixaFilha(paginaUtil, 0, 168, paginaUtil.largura, 93);
++    // Informações da solicitação: os cards agora crescem conforme o conteúdo.
++    // Se o texto não couber na primeira página, o restante continua em páginas adicionais.
++    const caixaInformacoes = caixaFilha(paginaUtil, 0, 168, paginaUtil.largura, 12);
+     setTextHex(this.doc, CORES.grafite);
+     this.doc.setFont(FONTE, "bold");
+     this.doc.setFontSize(9.2);
+@@ -545,41 +631,29 @@
+       caixaInformacoes.y + 8,
+     );
+ 
+-    const corpoInformacoes = caixaFilha(caixaInformacoes, 0, 12, caixaInformacoes.largura, caixaInformacoes.altura - 12);
+-    const descricaoBox = caixaFilha(corpoInformacoes, 0, 0, corpoInformacoes.largura, 25);
+-    const objetivosBox = caixaFilha(corpoInformacoes, 0, 30, corpoInformacoes.largura, 22);
+-    const beneficiosBox = caixaFilha(corpoInformacoes, 0, 57, corpoInformacoes.largura, 21);
+-
+-    this.desenharBlocoTexto(descricaoBox, "Descrição da atividade", this.dados.descricaoAtividade);
+-
+     const objetivos = [
+       ...(this.dados.objetivos || []),
+       ...(this.dados.objetivoOutro ? [this.dados.objetivoOutro] : []),
+     ];
+-    this.desenharBlocoTexto(
+-      objetivosBox,
++
++    let proximoY = caixaInformacoes.y + 13;
++    proximoY = this.desenharBlocoTextoPaginado(
++      "Descrição da atividade",
++      this.dados.descricaoAtividade,
++      proximoY,
++    );
++    proximoY = this.desenharBlocoTextoPaginado(
+       "Objetivos da utilização",
+       objetivos.length ? objetivos.join(" • ") : "Não informado.",
++      proximoY,
+     );
+-
+-    this.desenharBlocoTexto(beneficiosBox, "Benefícios esperados", this.dados.beneficiosEsperados);
+-
+-    // Rodapé também deriva da grade principal e nunca compete com os campos acima.
+-    const caixaRodape = caixaFilha(paginaUtil, 0, 268, paginaUtil.largura, 10);
+-    setDrawHex(this.doc, CORES.verdeLinha);
+-    this.doc.setLineWidth(0.35);
+-    this.doc.line(caixaRodape.x, caixaRodape.y, caixaRodape.x + caixaRodape.largura, caixaRodape.y);
+-
+-    setTextHex(this.doc, CORES.cinza);
+-    this.doc.setFont(FONTE, "bold");
+-    this.doc.setFontSize(7.2);
+-    this.doc.text(`PROTOCOLO: ${textoSeguro(this.dados.protocolo)}`, caixaRodape.x, caixaRodape.y + 7);
+-    this.doc.text(
+-      `ATUALIZADO EM: ${textoSeguro(this.dados.atualizadoEm)}`,
+-      caixaRodape.x + caixaRodape.largura,
+-      caixaRodape.y + 7,
+-      { align: "right" },
++    this.desenharBlocoTextoPaginado(
++      "Benefícios esperados",
++      this.dados.beneficiosEsperados,
++      proximoY,
+     );
++
++    this.desenharRodapeAtual();
+   }
+ }
+ 

@@ -1,0 +1,827 @@
+/* ============================================================
+   CEDRO IA — REFINO PROFISSIONAL COMPACTO
+   Objetivo: hierarquia, densidade, alinhamento e previsibilidade.
+   Esta camada substitui excessos visuais sem alterar a lógica.
+   ============================================================ */
+
+:root {
+  --cedro-refino-fundo: #f3f6f3;
+  --cedro-refino-superficie: #ffffff;
+  --cedro-refino-superficie-suave: #f8faf8;
+  --cedro-refino-borda: #d7e1d9;
+  --cedro-refino-borda-forte: #bdcec1;
+  --cedro-refino-texto: #172b1d;
+  --cedro-refino-texto-secundario: #66746a;
+  --cedro-refino-verde: #075618;
+  --cedro-refino-verde-hover: #064713;
+  --cedro-refino-verde-suave: #eaf3ec;
+  --cedro-refino-laranja: #f29222;
+  --cedro-refino-perigo: #b42318;
+  --cedro-refino-raio: 12px;
+  --cedro-refino-raio-menor: 9px;
+  --cedro-refino-sombra: 0 1px 2px rgba(8, 36, 15, .04), 0 7px 18px rgba(8, 36, 15, .04);
+}
+
+/* ------------------------------------------------------------
+   1. BASE / DENSIDADE
+   ------------------------------------------------------------ */
+
+.aplicacao__area-pagina {
+  background: var(--cedro-refino-fundo) !important;
+}
+
+.aplicacao__pagina-desktop:not(.aplicacao__pagina-desktop--chat) {
+  width: 100%;
+  max-width: 1540px;
+  margin-inline: auto;
+  padding: 20px 24px 36px !important;
+}
+
+.pagina-dashboard,
+.pagina-inventario,
+.pagina-aprovacoes,
+.pagina-administracao,
+.pagina-mapa-ias,
+.pagina-perfil,
+.pagina-relatorio,
+.administracao-setores,
+.pagina-nova-solicitacao {
+  min-width: 0;
+}
+
+/* Navegação permanece institucional, mas sem excesso de efeitos. */
+.barra-lateral {
+  background: linear-gradient(90deg, #02290a 0%, #03390e 100%) !important;
+  box-shadow: 7px 0 20px rgba(0, 27, 7, .12) !important;
+}
+
+.barra-lateral::before { opacity: .10 !important; }
+
+.barra-superior {
+  background: linear-gradient(90deg, #02290a 0%, #03420f 100%) !important;
+  border-bottom-width: 2px !important;
+  box-shadow: 0 3px 12px rgba(0, 29, 7, .14) !important;
+}
+
+/* ------------------------------------------------------------
+   2. CABEÇALHOS DE PÁGINA
+   ------------------------------------------------------------ */
+
+.cedro-page-premium > header,
+.cedro-page-premium .inventario-cabecalho,
+.cedro-page-premium .administracao-cabecalho,
+.cedro-page-premium .aprovacao-cabecalho,
+.cedro-page-premium .relatorio-cabecalho,
+.mapa-ias__grupo-mapa-de-ias-por-setor,
+.setores__grupo-setores {
+  min-height: 0 !important;
+  margin-bottom: 16px !important;
+  padding: 14px 18px !important;
+  overflow: visible !important;
+  background: #fff !important;
+  border: 1px solid var(--cedro-refino-borda) !important;
+  border-left: 3px solid var(--cedro-refino-verde) !important;
+  border-radius: var(--cedro-refino-raio) !important;
+  box-shadow: var(--cedro-refino-sombra) !important;
+}
+
+.cedro-page-premium > header::after,
+.cedro-page-premium .inventario-cabecalho::after,
+.cedro-page-premium .administracao-cabecalho::after,
+.cedro-page-premium .aprovacao-cabecalho::after,
+.cedro-page-premium .relatorio-cabecalho::after {
+  display: none !important;
+}
+
+.cedro-page-premium h1,
+.cedro-page-premium .inventario-cabecalho__titulo,
+.cedro-page-premium .administracao__titulo-principal-titulopaineladministracao,
+.cedro-page-premium .aprovacoes__titulo-principal-aprovacao-de-sistemas,
+.mapa-ias__titulo-principal-mapa-de-ias-por-setor,
+.setores__titulo-principal-setores {
+  font-size: clamp(20px, 1.6vw, 25px) !important;
+  line-height: 1.15 !important;
+  letter-spacing: -.025em !important;
+}
+
+/* ------------------------------------------------------------
+   3. SUPERFÍCIES / CARDS
+   ------------------------------------------------------------ */
+
+.cedro-card-premium,
+.painel-cartao,
+.inventario-card,
+.inventario-filtros,
+.inventario-item,
+.aprovacao-fila,
+.aprovacao-item-fila,
+.administracao-cartao,
+.administracao-filtros,
+.administracao-tabela-conteiner,
+.relatorio-secao,
+.relatorio__secao-resumo-executivo,
+.relatorio__secao-situacao-da-aprovacao,
+.setores__grupo-resumo-geral,
+.mapa-ias__elemento-2,
+.perfil__elemento-resumo-do-perfil,
+.perfil__elemento-informacoes-pessoais {
+  background: #fff !important;
+  border: 1px solid var(--cedro-refino-borda) !important;
+  border-radius: var(--cedro-refino-raio) !important;
+  box-shadow: var(--cedro-refino-sombra) !important;
+}
+
+@media (hover: hover) {
+  .cedro-card-premium:hover,
+  .painel-cartao:hover,
+  .inventario-item:hover,
+  .aprovacao-item-fila:hover,
+  .administracao-cartao:hover,
+  .mapa-ias__elemento-2:hover {
+    border-color: var(--cedro-refino-borda-forte) !important;
+    box-shadow: 0 2px 9px rgba(8, 36, 15, .07) !important;
+  }
+}
+
+/* ------------------------------------------------------------
+   4. CAMPOS / SELECTS / DROPDOWNS
+   ------------------------------------------------------------ */
+
+.cedro-page-premium input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.cedro-page-premium select,
+.cedro-page-premium textarea,
+.cadastro-campo,
+.perfil__campo-ex-carlos-ferreira,
+.perfil__campo,
+.perfil__campo-minimo-6-digitos,
+.inventario__campo-pesquisar-por-nome-fornecedor-,
+.aprovacoes__campo-buscar-ferramenta-id-setor,
+.aprovacoes__campo-buscar-ferramenta-id-setor-2,
+.setores__campo-buscar-setores-responsaveis-ou,
+.mapa-ias__campo-buscar-ia-setor-ou-responsavel,
+.administracao__campo-buscar-ia-id-ou-setor {
+  min-height: 38px !important;
+  height: auto;
+  padding: 8px 11px !important;
+  background: #fff !important;
+  border: 1px solid #c8d5ca !important;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+  font-size: 12px !important;
+}
+
+.cedro-page-premium textarea,
+.cadastro-campo--textarea {
+  min-height: 88px !important;
+  line-height: 1.45;
+}
+
+.cedro-page-premium input:focus,
+.cedro-page-premium select:focus,
+.cedro-page-premium textarea:focus,
+.cadastro-campo--editavel:focus {
+  border-color: #6fa17a !important;
+  box-shadow: 0 0 0 3px rgba(7, 86, 24, .08) !important;
+}
+
+.menu-suspenso { z-index: auto; }
+.menu-suspenso--aberto { z-index: 100; }
+
+.menu-suspenso__gatilho {
+  min-height: 38px !important;
+  padding: 0 36px 0 11px !important;
+  background: #fff !important;
+  border-color: #c8d5ca !important;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+  font-size: 12px !important;
+}
+
+.menu-suspenso--sm .menu-suspenso__gatilho {
+  min-height: 34px !important;
+  padding-inline: 10px 32px !important;
+}
+
+.menu-suspenso--lg .menu-suspenso__gatilho {
+  min-height: 42px !important;
+  padding-inline: 12px 38px !important;
+  border-radius: 10px !important;
+  font-size: 12.5px !important;
+}
+
+.menu-suspenso__fechamento {
+  z-index: 9998 !important;
+}
+
+.menu-suspenso__painel--portal {
+  position: fixed !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 9999 !important;
+  margin: 0 !important;
+  padding: 5px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  background: #fff !important;
+  border: 1px solid #c4d1c6 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 14px 32px rgba(10, 34, 16, .16) !important;
+}
+
+.menu-suspenso__opcao {
+  min-height: 34px !important;
+  padding: 7px 9px !important;
+  border-radius: 7px !important;
+  font-size: 11.5px !important;
+}
+
+/* ------------------------------------------------------------
+   5. BOTÕES
+   ------------------------------------------------------------ */
+
+.inventario__botao-novo-registro,
+.cadastro__botao-proxima-fase,
+.cadastro__botao-10,
+.aprovacoes__botao-registrar-parecer,
+.aprovacoes__botao-7,
+.setores__botao-cadastrar-setor,
+.setores__botao-salvar-alteracoes,
+.chat__nova-conversa-botao,
+.chat__composer-enviar,
+.perfil__elemento-11,
+.administracao__botao-sim,
+.administracao__botao-sim-2 {
+  min-height: 36px !important;
+  padding: 0 14px !important;
+  color: #fff !important;
+  background: var(--cedro-refino-verde) !important;
+  border: 1px solid var(--cedro-refino-verde) !important;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: .01em !important;
+}
+
+.inventario__botao-novo-registro:hover,
+.cadastro__botao-proxima-fase:hover:not(:disabled),
+.cadastro__botao-10:hover:not(:disabled),
+.aprovacoes__botao-registrar-parecer:hover:not(:disabled),
+.setores__botao-cadastrar-setor:hover:not(:disabled),
+.chat__nova-conversa-botao:hover,
+.chat__composer-enviar:hover,
+.perfil__elemento-11:hover:not(:disabled) {
+  background: var(--cedro-refino-verde-hover) !important;
+  border-color: var(--cedro-refino-verde-hover) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.inventario__botao-exportar-inventario,
+.inventario__botao-ver-detalhes,
+.cadastro__botao-cancelar-registro,
+.cadastro__botao-btnsalvarsolicitacao,
+.aprovacoes__botao-ver-detalhes,
+.aprovacoes__botao-ver-ficha,
+.relatorio__botao-voltar-ao-inventario,
+.relatorio__botao-editar-cadastro,
+.administracao__botao-ver-ficha,
+.administracao__botao-editar,
+.administracao__botao-redefinir-status,
+.perfil__botao-cancelar {
+  min-height: 34px !important;
+  padding: 0 12px !important;
+  color: #294a31 !important;
+  background: #fff !important;
+  border: 1px solid #bfcfc2 !important;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+  font-size: 10.5px !important;
+  font-weight: 750 !important;
+  transform: none !important;
+}
+
+.inventario__botao-cancelar-solicitacao,
+.administracao__botao-deletar-conta-permanentemente,
+.administracao__botao-arquivar-registro,
+.setores__botao-excluir,
+.perfil__elemento-4 {
+  min-height: 34px !important;
+  padding: 0 12px !important;
+  color: var(--cedro-refino-perigo) !important;
+  background: #fff !important;
+  border: 1px solid #e6bcb8 !important;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+}
+
+/* abas: simples, sem aparência de botões pesados */
+.cedro-abas,
+.cedro-segmented {
+  margin-left: 40px;
+  gap: 10px !important;
+  padding: 3px !important;
+  background: #edf2ee !important;
+  border-color: #d3ddd5 !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+.cedro-aba {
+
+  min-height: 50px !important;
+  padding: 7px 50px !important;
+  border-radius: 7px !important;
+  font-size: 15px !important;
+  box-shadow: none !important;
+}
+
+.cedro-aba--ativa {
+  color: #fff !important;
+  background: var(--cedro-refino-verde) !important;
+  border-color: var(--cedro-refino-verde) !important;
+  box-shadow: none !important;
+}
+
+/* ------------------------------------------------------------
+   6. DASHBOARD
+   ------------------------------------------------------------ */
+
+.pagina-dashboard {
+  gap: 16px !important;
+}
+
+.painel-indicadores {
+  gap: 12px !important;
+}
+
+.cartao-kpi {
+  min-height: 98px !important;
+  padding: 14px !important;
+  background: #fff !important;
+  border-width: 1px !important;
+  border-left-width: 3px !important;
+  border-radius: 12px !important;
+  box-shadow: var(--cedro-refino-sombra) !important;
+}
+
+.cartao-kpi::after { display: none !important; }
+.cartao-kpi__icone { width: 34px !important; height: 34px !important; border-radius: 9px !important; }
+.cartao-kpi__valor { font-size: 28px !important; }
+.cartao-kpi__rotulo { margin-bottom: 5px !important; }
+.cartao-kpi__comparacao { margin-top: 6px !important; }
+
+.painel-resumo {
+  gap: 14px !important;
+}
+
+.painel__painel-cartao-estrutura,
+.painel__painel-cartao-estrutura-2 {
+  padding: 16px !important;
+}
+
+.painel-grafico::before,
+.painel-grafico-status::before { display: none !important; }
+
+.cartao-acao__item {
+  padding: 9px 10px !important;
+  border-radius: 9px !important;
+}
+
+/* ------------------------------------------------------------
+   7. INVENTÁRIO
+   ------------------------------------------------------------ */
+
+.inventario-container {
+  gap: 16px !important;
+}
+
+.inventario-cabecalho {
+  align-items: center !important;
+}
+
+.inventario-cabecalho__descricao {
+  margin-top: 4px !important;
+  font-size: 11px !important;
+}
+
+.inventario-resumo {
+  gap: 12px !important;
+}
+
+.inventario-card {
+  min-height: 82px !important;
+  padding: 14px !important;
+  border-left-width: 1px !important;
+}
+
+.inventario-filtros {
+  padding: 10px 12px !important;
+  background: #fff !important;
+}
+
+.inventario-tabela th { padding-block: 10px !important; }
+.inventario-tabela td { padding-block: 10px !important; }
+
+/* ------------------------------------------------------------
+   8. NOVA SOLICITAÇÃO
+   ------------------------------------------------------------ */
+
+.cadastro-container {
+  min-height: 0 !important;
+  background: #fff !important;
+  border: 1px solid var(--cedro-refino-borda) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--cedro-refino-sombra) !important;
+}
+
+.cadastro-etapas {
+  width: 214px !important;
+  padding: 16px 12px !important;
+  background: #f7faf7 !important;
+  border-color: var(--cedro-refino-borda) !important;
+}
+
+.cadastro__grupo-nova-solicitacao {
+  margin-bottom: 14px !important;
+  padding: 10px 12px !important;
+  background: var(--cedro-refino-verde) !important;
+  border-radius: 9px !important;
+}
+
+.cadastro__botao-4 {
+  min-height: 72px !important;
+  padding: 10px !important;
+  border-radius: 10px !important;
+}
+
+.cadastro__grupo-8 {
+  padding: 20px 22px !important;
+}
+
+.cadastro-cabecalho {
+  margin-bottom: 16px !important;
+  padding-bottom: 14px !important;
+}
+
+.cadastro__titulo-secao {
+  font-size: clamp(22px, 2vw, 29px) !important;
+}
+
+.cadastro__grupo-protocolo {
+  padding: 8px 11px !important;
+  border-radius: 9px !important;
+  font-size: 10px !important;
+}
+
+.cadastro-secao {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.cadastro__cadastro-secao-estrutura > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 16px !important;
+}
+
+.cadastro__grupo-10 {
+  gap: 12px !important;
+}
+
+.cadastro-acoes {
+  min-height: 60px !important;
+  padding: 10px 18px !important;
+  background: #fafcfb !important;
+  border-top: 1px solid var(--cedro-refino-borda) !important;
+}
+
+/* ------------------------------------------------------------
+   9. APROVAÇÕES
+   ------------------------------------------------------------ */
+
+.aprovacao-container {
+  gap: 16px !important;
+}
+
+.aprovacao-cabecalho {
+  min-height: 72px !important;
+}
+
+.aprovacao-layout {
+  grid-template-columns: minmax(320px, .68fr) minmax(0, 1.52fr) !important;
+  gap: 16px !important;
+  align-items: start !important;
+}
+
+.aprovacao-layout__fila,
+.aprovacao-layout__detalhes {
+  min-width: 0 !important;
+}
+
+.aprovacao-fila {
+  padding: 14px !important;
+}
+
+.aprovacao-item-fila {
+  padding: 12px !important;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+}
+
+.aprovacoes__grupo-42 {
+  padding: 14px !important;
+  background: #fff !important;
+  border-radius: 11px !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+.aprovacoes__grupo-42::before { display: none !important; }
+.aprovacoes__grupo-44 { box-shadow: none !important; }
+
+.aprovacao-fluxo-etapas {
+  gap: 7px !important;
+}
+
+.aprovacao-fluxo-etapas__item {
+  min-height: 54px !important;
+  padding: 8px !important;
+  border-radius: 9px !important;
+}
+
+.aprovacao-responsaveis {
+  gap: 10px !important;
+}
+
+.aprovacao-responsaveis__cartao {
+  padding: 12px !important;
+  border-radius: 10px !important;
+}
+
+.aprovacoes__grupo-41 {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.aprovacoes__botao-7 {
+  min-height: 38px !important;
+  border-radius: 9px !important;
+}
+
+/* ------------------------------------------------------------
+   10. MAPA E SETORES
+   ------------------------------------------------------------ */
+
+.mapa-ias__grupo {
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  background: #fff !important;
+  border: 1px solid var(--cedro-refino-borda) !important;
+  border-radius: 11px !important;
+  box-shadow: var(--cedro-refino-sombra) !important;
+}
+
+.mapa-ias__elemento {
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.mapa-ias__elemento-2 {
+  min-height: 0 !important;
+  padding: 14px !important;
+  border-left-width: 1px !important;
+}
+
+.setores__grupo-painelsetores {
+  gap: 16px !important;
+}
+
+.setores__grupo-22 {
+  grid-template-columns: 220px minmax(0, 1fr) !important;
+  gap: 14px !important;
+}
+
+.setores__grupo-resumo-geral {
+  padding: 14px !important;
+}
+
+.setores__grupo-25,
+.setores__grupo-26,
+.setores__grupo-27 {
+  min-height: 0 !important;
+}
+
+/* ------------------------------------------------------------
+   11. ADMINISTRAÇÃO
+   ------------------------------------------------------------ */
+
+.administracao-container {
+  gap: 16px !important;
+}
+
+.administracao-indicadores {
+  gap: 10px !important;
+}
+
+.administracao-cartao {
+  min-height: 88px !important;
+  padding: 14px !important;
+  border-top-width: 1px !important;
+}
+
+.administracao-filtros {
+  padding: 8px 10px !important;
+  background: #fff !important;
+  overflow: visible !important;
+}
+
+.administracao__administracao-filtros-estrutura {
+  gap: 10px !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+}
+
+.administracao__cartao {
+  padding: 16px !important;
+  border-radius: 12px !important;
+}
+
+/* ------------------------------------------------------------
+   12. CHAT
+   ------------------------------------------------------------ */
+
+.cedro-chat-shell,
+.aplicacao-conversa-conteiner {
+  background: #fff !important;
+  border: 1px solid var(--cedro-refino-borda) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--cedro-refino-sombra) !important;
+}
+
+@media (min-width: 1024px) {
+  .chat__estrutura {
+    grid-template-columns: 330px minmax(0, 1fr) !important;
+  }
+}
+
+.chat__painel-conversas,
+.chat__conversas-cabecalho,
+.chat__lista-conversas {
+  background: #fafcfb !important;
+}
+
+.chat__conversas-cabecalho {
+  padding: 14px 16px !important;
+}
+
+.chat__contato {
+  min-height: 74px !important;
+  padding: 11px 12px !important;
+  border-bottom-color: #e7ede8 !important;
+}
+
+.chat__contato--nao-lido,
+.chat__contato--ativo {
+  background: #eef5ef !important;
+  border-left-color: var(--cedro-refino-verde) !important;
+}
+
+/* ------------------------------------------------------------
+   13. PERFIL
+   ------------------------------------------------------------ */
+
+.perfil__perfil-cabecalho-estrutura {
+  min-height: 138px !important;
+  padding: 20px 22px !important;
+  background: #064713 !important;
+  border-radius: 14px !important;
+  box-shadow: var(--cedro-refino-sombra) !important;
+}
+
+.cedro-profile-hero {
+  background: #064713 !important;
+  box-shadow: var(--cedro-refino-sombra) !important;
+}
+
+.perfil__perfil-dados-estrutura {
+  grid-template-columns: minmax(250px, .68fr) minmax(0, 1.5fr) !important;
+  gap: 16px !important;
+}
+
+.perfil__elemento-resumo-do-perfil,
+.perfil__elemento-informacoes-pessoais {
+  padding: 16px !important;
+}
+
+.perfil__grupo-resumo-do-perfil,
+.perfil__grupo-informacoes-pessoais-2 {
+  margin-bottom: 14px !important;
+  padding-bottom: 10px !important;
+}
+
+.perfil__grupo-14 {
+  gap: 12px !important;
+}
+
+.perfil__elemento-11 {
+  width: auto !important;
+  min-width: 180px !important;
+  margin-left: auto !important;
+}
+
+/* ------------------------------------------------------------
+   14. RELATÓRIO / FICHA
+   ------------------------------------------------------------ */
+
+.pagina-relatorio {
+  gap: 16px !important;
+}
+
+.relatorio__secao-resumo-executivo,
+.relatorio__secao-situacao-da-aprovacao,
+.relatorio-secao {
+  padding: 16px 18px !important;
+  border-radius: 12px !important;
+  box-shadow: var(--cedro-refino-sombra) !important;
+}
+
+.relatorio__grupo-30 {
+  gap: 8px !important;
+}
+
+.relatorio-etapa {
+  min-height: 112px !important;
+  padding: 11px !important;
+  background: #fff !important;
+  border-left-width: 4px !important;
+  border-radius: 9px !important;
+}
+
+.relatorio-etapa--aprovada { background: #f5fbf6 !important; }
+.relatorio-etapa--atual { background: #fffaf0 !important; box-shadow: none !important; }
+
+/* ------------------------------------------------------------
+   15. MODAIS
+   ------------------------------------------------------------ */
+
+.cedro-modal-overlay {
+  background: rgba(9, 25, 13, .48) !important;
+}
+
+.cedro-modal-painel {
+  border-radius: 14px !important;
+  box-shadow: 0 22px 50px rgba(6, 26, 11, .22) !important;
+}
+
+.cedro-modal-painel::before { display: none !important; }
+.cedro-modal-cabecalho { background: #fafcfb !important; }
+.cedro-modal-rodape { background: #fafcfb !important; }
+
+/* ------------------------------------------------------------
+   16. BREAKPOINTS
+   ------------------------------------------------------------ */
+
+@media (max-width: 1280px) {
+  .aprovacao-layout {
+    grid-template-columns: minmax(290px, .72fr) minmax(0, 1.28fr) !important;
+  }
+  .setores__grupo-22 {
+    grid-template-columns: 200px minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 1080px) {
+  .perfil__perfil-dados-estrutura,
+  .setores__grupo-22,
+  .aprovacao-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .cadastro-etapas {
+    width: 190px !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .aplicacao__pagina-mobile {
+    background: var(--cedro-refino-fundo) !important;
+  }
+
+  .cadastro-etapas {
+    width: 100% !important;
+    padding: 10px !important;
+  }
+
+  .cadastro__grupo-8 {
+    padding: 16px !important;
+  }
+
+  .mapa-ias__elemento {
+    grid-template-columns: 1fr !important;
+  }
+
+  .perfil__perfil-cabecalho-estrutura {
+    min-height: 0 !important;
+  }
+}

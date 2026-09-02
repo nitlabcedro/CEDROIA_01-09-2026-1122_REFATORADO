@@ -1,0 +1,74 @@
+diff --git a/frontend/src/hooks/useAplicacao.ts b/frontend/src/hooks/useAplicacao.ts
+index b37f03b..cb652a0 100644
+--- a/frontend/src/hooks/useAplicacao.ts
++++ b/frontend/src/hooks/useAplicacao.ts
+@@ -399,7 +399,13 @@ export function useAplicacao() {
+                 type: "chat",
+                 actionLabel: "Ver Mensagem",
+                 onAction: () => {
++                  sessionStorage.setItem(CHAVES_ARMAZENAMENTO_LOCAL.CHAT_ALVO_NOTIFICACAO, msg.sender_id);
+                   setActiveTab("chat");
++                  window.setTimeout(() => {
++                    window.dispatchEvent(new CustomEvent(EVENTOS_APLICACAO.CHAT_ABRIR_CONVERSA, {
++                      detail: { userId: msg.sender_id },
++                    }));
++                  }, 0);
+                 }
+               });
+             } catch (err) {
+diff --git a/frontend/src/paginas/chat/Chat.tsx b/frontend/src/paginas/chat/Chat.tsx
+index 7834e1a..89302ca 100644
+--- a/frontend/src/paginas/chat/Chat.tsx
++++ b/frontend/src/paginas/chat/Chat.tsx
+@@ -132,6 +132,38 @@ export const Chat: React.FC = () => {
+   const inputRef = useRef<HTMLInputElement>(null);
+   const scrollRef = useRef<HTMLDivElement>(null);
+ 
++  // Abre diretamente a conversa indicada pela notificação global.
++  useEffect(() => {
++    if (!user?.id) return;
++
++    const abrirConversaDaNotificacao = (partnerId?: string | null) => {
++      if (!partnerId || partnerId === user.id) return;
++
++      setListFilter("all");
++      setSearchQuery("");
++      setChatSearchOpen(false);
++      setChatSearchQuery("");
++      setIsEmojiOpen(false);
++      setUiError("");
++      setSelectedConvId(partnerId);
++      sessionStorage.removeItem(CHAVES_ARMAZENAMENTO_LOCAL.CHAT_ALVO_NOTIFICACAO);
++
++      window.setTimeout(() => inputRef.current?.focus(), 80);
++    };
++
++    const pendente = sessionStorage.getItem(CHAVES_ARMAZENAMENTO_LOCAL.CHAT_ALVO_NOTIFICACAO);
++    if (pendente) abrirConversaDaNotificacao(pendente);
++
++    const handleOpenChat = (event: Event) => {
++      const customEvent = event as CustomEvent<{ userId?: string }>;
++      abrirConversaDaNotificacao(customEvent.detail?.userId);
++    };
++
++    window.addEventListener(EVENTOS_APLICACAO.CHAT_ABRIR_CONVERSA, handleOpenChat as EventListener);
++    return () => {
++      window.removeEventListener(EVENTOS_APLICACAO.CHAT_ABRIR_CONVERSA, handleOpenChat as EventListener);
++    };
++  }, [user?.id]);
+   // Protege contra duplo clique/Enter duplo que poderia gerar dois INSERTs idênticos.
+   const ultimaTentativaEnvioRef = useRef<{ assinatura: string; em: number }>({ assinatura: "", em: 0 });
+ 
+@@ -453,6 +485,12 @@ export const Chat: React.FC = () => {
+     return users.find((u) => u.id === selectedConvId) || null;
+   }, [selectedConvId, users]);
+ 
++  // Mantém o compositor utilizável assim que o contato aberto pela notificação estiver disponível.
++  useEffect(() => {
++    if (!selectedConvId || !selectedRecipient) return;
++    const focusTimer = window.setTimeout(() => inputRef.current?.focus(), 100);
++    return () => window.clearTimeout(focusTimer);
++  }, [selectedConvId, selectedRecipient?.id]);
+ 
+   // Lista de conversas no padrão WhatsApp/Instagram:
+   // qualquer envio ou recebimento recente move a conversa imediatamente para o topo.

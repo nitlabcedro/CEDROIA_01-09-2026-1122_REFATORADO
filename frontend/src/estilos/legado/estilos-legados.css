@@ -1,0 +1,1180 @@
+:root {
+  --font-sans: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Lato", sans-serif;
+  --font-lato: "Lato", sans-serif;
+  --font-noto: "Noto Sans", sans-serif;
+  --color-brand-green: #075618;
+  --color-brand-orange: #F29222;
+  --color-brand-black: #111111;
+  --color-brand-gray: #E8E7E7;
+  --color-brand-light-bg: #f8fafc;
+  --color-lab-cyan: #06b6d4;
+  --color-lab-blue: #2563eb;
+  --color-lab-red: #ef4444;
+
+  --tracking-tighter: -0.015em;
+  --tracking-tight: -0.01em;
+  --tracking-wide: 0.0125em;
+  --tracking-wider: 0.025em;
+  --tracking-widest: 0.05em;
+}
+
+h1, h2, h3, h4, h5, h6, p, span, .font-display {
+    font-family: var(--font-lato), "Lato", sans-serif !important;
+  }
+
+h1, h2, h3, h4 {
+    color: #075618;
+    font-weight: bold !important;
+  }
+
+h1, h2 {
+    letter-spacing: -0.01em; /* -0.01em ou 0 */
+  }
+
+:root h1, :root h2, :root h3, :root h4 {
+    color: #075618 !important;
+  }
+
+.dark h1, .dark h2 {
+    color: #f8fafc !important;
+  }
+
+label {
+    font-family: var(--font-sans) !important;
+    font-weight: 700 !important;
+    letter-spacing: 0 !important; /* Evita letter-spacing muito alto */
+  }
+
+input, select, textarea, option {
+    font-family: var(--font-sans) !important;
+    font-weight: 600 !important; /* Mantém 600 ou 700 */
+  }
+
+:root input, :root select, :root textarea, :root option {
+    color: #111111 !important;
+  }
+
+.dark input, .dark select, .dark textarea, .dark option {
+    color: #f8fafc !important;
+  }
+
+/* =============================================
+     MODO CLARO — fundo branco, verde e laranja
+     ============================================= */
+
+:root {
+    /* Fundos */
+    --bg-main: #f8fafc;
+    --bg-content: #f1f5f9;
+    --bg-sidebar: #ffffff;
+    --bg-card: rgba(255, 255, 255, 0.95);
+    --bg-card-page: #ffffff;
+
+    /* Bordas */
+    --border-lab: rgba(0, 0, 0, 0.07);
+    --border-page: #03440c;
+
+    /* Textos */
+    --text-main: #334155;
+    --text-muted: #64748b;
+    --text-bright: #0f172a;
+
+    /* Utilitários */
+    --logo-filter: none;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  }
+
+/* =============================================
+     MODO ESCURO — fundo azul-slate, verde néon
+     ============================================= */
+
+.dark {
+    /* Fundos */
+    --bg-main: #020617;
+    --bg-content: #020617;
+    --bg-sidebar: rgba(15, 23, 42, 0.85);
+    --bg-card: rgba(30, 41, 59, 0.5);
+    --bg-card-page: #060b13;
+
+    /* Bordas */
+    --border-lab: rgba(255, 255, 255, 0.06);
+    --border-page: #059669;
+
+    /* Textos */
+    --text-main: #94a3b8;
+    --text-muted: #64748b;
+    --text-bright: #f8fafc;
+
+    /* Utilitários */
+    --logo-filter: brightness(0) invert(1);
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+  }
+
+body {
+    transition: color 300ms ease, background-color 300ms ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: var(--font-sans);
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-size: 15.5px;
+    line-height: 1.6;
+  }
+
+/* Garante que sidebar use sempre a variável correta por modo */
+
+aside {
+    background-color: var(--bg-sidebar);
+  }
+
+.lab-bg-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 10h1v1h-1zM50 50h1v1h-1zM90 90h1v1h-1zM30 70h1v1h-1zM70 20h1v1h-1z' fill='%2300d136' fill-opacity='0.03'/%3E%3Ccircle cx='25' cy='25' r='1' fill='%2300d136' fill-opacity='0.02'/%3E%3Ccircle cx='75' cy='75' r='1' fill='%2300d136' fill-opacity='0.02'/%3E%3Cpath d='M15 85l2 2m0-2l-2 2' stroke='%2300d136' stroke-opacity='0.02' stroke-width='0.5'/%3E%3Cpath d='M85 15l2 2m0-2l-2 2' stroke='%2300d136' stroke-opacity='0.02' stroke-width='0.5'/%3E%3Crect x='45' y='15' width='4' height='4' rx='1' stroke='%2300d136' stroke-opacity='0.02' stroke-width='0.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    
+  }
+
+.glass {
+    background: var(--bg-card);
+    border: 1px solid var(--border-lab);
+  }
+
+.dark .glow-green {
+  box-shadow: 0 0 15px rgba(46, 204, 113, 0.1);
+}
+
+.dark .glow-cyan {
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.15);
+}
+
+.dark .text-glow-green {
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.5);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-lab);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.5);
+}
+
+/* Force high contrast and brand styling for select options across all browsers and modes */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="url"],
+input[type="tel"],
+input[type="number"],
+select {
+  color: var(--text-bright) !important;
+}
+
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"],
+.dark input[type="url"],
+.dark input[type="tel"],
+.dark input[type="number"],
+.dark select {
+  color: #ffffff !important;
+}
+
+select option {
+  background-color: #ffffff !important; /* Modo claro: fundo branco */
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+.dark select option,
+.dark option {
+  background-color: #022c22 !important; /* Modo escuro: verde escuro */
+  color: #f8fafc !important;
+}
+
+/* Inventory filter — no modo claro texto escuro, no escuro branco */
+.inventory-filter-select,
+input[type="text"].inventory-search-input,
+.inventory-search-input {
+  color: var(--text-bright) !important;
+}
+
+/* Image smoothing & anti-aliasing to remove jagged/serrilhado edges */
+img {
+  image-rendering: auto;
+  max-width: 100%;
+}
+
+
+/* ============================================================
+   CEDRO IA MOBILE — base responsiva compartilhada
+   Mantém a interface dentro da viewport e respeita safe areas.
+   ============================================================ */
+@media (max-width: 1023px) {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  body {
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .aplicacao-estrutura-mobile {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .aplicacao-conteudo-mobile {
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  .aplicacao-pagina-ativa {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+}
+
+.menu-mobile-safe-area {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.menu-mobile-safe-bottom,
+.mobile-safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0px);
+}
+
+/* ============================================================
+   CEDRO IA MOBILE — contenção de largura e consistência visual
+   ============================================================ */
+@media (max-width: 1023px) {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root,
+  .aplicacao-conteiner,
+  .aplicacao-estrutura-mobile,
+  .aplicacao-conteudo-mobile,
+  .aplicacao-pagina-ativa {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .aplicacao-pagina-ativa > *,
+  .painel-conteiner,
+  .inventario-container,
+  .cadastro-container,
+  .relatorio-container,
+  .administracao-conteiner,
+  .perfil-container {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .aplicacao-pagina-ativa img,
+  .aplicacao-pagina-ativa input,
+  .aplicacao-pagina-ativa select,
+  .aplicacao-pagina-ativa textarea,
+  .aplicacao-pagina-ativa canvas {
+    max-width: 100%;
+  }
+
+  .aplicacao-pagina-ativa :where(h1, h2, h3, h4, p, span, strong, small) {
+    overflow-wrap: anywhere;
+  }
+
+  .cadastro-container,
+  .inventario-container,
+  .relatorio-container,
+  .administracao-conteiner {
+    overflow-x: hidden;
+  }
+
+  .cadastro-etapas {
+    overflow-x: hidden !important;
+  }
+}
+
+/* ============================================================
+   CEDRO IA — ETAPA 4 | DESIGN SYSTEM PREMIUM
+   Camada exclusivamente visual. Não altera regras de negócio.
+   ============================================================ */
+:root {
+  --cedro-green-950: #043A12;
+  --cedro-green-900: #075618;
+  --cedro-green-800: #0B6E20;
+  --cedro-green-100: #DFF2E4;
+  --cedro-green-50: #F0F8F2;
+  --cedro-ink: #17301D;
+  --cedro-muted: #6F7D72;
+  --cedro-border: #E4EBE5;
+  --cedro-surface: #FFFFFF;
+  --cedro-page: #F4F7F4;
+  --cedro-orange: #F29222;
+  --cedro-success: #15A05D;
+  --cedro-danger: #E04F5F;
+  --cedro-info: #5D7FA3;
+  --cedro-shadow-card: 0 10px 30px rgba(10, 31, 16, 0.065);
+  --cedro-shadow-raised: 0 18px 48px rgba(10, 31, 16, 0.10);
+  --cedro-shadow-green: 0 14px 34px rgba(7, 86, 24, 0.18);
+}
+
+/* Superfície geral mais sofisticada */
+.cedro-app-surface,
+.cedro-content-surface {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(11, 110, 32, 0.055), transparent 25rem),
+    radial-gradient(circle at 92% 8%, rgba(242, 146, 34, 0.035), transparent 20rem),
+    linear-gradient(180deg, #F8FAF8 0%, #F3F7F3 100%);
+}
+
+.cedro-page-premium {
+  position: relative;
+}
+
+.cedro-page-premium::before {
+  content: "";
+  position: absolute;
+  inset: -12px -12px auto;
+  height: 150px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle at 18% 0%, rgba(7, 86, 24, 0.045), transparent 62%);
+}
+
+/* Cabeçalho mobile premium */
+.cedro-mobile-header,
+.cedro-drawer-header {
+  position: relative;
+  overflow: hidden;
+  background-image:
+    radial-gradient(circle at 14% -45%, rgba(255, 255, 255, 0.24), transparent 45%),
+    radial-gradient(circle at 88% 120%, rgba(69, 197, 103, 0.22), transparent 42%),
+    linear-gradient(135deg, var(--cedro-green-950) 0%, var(--cedro-green-900) 48%, var(--cedro-green-800) 100%);
+  box-shadow: 0 8px 28px rgba(4, 58, 18, 0.24);
+}
+
+.cedro-mobile-header::after,
+.cedro-drawer-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  background-image: linear-gradient(115deg, transparent 0 42%, rgba(255,255,255,.16) 49%, transparent 56%);
+  transform: translateX(34%);
+}
+
+.cedro-header-control {
+  border: 1px solid rgba(255,255,255,.16) !important;
+  background: rgba(255,255,255,.095) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 8px 22px rgba(0,0,0,.10);
+  backdrop-filter: none;
+}
+
+.cedro-header-control:hover {
+  background: rgba(255,255,255,.15) !important;
+  transform: translateY(-1px);
+}
+
+.cedro-header-brand {
+  filter: none;
+}
+
+/* Sidebar desktop: mais profunda, menos "neon" */
+.cedro-sidebar {
+  border-right: 1px solid rgba(255,255,255,.08);
+  background-image:
+    radial-gradient(circle at 18% 2%, rgba(74, 201, 106, .16), transparent 26%),
+    linear-gradient(180deg, #064B18 0%, #043A12 50%, #022C0D 100%);
+  box-shadow: 5px 0 34px rgba(3, 34, 12, .22);
+}
+
+.cedro-sidebar .menu-lateral-logo,
+.cedro-sidebar .menu-lateral-usuario {
+  background: rgba(0,0,0,.13) !important;
+  backdrop-filter: none;
+}
+
+.cedro-sidebar .menu-lateral-item-ativo {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05), 0 9px 22px rgba(0,0,0,.08);
+}
+
+/* Card base de alto acabamento */
+.cedro-card-premium {
+  border: 1px solid rgba(214, 225, 216, .88);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.995), rgba(252,254,252,.995));
+  box-shadow: var(--cedro-shadow-card);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+@media (hover: hover) {
+  .cedro-card-premium:hover {
+    border-color: rgba(172, 199, 178, .8);
+    box-shadow: var(--cedro-shadow-raised);
+  }
+}
+
+/* KPI cards */
+.cedro-kpi-card {
+  border: 1px solid rgba(218, 227, 219, .9);
+  border-radius: 22px;
+  background: linear-gradient(145deg, #FFFFFF 0%, #FBFDFB 100%);
+  box-shadow: 0 10px 28px rgba(10,31,16,.06);
+  isolation: isolate;
+}
+
+.cedro-kpi-card::before {
+  content: "";
+  position: absolute;
+  width: 92px;
+  height: 92px;
+  right: -34px;
+  bottom: -42px;
+  border-radius: 999px;
+  opacity: .65;
+  z-index: -1;
+}
+
+.cedro-kpi-green::before { background: radial-gradient(circle, rgba(21,160,93,.18), transparent 69%); }
+.cedro-kpi-orange::before { background: radial-gradient(circle, rgba(242,162,27,.18), transparent 69%); }
+.cedro-kpi-red::before { background: radial-gradient(circle, rgba(224,79,95,.16), transparent 69%); }
+.cedro-kpi-amber::before { background: radial-gradient(circle, rgba(214,169,16,.16), transparent 69%); }
+.cedro-kpi-slate::before { background: radial-gradient(circle, rgba(93,127,163,.15), transparent 69%); }
+
+/* Perfil: hero de produto, sem perder a identidade corporativa */
+.cedro-profile-hero {
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 28px;
+  background-image:
+    radial-gradient(circle at 12% 10%, rgba(255,255,255,.16), transparent 31%),
+    radial-gradient(circle at 86% 100%, rgba(66,191,97,.24), transparent 33%),
+    linear-gradient(135deg, #043A12 0%, #075618 52%, #0B6E20 100%);
+  box-shadow: 0 20px 52px rgba(4,58,18,.20);
+}
+
+.cedro-profile-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .18;
+  background-image: linear-gradient(125deg, transparent 0 44%, rgba(255,255,255,.14) 49%, transparent 55%);
+}
+
+.cedro-profile-hero .perfil-avatar > div:first-child {
+  border-color: rgba(255,255,255,.9) !important;
+  background: rgba(255,255,255,.16) !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,.20), 0 0 0 5px rgba(255,255,255,.09) !important;
+}
+
+.cedro-profile-hero .perfil-identidade h2 {
+  color: #FFFFFF !important;
+  text-shadow: 0 3px 16px rgba(0,0,0,.12);
+}
+
+.cedro-profile-hero .perfil-identidade > div:first-child > span {
+  background: rgba(255,255,255,.12) !important;
+  border-color: rgba(255,255,255,.20) !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+  backdrop-filter: none;
+}
+
+.cedro-profile-hero .perfil-identidade > div:nth-child(2) > div {
+  background: rgba(255,255,255,.12) !important;
+  border-color: rgba(255,255,255,.18) !important;
+  color: white !important;
+  box-shadow: none !important;
+  backdrop-filter: none;
+}
+
+.cedro-profile-hero .perfil-identidade > div:nth-child(2) span:first-child {
+  padding: 5px !important;
+  /* background: rgba(255,255,255,.14) !important; */
+  color: #DFF2E4 !important;
+}
+
+.cedro-profile-hero .perfil-identidade > div:nth-child(2) span:last-child {
+  color: rgba(255,255,255,.88) !important;
+}
+
+.cedro-profile-hero button {
+  backdrop-filter: none;
+}
+
+/* Aprovação */
+.aprovacao-cabecalho {
+  border-bottom-color: rgba(201,214,203,.75) !important;
+}
+
+.cedro-mini-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #DCE8DF;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #F6FBF7 0%, #FFFFFF 100%);
+  box-shadow: 0 5px 16px rgba(10,31,16,.035);
+}
+
+.cedro-mini-stat span {
+  color: #6F7D72;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.cedro-mini-stat strong {
+  color: #075618;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.cedro-mini-stat-amber {
+  background: linear-gradient(145deg, #FFFBF1 0%, #FFFFFF 100%);
+  border-color: #F8E2AF;
+}
+
+.cedro-mini-stat-amber strong { color: #C87609; }
+
+.cedro-segmented {
+  border: 1px solid #DFE7E1;
+  border-radius: 18px;
+  background: #F1F5F2;
+  box-shadow: inset 0 1px 2px rgba(10,31,16,.025);
+}
+
+.aprovacao-item-fila {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #E0E8E2;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #FFFFFF 0%, #FAFCFA 100%);
+  box-shadow: 0 8px 24px rgba(10,31,16,.045);
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.aprovacao-item-fila::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 18px;
+  bottom: 18px;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, #075618, #23A34A);
+}
+
+@media (hover: hover) {
+  .aprovacao-item-fila:hover {
+    transform: translateY(-2px);
+    border-color: #BFD5C4;
+    box-shadow: 0 14px 34px rgba(7,86,24,.09);
+  }
+}
+
+/* Chat */
+.cedro-chat-shell {
+  background:
+    radial-gradient(circle at 95% 0%, rgba(7,86,24,.055), transparent 30rem),
+    #F3F7F3;
+}
+
+.cedro-chat-frame {
+  border: 1px solid #DDE7DF;
+  background: #FFFFFF;
+  box-shadow: 0 14px 40px rgba(10,31,16,.075);
+}
+
+@media (min-width: 1024px) {
+  .cedro-chat-frame { border-radius: 26px; }
+}
+
+.cedro-chat-list-header {
+  background-image:
+    radial-gradient(circle at 92% -10%, rgba(7,86,24,.08), transparent 42%),
+    linear-gradient(180deg, #F8FCF8 0%, #FFFFFF 100%);
+}
+
+.cedro-chat-conversation-header {
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 5px 18px rgba(10,31,16,.035);
+  backdrop-filter: none;
+}
+
+/* Inputs/controles usados nas páginas do produto */
+.aplicacao-pagina-ativa input:not([type="checkbox"]):not([type="radio"]),
+.aplicacao-pagina-ativa select,
+.aplicacao-pagina-ativa textarea {
+  border-radius: 16px;
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+
+.aplicacao-pagina-ativa input:not([type="checkbox"]):not([type="radio"]):focus,
+.aplicacao-pagina-ativa select:focus,
+.aplicacao-pagina-ativa textarea:focus {
+  border-color: rgba(7,86,24,.66) !important;
+  box-shadow: 0 0 0 4px rgba(7,86,24,.08) !important;
+}
+
+/* Movimento discreto apenas em dispositivos com hover */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .aplicacao-pagina-ativa button {
+    transition: transform .16s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease, color .18s ease;
+  }
+}
+
+/* Mobile: escala, respiro e acabamento consistentes */
+@media (max-width: 1023px) {
+  .cedro-card-premium { border-radius: 22px; }
+  .cedro-profile-hero { border-radius: 24px; }
+
+  .perfil-container > div,
+  .aprovacao-container > div,
+  .painel-conteiner {
+    min-width: 0;
+  }
+
+  .perfil-container .space-y-8 { row-gap: 18px; }
+  .perfil-dados { gap: 18px !important; }
+
+  .cedro-profile-hero {
+    padding: 24px 18px !important;
+  }
+
+  .cedro-profile-hero .perfil-identidade h2 {
+    font-size: clamp(1.45rem, 7vw, 1.85rem) !important;
+    line-height: 1.06;
+  }
+
+  .aprovacao-item-fila {
+    padding: 16px !important;
+  }
+}
+
+/* Dark mode: mantém legibilidade sem desfazer identidade */
+.dark .cedro-card-premium,
+.dark .cedro-kpi-card,
+.dark .cedro-chat-frame {
+  background: rgba(15,23,42,.78);
+  border-color: rgba(148,163,184,.14);
+  box-shadow: none;
+}
+
+/* Inventário */
+.inventario-card-mobile {
+  position: relative;
+}
+.inventario-card-mobile::after {
+  content: "";
+  position: absolute;
+  inset: auto 16px 0;
+  height: 3px;
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(90deg, rgba(7,86,24,.0), rgba(7,86,24,.34), rgba(7,86,24,.0));
+}
+
+/* Nova solicitação */
+.cedro-form-shell {
+  border: 1px solid #DCE7DE;
+  border-radius: 28px;
+  background: #FFFFFF;
+  box-shadow: 0 18px 48px rgba(10,31,16,.09);
+}
+
+.cedro-form-stepper {
+  border-color: #DCE7DE !important;
+  background-image:
+    radial-gradient(circle at 8% 0%, rgba(7,86,24,.08), transparent 26rem),
+    linear-gradient(180deg, #FBFDFB 0%, #F5F9F5 100%);
+}
+
+.cedro-form-content {
+  background-image:
+    radial-gradient(circle at 96% 0%, rgba(7,86,24,.055), transparent 24rem),
+    linear-gradient(180deg, #FFFFFF 0%, #FBFDFB 100%);
+}
+
+.cedro-form-heading {
+  border-color: #E1E9E3 !important;
+}
+
+.cedro-form-heading h2 {
+  color: #17301D !important;
+}
+
+/* Administração */
+.cedro-admin-stat {
+  border-radius: 22px;
+  background: linear-gradient(145deg, #FFFFFF 0%, #FBFDFB 100%);
+  box-shadow: 0 9px 26px rgba(10,31,16,.055);
+}
+
+@media (hover: hover) {
+  .cedro-admin-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 36px rgba(10,31,16,.085);
+  }
+}
+
+/* Títulos de página: mais produto, menos formulário cru */
+.inventario-container > header h1,
+.administracao-cabecalho h1,
+.relatorio-mapa-setores > h1,
+.relatorio-container > header h1 {
+  color: #17301D !important;
+  letter-spacing: -.025em !important;
+}
+
+@media (max-width: 1023px) {
+  .cedro-form-shell {
+    border-radius: 24px;
+    box-shadow: 0 12px 34px rgba(10,31,16,.075);
+  }
+
+  .cedro-form-stepper {
+    background: #FFFFFF;
+  }
+
+  .cedro-form-stepper button {
+    min-height: 70px;
+    border-radius: 16px !important;
+  }
+
+  .cedro-form-heading {
+    margin-bottom: 22px !important;
+  }
+}
+
+/* ============================================================
+   CEDRO IA — ETAPA 5 | REFINO VISUAL / MENOS BRANCO / MOBILE MAIS LIMPO
+   ============================================================ */
+
+:root {
+  --bg-main: #edf3ee;
+  --bg-content: #edf4ef;
+  --bg-sidebar: #ffffff;
+  --bg-card: rgba(255, 255, 255, 0.92);
+  --bg-card-page: #f7fbf7;
+  --cedro-page: #edf4ef;
+  --cedro-surface: #f8fcf8;
+  --cedro-border-soft: #dbe7de;
+}
+
+body {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(11, 110, 32, 0.065), transparent 24rem),
+    radial-gradient(circle at 100% 4%, rgba(242, 146, 34, 0.045), transparent 20rem),
+    linear-gradient(180deg, #eff5f0 0%, #e8f0ea 100%);
+}
+
+.cedro-app-surface,
+.cedro-content-surface {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(11, 110, 32, 0.07), transparent 26rem),
+    radial-gradient(circle at 92% 10%, rgba(242, 146, 34, 0.05), transparent 22rem),
+    linear-gradient(180deg, #f2f7f3 0%, #eaf2ec 100%);
+}
+
+.cedro-page-premium::before {
+  height: 180px;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(7, 86, 24, 0.09), transparent 58%),
+    linear-gradient(180deg, rgba(255,255,255,.34), transparent 100%);
+}
+
+/* Cards e painéis menos crus/brancos */
+.cedro-card-premium,
+.cedro-kpi-card,
+.cedro-chat-frame,
+.cedro-form-shell,
+.cedro-admin-stat,
+.aprovacao-item-fila,
+.cedro-mini-stat,
+.cedro-chat-conversation-header {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(246,250,247,.98) 100%) !important;
+  border-color: #d9e5dd !important;
+}
+
+.cedro-card-premium,
+.cedro-kpi-card,
+.cedro-chat-frame,
+.cedro-form-shell,
+.cedro-admin-stat,
+.aprovacao-item-fila {
+  box-shadow: 0 12px 30px rgba(10,31,16,.055) !important;
+}
+
+/* Tabelas e superfícies internas mais suaves */
+.aplicacao-pagina-ativa table thead,
+.aplicacao-pagina-ativa .bg-slate-50,
+.aplicacao-pagina-ativa .bg-slate-100 {
+  background-color: #f3f7f4 !important;
+}
+
+.aplicacao-pagina-ativa .border-slate-200,
+.aplicacao-pagina-ativa .border-slate-100 {
+  border-color: #dbe6de !important;
+}
+
+/* Perfil: força legibilidade do nome no hero */
+.cedro-profile-hero .perfil-identidade h1,
+.cedro-profile-hero .perfil-identidade h2,
+.cedro-profile-hero .perfil-identidade h3 {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.18) !important;
+}
+
+.cedro-profile-hero .perfil-identidade {
+  position: relative;
+  z-index: 2;
+}
+
+.cedro-profile-hero .perfil-identidade > div:first-child > span,
+.cedro-profile-hero .perfil-identidade > div:nth-child(2) > div {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+}
+
+/* Sidebar desktop branca, alinhada ao visual mobile */
+.cedro-sidebar {
+  border-right: 1px solid #dce7de !important;
+  background-image:
+    radial-gradient(circle at 14% 0%, rgba(11, 110, 32, .08), transparent 24%),
+    radial-gradient(circle at 100% 100%, rgba(242, 146, 34, .05), transparent 28%),
+    linear-gradient(180deg, #ffffff 0%, #f5faf6 48%, #eef5f0 100%) !important;
+  box-shadow: 12px 0 34px rgba(10,31,16,.08) !important;
+  color: #17301d !important;
+}
+
+.cedro-sidebar .menu-lateral-logo,
+.cedro-sidebar .menu-lateral-usuario {
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, .92),
+      rgba(243, 248, 244, .95)) !important;
+
+  border-color: #e0ebe3 !important;
+
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.cedro-sidebar .menu-lateral-logo::after {
+  content: "";
+  position: absolute;
+  inset: auto 16px 0;
+  height: 3px;
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(90deg, rgba(7,86,24,0), rgba(7,86,24,.35), rgba(242,146,34,.2), rgba(7,86,24,0));
+}
+
+.cedro-sidebar .menu-lateral-item {
+  color: #496152 !important;
+}
+
+.cedro-sidebar .menu-lateral-item:hover {
+  color: #075618 !important;
+  background: rgba(7,86,24,.06) !important;
+}
+
+.cedro-sidebar .menu-lateral-item svg,
+.cedro-sidebar .menu-lateral-usuario svg,
+.cedro-sidebar .menu-lateral-logo button svg,
+.cedro-sidebar .menu-lateral-grupo .group\/title svg {
+  color: #6a8170 !important;
+  filter: none !important;
+}
+
+.cedro-sidebar .menu-lateral-item-ativo {
+  color: #075618 !important;
+  border: 1px solid #cfe0d4;
+  box-shadow: 0 10px 24px rgba(7,86,24,.08) !important;
+}
+
+.cedro-sidebar .menu-lateral-item-ativo > div:first-child {
+  background: linear-gradient(90deg, rgba(7,86,24,.12), rgba(7,86,24,.04), transparent) !important;
+  border-left-color: #0b6e20 !important;
+}
+
+.cedro-sidebar .menu-lateral-item-ativo svg {
+  color: #0b6e20 !important;
+}
+
+.cedro-sidebar .menu-lateral-grupo > .flex,
+.cedro-sidebar .menu-lateral-grupo span,
+.cedro-sidebar .menu-lateral-usuario .text-emerald-100,
+.cedro-sidebar .menu-lateral-usuario .text-emerald-300\/60,
+.cedro-sidebar .menu-lateral-logo .text-white,
+.cedro-sidebar .menu-lateral-logo .text-emerald-200\/60,
+.cedro-sidebar .menu-lateral-conteudo .text-emerald-200\/60,
+.cedro-sidebar .menu-lateral-conteudo .text-emerald-100\/80,
+.cedro-sidebar .menu-lateral-conteudo .text-emerald-100,
+.cedro-sidebar .menu-lateral-conteudo .text-white {
+  color: inherit !important;
+}
+
+.cedro-sidebar .menu-lateral-grupo [data-grupo] > .flex,
+.cedro-sidebar .menu-lateral-grupo .group\/title,
+.cedro-sidebar .menu-lateral-conteudo > div > .border-t + div,
+.cedro-sidebar .menu-lateral-conteudo .group\/title span {
+  color: #6d8271 !important;
+}
+
+.cedro-sidebar .menu-lateral-conteudo .border-t {
+  border-color: #e2ebe4 !important;
+  opacity: .9 !important;
+}
+
+.cedro-sidebar .menu-lateral-usuario button {
+  background: #f6faf7 !important;
+  color: #35533e !important;
+  border-color: #dbe7de !important;
+}
+
+.cedro-sidebar .menu-lateral-usuario button:hover {
+  background: #eef6f0 !important;
+  color: #075618 !important;
+}
+
+.cedro-sidebar .menu-lateral-usuario kbd {
+  color: #65816d !important;
+  border-color: #dce7de !important;
+  background: #ffffff !important;
+}
+
+.cedro-sidebar .menu-lateral-usuario .bg-\[\#00d136\]\/20,
+.cedro-sidebar .menu-lateral-usuario .border-\[\#00d136\]\/50 {
+  background: rgba(7,86,24,.08) !important;
+  border-color: rgba(7,86,24,.22) !important;
+  box-shadow: none !important;
+}
+
+/* Chat / dashboard / aprovação com mais atmosfera */
+.cedro-chat-shell {
+  background:
+    radial-gradient(circle at 95% 0%, rgba(7,86,24,.08), transparent 28rem),
+    radial-gradient(circle at 0% 100%, rgba(242,146,34,.035), transparent 24rem),
+    #edf4ef;
+}
+
+.cedro-chat-list-header,
+.cedro-form-content,
+.cedro-form-stepper,
+.cedro-chat-conversation-header {
+  background-image:
+    radial-gradient(circle at 92% -10%, rgba(7,86,24,.08), transparent 42%),
+    linear-gradient(180deg, #f9fcf9 0%, #f2f7f3 100%) !important;
+}
+
+/* Mobile: menos chuva de informação */
+@media (max-width: 1023px) {
+  .cedro-mobile-header {
+    box-shadow: 0 10px 24px rgba(4,58,18,.18);
+  }
+
+  .cedro-page-premium::before {
+    inset: -8px -8px auto;
+    height: 110px;
+  }
+
+  .cedro-card-premium,
+  .cedro-form-shell,
+  .cedro-chat-frame,
+  .cedro-admin-stat,
+  .aprovacao-item-fila {
+    border-radius: 20px !important;
+  }
+
+  .cedro-profile-hero {
+    padding: 22px 16px !important;
+    border-radius: 22px !important;
+  }
+
+  .cedro-profile-hero .perfil-identidade {
+    width: 100%;
+    text-align: center;
+  }
+
+  .cedro-profile-hero .perfil-identidade > div:first-child {
+    gap: .55rem !important;
+  }
+
+  .cedro-profile-hero .perfil-identidade > div:nth-child(2) {
+    gap: .45rem !important;
+  }
+
+  .cedro-profile-hero .perfil-identidade h2 {
+    font-size: clamp(1.25rem, 6vw, 1.7rem) !important;
+    line-height: 1.08 !important;
+  }
+
+  .cedro-profile-hero .perfil-avatar .size-28,
+  .cedro-profile-hero .perfil-avatar .md\:size-32 {
+    width: 6rem !important;
+    height: 6rem !important;
+  }
+
+  .perfil-container .space-y-8,
+  .painel-conteiner,
+  .aprovacao-container,
+  .inventario-container,
+  .relatorio-container,
+  .administracao-conteiner {
+    gap: 16px !important;
+  }
+
+  .perfil-dados,
+  .aprovacao-conteudo,
+  .painel-conteiner .grid,
+  .inventario-container .grid,
+  .administracao-conteiner .grid {
+    gap: 14px !important;
+  }
+
+  .aplicacao-pagina-ativa h1 {
+    font-size: 1.25rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .aplicacao-pagina-ativa h2 {
+    font-size: 1.05rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .aplicacao-pagina-ativa p,
+  .aplicacao-pagina-ativa span,
+  .aplicacao-pagina-ativa small {
+    line-height: 1.45;
+  }
+
+  /* Reduz ruído textual secundário */
+  .aplicacao-pagina-ativa .text-xs.uppercase,
+  .aplicacao-pagina-ativa .tracking-widest {
+    letter-spacing: .06em !important;
+  }
+
+  /* Aprovação mais simples no celular */
+  .aprovacao-container > div:first-child .grid-cols-2 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .cedro-mini-stat {
+    padding: 8px 10px;
+    border-radius: 14px;
+  }
+
+  .cedro-mini-stat span {
+    font-size: 8px;
+  }
+
+  .cedro-mini-stat strong {
+    font-size: 16px;
+  }
+
+  /* Dashboard e inventário menos pesados */
+  .painel-conteiner .recharts-wrapper,
+  .painel-conteiner .recharts-responsive-container {
+    max-height: 260px;
+  }
+
+  .inventario-container table,
+  .relatorio-container table {
+    font-size: 12px;
+  }
+
+  /* Oculta conteúdos menos críticos em telas bem pequenas */
+  .painel-conteiner .text-[11px],
+  .inventario-container .text-[11px],
+  .aprovacao-container .text-[11px] {
+    line-height: 1.35;
+  }
+}
+
+@media (max-width: 640px) {
+  .aplicacao-conteudo-mobile {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
+  }
+
+  .cedro-card-premium,
+  .cedro-form-shell,
+  .cedro-admin-stat,
+  .aprovacao-item-fila {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .cedro-profile-hero button,
+  .aplicacao-pagina-ativa button {
+    min-height: 42px;
+  }
+
+  .perfil-container .lg\:col-span-1.space-y-6,
+  .perfil-container .lg\:col-span-2 {
+    gap: 14px !important;
+  }
+
+  .perfil-container .border-b {
+    margin-bottom: 14px !important;
+    padding-bottom: 14px !important;
+  }
+
+  /* deixa cards de resumo mais compactos no celular */
+  .perfil-container .space-y-4 > .flex.items-center.gap-3\.5 {
+    gap: 10px !important;
+  }
+
+  .perfil-container .space-y-4 > .flex.items-center.gap-3\.5 > div:first-child {
+    padding: 8px !important;
+  }
+}

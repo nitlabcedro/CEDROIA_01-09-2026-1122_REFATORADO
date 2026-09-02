@@ -1,0 +1,707 @@
+/* ========================================================================== */
+/* MODAL DE APROVACAO MOBILE - V3 COMPACTO                                   */
+/* Escopo exclusivo em #modalAprovacaoMobile. Desktop nao e alterado.        */
+/* ========================================================================== */
+
+@media (max-width: 1023px) {
+  .aprovacao-modal-mobile.aprovacoes__grupo-84 {
+    padding: 0;
+    background: rgba(5, 34, 16, 0.58);
+  }
+
+  #modalAprovacaoMobile.aprovacoes__elemento-modalaprovacaomobile {
+    width: 100%;
+    max-width: 430px;
+    height: 100dvh;
+    max-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #f5f7f5;
+    border: 0;
+    border-radius: 0;
+    box-shadow: 0 24px 80px rgba(6, 40, 18, 0.24);
+  }
+
+  #modalAprovacaoMobile > .aprovacoes__grupo-61 {
+    display: none;
+  }
+
+  /* Header */
+  #modalAprovacaoMobile .aprovacoes__grupo-85 {
+    position: relative;
+    top: auto;
+    z-index: 30;
+    flex: 0 0 auto;
+    min-height: 0;
+    padding: max(14px, env(safe-area-inset-top, 0px)) 16px 13px;
+    background: #ffffff;
+    border: 0;
+    border-top: 4px solid #075618;
+    border-bottom: 1px solid #e1e7e2;
+    box-shadow: 0 3px 12px rgba(15, 45, 24, 0.04);
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-fila-de-aprovacao-2 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-17 {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__texto-etapa-de,
+  #modalAprovacaoMobile .aprovacoes__texto-38 {
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-family: "Noto Sans", sans-serif;
+    font-size: 8.5px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__texto-etapa-de {
+    color: #075618;
+    background: #edf7f0;
+    border: 1px solid #cfe5d5;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__texto-39 {
+    color: #075618;
+    background: #eef8f1;
+    border-color: #c8e3d0;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__texto-40 {
+    color: #b4233c;
+    background: #fff0f2;
+    border-color: #f3c5ce;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__texto-41 {
+    color: #8c5200;
+    background: #fff7e8;
+    border-color: #f3d191;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__botao-15 {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+    color: #56655c;
+    background: #ffffff;
+    border: 1px solid #dfe6e1;
+    border-radius: 12px;
+    box-shadow: 0 2px 7px rgba(15, 45, 24, 0.05);
+  }
+
+  #modalAprovacaoMobile .aprovacoes__botao-15:hover,
+  #modalAprovacaoMobile .aprovacoes__botao-15:active {
+    color: #1e3526;
+    background: #f5f8f6;
+    border-color: #cbd7cf;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-86 {
+    margin: 10px 0 0;
+    max-width: calc(100% - 4px);
+    overflow: hidden;
+    color: #17231b !important;
+    font-family: "Lato", sans-serif;
+    font-size: clamp(20px, 5.5vw, 24px);
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    text-shadow: none;
+    overflow-wrap: anywhere;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-86 * {
+    color: inherit !important;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__descricao-id-protocolo {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 3px 5px;
+    margin: 7px 0 0;
+    color: #6c7971 !important;
+    font-family: "Noto Sans", sans-serif;
+    font-size: 10px;
+    line-height: 1.35;
+    font-weight: 600;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__texto-42 {
+    color: #26352b !important;
+    font-weight: 800;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__texto-43 {
+    margin: 0 1px;
+    color: #b4bdb7 !important;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__texto-44 {
+    max-width: 100%;
+    color: #075618 !important;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: none;
+    overflow-wrap: anywhere;
+  }
+
+  /* Scrollable content */
+  #modalAprovacaoMobile .aprovacoes__grupo-87 {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 12px 12px calc(108px + env(safe-area-inset-bottom, 0px));
+    background: #f5f7f5;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #bcc8bf transparent;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-87::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-87::-webkit-scrollbar-thumb {
+    background: #bcc8bf;
+    border-radius: 999px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-87 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 9px;
+  }
+
+  /* Current stage compact card */
+  #modalAprovacaoMobile .aprovacoes__grupo-nit {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 58px;
+    margin: 0;
+    padding: 11px 13px;
+    background: #f0f8f2;
+    border: 1px solid #d5e8da;
+    border-radius: 14px;
+    box-shadow: none;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__descricao-nit {
+    margin: 0;
+    color: #075618;
+    font-family: "Lato", sans-serif;
+    font-size: 11px;
+    line-height: 1.25;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-tipo-de-analise-2 {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    text-align: right;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-tipo-de-analise-2 .aprovacoes__descricao-tipo-de-analise {
+    margin: 0;
+    color: #829087;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__descricao-triagem-e-filtragem {
+    margin: 3px 0 0;
+    color: #2c3c31;
+    font-size: 10px;
+    line-height: 1.25;
+    font-weight: 800;
+  }
+
+  /* History */
+  #modalAprovacaoMobile .aprovacao-historico.aprovacoes__grupo-historico-de-pareceres {
+    margin: 0;
+    padding: 14px;
+    background: #ffffff;
+    border: 1px solid #dfe6e1;
+    border-radius: 15px;
+    box-shadow: 0 3px 12px rgba(15, 45, 24, 0.035);
+  }
+
+  #modalAprovacaoMobile .aprovacao-historico.aprovacoes__grupo-historico-de-pareceres > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 11px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__elemento-historico-de-pareceres {
+    margin: 0;
+    color: #18271d;
+    font-family: "Lato", sans-serif;
+    font-size: 15px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-88 {
+    display: grid;
+    gap: 8px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-88 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-89 {
+    position: relative;
+    min-width: 0;
+    min-height: 74px;
+    padding: 11px 10px 11px 43px;
+    background: #fbfcfb;
+    border: 1px solid #e4e9e5;
+    border-radius: 12px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-90 {
+    left: 10px;
+    top: 12px;
+    width: 24px;
+    height: 24px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-90 svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-93 {
+    left: 21px;
+    top: 36px;
+    height: calc(100% + 9px);
+    background: #cce1d2;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-94 {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__descricao-etapa-2 {
+    margin: 0;
+    color: #176d37;
+    font-size: 8px;
+    line-height: 1.3;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__descricao-23 {
+    margin: 5px 0 0;
+    color: #2e3d33;
+    font-size: 11px;
+    line-height: 1.45;
+    font-weight: 650;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__descricao-por-2 {
+    margin: 5px 0 0;
+    color: #87938b;
+    font-size: 9px;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__texto-45 {
+    align-self: start;
+    min-height: 21px;
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 7px;
+    font-size: 7.5px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: 0.025em;
+  }
+
+  /* Accordions */
+  #modalAprovacaoMobile .aprovacoes__grupo-95 {
+    margin: 0;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-95 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: -1px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__botao-16 {
+    width: 100%;
+    min-height: 48px;
+    padding: 10px 12px;
+    color: #27372d;
+    background: #ffffff;
+    border: 1px solid #dfe6e1;
+    border-radius: 13px;
+    box-shadow: 0 2px 8px rgba(15, 45, 24, 0.025);
+  }
+
+  #modalAprovacaoMobile .aprovacoes__botao-16:active {
+    background: #f7faf8;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-1-solicitante {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__icone-users {
+    width: 16px;
+    height: 16px;
+    margin-right: 10px;
+    color: #348653;
+    flex: 0 0 16px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__texto-1-solicitante {
+    color: #2a3b30;
+    font-family: "Lato", sans-serif;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+    text-align: left;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__botao-16 > svg {
+    width: 15px;
+    height: 15px;
+    color: #7c8981;
+    flex: 0 0 15px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-solicitante {
+    margin: -1px 0 0;
+    padding: 12px 13px 13px;
+    background: #ffffff;
+    border: 1px solid #dfe6e1;
+    border-top-color: #edf0ee;
+    border-radius: 0 0 13px 13px;
+    box-shadow: none;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-solicitante > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 10px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__descricao-tipo-de-ia-tecnologia {
+    margin: 0;
+    color: #7a877f;
+    font-family: "Noto Sans", sans-serif;
+    font-size: 8px;
+    line-height: 1.25;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__descricao-24,
+  #modalAprovacaoMobile .aprovacoes__descricao-25,
+  #modalAprovacaoMobile .aprovacoes__descricao-26 {
+    margin: 4px 0 0;
+    color: #25352b;
+    font-family: "Noto Sans", sans-serif;
+    font-size: 11px;
+    line-height: 1.4;
+    font-weight: 700;
+    text-transform: none;
+    overflow-wrap: anywhere;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-72,
+  #modalAprovacaoMobile .aprovacoes__grupo-96 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 6px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__texto-48,
+  #modalAprovacaoMobile .aprovacoes__texto-35 {
+    max-width: 100%;
+    padding: 4px 7px;
+    color: #176d37;
+    background: #eef7f1;
+    border: 1px solid #d2e7d8;
+    border-radius: 7px;
+    font-size: 8px;
+    line-height: 1.25;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__descricao-27 {
+    width: 100%;
+    margin: 5px 0 0;
+    padding: 9px 10px;
+    color: #34443a;
+    background: #f9fbfa;
+    border: 1px solid #e7ece8;
+    border-radius: 9px;
+    font-size: 10px;
+    line-height: 1.5;
+    font-weight: 600;
+    font-style: normal;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  /* Decision form */
+  #modalAprovacaoMobile .aprovacao-formulario-mobile {
+    margin: 0;
+    padding: 14px;
+    background: #ffffff;
+    border: 1px solid #dfe6e1;
+    border-radius: 15px;
+    box-shadow: 0 3px 12px rgba(15, 45, 24, 0.035);
+  }
+
+  #modalAprovacaoMobile .aprovacao-formulario-mobile > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 12px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__descricao-formulario-de-decisao {
+    margin: 0;
+    padding: 0 0 10px;
+    color: #18271d;
+    border-bottom: 1px solid #e9eeeb;
+    font-family: "Lato", sans-serif;
+    font-size: 14px;
+    line-height: 1.2;
+    font-weight: 800;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-97 {
+    padding-top: 0;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__rotulo-parecer-tecnico-justificado-2 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #3e4d43;
+    font-family: "Noto Sans", sans-serif;
+    font-size: 9px;
+    line-height: 1.35;
+    font-weight: 800;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__rotulo-parecer-tecnico-justificado-2 svg {
+    width: 15px;
+    height: 15px;
+    color: #27804a;
+    flex: 0 0 15px;
+  }
+
+  #modalAprovacaoMobile .aprovacao-campo-parecer {
+    width: 100%;
+    min-height: 106px;
+    max-height: 220px;
+    margin-top: 8px;
+    padding: 11px 12px;
+    resize: vertical;
+    color: #28382e;
+    background: #fbfcfb;
+    border: 1px solid #d9e2dc;
+    border-radius: 11px;
+    box-shadow: none;
+    font-family: "Noto Sans", sans-serif;
+    font-size: 11px;
+    line-height: 1.5;
+    font-weight: 550;
+  }
+
+  #modalAprovacaoMobile .aprovacao-campo-parecer::placeholder {
+    color: #98a39c;
+  }
+
+  #modalAprovacaoMobile .aprovacao-campo-parecer:focus {
+    outline: 0;
+    background: #ffffff;
+    border-color: #6fa782;
+    box-shadow: 0 0 0 3px rgba(7, 86, 24, 0.07);
+  }
+
+  /* Fixed actions */
+  #modalAprovacaoMobile .aprovacao-acoes--mobile {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+    padding: 10px 12px max(9px, env(safe-area-inset-bottom, 0px));
+    transform: none;
+    background: rgba(255, 255, 255, 0.97);
+    border-top: 1px solid #dfe6e1;
+    box-shadow: 0 -8px 24px rgba(15, 45, 24, 0.055);
+    backdrop-filter: blur(10px);
+  }
+
+  #modalAprovacaoMobile .aprovacao-acoes__coluna {
+    gap: 6px;
+  }
+
+  #modalAprovacaoMobile .aprovacao-acoes__grupo--mobile {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    width: 100%;
+  }
+
+  #modalAprovacaoMobile .botao-aprovacao--mobile {
+    width: 100%;
+    min-width: 0;
+    min-height: 43px;
+    padding: 9px 8px;
+    border-radius: 11px;
+    font-family: "Noto Sans", sans-serif;
+    font-size: 9.5px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+    box-shadow: none;
+  }
+
+  #modalAprovacaoMobile .botao-aprovacao--mobile svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+  }
+
+  #modalAprovacaoMobile .botao-aprovacao--mobile.botao-aprovacao--negar {
+    color: #c72a43;
+    background: #fff4f5;
+    border: 1px solid #efb8c1;
+  }
+
+  #modalAprovacaoMobile .botao-aprovacao--mobile.botao-aprovacao--negar:hover:not(:disabled),
+  #modalAprovacaoMobile .botao-aprovacao--mobile.botao-aprovacao--negar:active:not(:disabled) {
+    color: #ffffff;
+    background: #d92d48;
+    border-color: #d92d48;
+  }
+
+  #modalAprovacaoMobile .botao-aprovacao--mobile.botao-aprovacao--aprovar {
+    color: #ffffff;
+    background: #075618;
+    border: 1px solid #075618;
+    box-shadow: 0 4px 11px rgba(7, 86, 24, 0.13);
+  }
+
+  #modalAprovacaoMobile .botao-aprovacao--mobile.botao-aprovacao--aprovar:hover:not(:disabled),
+  #modalAprovacaoMobile .botao-aprovacao--mobile.botao-aprovacao--aprovar:active:not(:disabled) {
+    background: #064717;
+    border-color: #064717;
+  }
+
+  #modalAprovacaoMobile .botao-aprovacao--cancelar-mobile {
+    width: auto;
+    min-height: 24px;
+    align-self: center;
+    margin: 0;
+    padding: 4px 12px;
+    color: #76827a;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    font-family: "Noto Sans", sans-serif;
+    font-size: 8.5px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    box-shadow: none;
+  }
+
+  #modalAprovacaoMobile .botao-aprovacao--cancelar-mobile:hover,
+  #modalAprovacaoMobile .botao-aprovacao--cancelar-mobile:active {
+    color: #39473e;
+    background: #f3f6f4;
+  }
+
+  #modalAprovacaoMobile .botao-aprovacao:disabled {
+    color: #94a09a;
+    background: #eef1ef;
+    border-color: #dfe5e1;
+    box-shadow: none;
+  }
+
+}
+
+@media (max-width: 360px) {
+  #modalAprovacaoMobile .aprovacoes__grupo-85 {
+    padding-left: 13px;
+    padding-right: 13px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__grupo-87 {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  #modalAprovacaoMobile .aprovacoes__descricao-id-protocolo {
+    font-size: 9px;
+  }
+
+  #modalAprovacaoMobile .botao-aprovacao--mobile {
+    font-size: 8.7px;
+  }
+}

@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
+/*
+ * Cedro IA — ponto único de entrada dos estilos.
+ *
+ * Ordem intencional:
+ * 1. legado: mantém compatibilidade durante a migração;
+ * 2. base: tokens e regras globais;
+ * 3. layout: estrutura da aplicação;
+ * 4. componentes: elementos reutilizáveis;
+ * 5. páginas: estilos específicos de cada tela.
+ *
+ * Novos estilos NÃO devem ser adicionados em estilos-legados.css.
+ */
+@import "./legado/estilos-legados.css";
+
+@import "./base/variaveis.css";
+@import "./base/globais.css";
+@import "./base/responsividade.css";
+
+@import "./estrutura/aplicacao.css";
+@import "./estrutura/barra-lateral.css";
+@import "./estrutura/barra-superior.css";
+@import "./estrutura/menu-mobile.css";
+
+@import "./componentes/marca-cedro-ia.css";
+@import "./componentes/notificacoes.css";
+@import "./componentes/componentes-comuns.css";
+@import "./componentes/fundo-laboratorio.css";
+
+@import "./paginas/paginas.css";
+@import "./paginas/dashboard.css";
+@import "./paginas/nova-solicitacao.css";
+@import "./paginas/perfil.css";
+@import "./paginas/chat.css";
+@import "./paginas/administracao.css";
+@import "./paginas/relatorios.css";
+@import "./paginas/autenticacao.css";
+
+@import "./tema/tema-plataforma.css";
+
+@import "./tema/ajustes-estruturais-ux.css";
+
+@import "./tema/refino-profissional-compacto.css";
+
+/* Inventario em refinamento pagina-a-pagina: carrega por ultimo para isolar o visual aprovado. */
+@import "./paginas/inventario.css";
+
+/* Aprovacoes em refinamento pagina-a-pagina: carrega por ultimo para isolar o visual aprovado. */
+@import "./paginas/aprovacoes.css";
+
+
+/* Mapa de IAs em refinamento pagina-a-pagina: visual isolado da referencia aprovada. */
+@import "./paginas/mapa-ias.css";
+
+/* Navegação institucional carregada por último para isolar sidebar e navbar. */
+@import "./tema/navegacao-institucional.css";
+
+/* Modal de aprovacao mobile isolado para nao afetar o desktop. */
+@import "./paginas/aprovacao-modal-mobile.css";

@@ -1,0 +1,577 @@
+/* ============================================================
+   CEDRO IA — SISTEMA VISUAL PROFISSIONAL
+   Direção: tecnologia em saúde, governança, confiança e clareza.
+   Este arquivo é a camada final de identidade; layout específico
+   permanece nos CSS de cada página/componente.
+   ============================================================ */
+
+:root {
+  --cedro-ui-verde-profundo: #011f08;
+  --cedro-ui-verde: #075618;
+  --cedro-ui-verde-vivo: #0b6e20;
+  --cedro-ui-laranja: #f29222;
+  --cedro-ui-texto: #172b1d;
+  --cedro-ui-texto-secundario: #647268;
+  --cedro-ui-borda: #d1ddd3;
+  --cedro-ui-borda-forte: #b9cdbd;
+  --cedro-ui-superficie: #ffffff;
+  --cedro-ui-superficie-suave: #f6f9f6;
+  --cedro-ui-superficie-verde: #edf5ef;
+  --cedro-ui-fundo: #e8efea;
+  --cedro-ui-sombra-1: 0 8px 22px rgba(2, 43, 13, .065);
+  --cedro-ui-sombra-2: 0 14px 34px rgba(2, 43, 13, .10);
+  --cedro-ui-sombra-3: 0 24px 54px rgba(2, 43, 13, .15);
+  --cedro-ui-foco: 0 0 0 3px rgba(7, 86, 24, .12);
+}
+
+/* ------------------------------------------------------------
+   Base da aplicação e rolagem
+   ------------------------------------------------------------ */
+
+body {
+  background: #e7eee9;
+  color: var(--cedro-ui-texto);
+}
+
+.aplicacao__area-pagina {
+  background:
+    radial-gradient(circle at 3% 0%, rgba(7, 86, 24, .055), transparent 28rem),
+    radial-gradient(circle at 98% 8%, rgba(242, 146, 34, .035), transparent 22rem),
+    linear-gradient(180deg, #edf3ef 0%, #e7eee9 100%);
+}
+
+.aplicacao__pagina-desktop:not(.aplicacao__pagina-desktop--chat) {
+  padding: 26px 28px 34px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.aplicacao__pagina-desktop:not(.aplicacao__pagina-desktop--chat)::before { display: none; }
+
+.rolagem-personalizada {
+  scrollbar-width: thin;
+  scrollbar-color: #9fb4a4 transparent;
+}
+.rolagem-personalizada::-webkit-scrollbar { width: 6px; height: 6px; }
+.rolagem-personalizada::-webkit-scrollbar-track { background: transparent; }
+.rolagem-personalizada::-webkit-scrollbar-thumb { background: #9fb4a4; border-radius: 999px; }
+.rolagem-personalizada::-webkit-scrollbar-thumb:hover { background: #79957f; }
+
+/* ------------------------------------------------------------
+   Navbar superior — verde profundo
+   ------------------------------------------------------------ */
+
+.barra-superior {
+  height: var(--cedro-altura-barra-superior);
+  padding-inline: 28px;
+  background:
+    radial-gradient(circle at 18% -120%, rgba(255,255,255,.09), transparent 42%),
+    linear-gradient(90deg, var(--cedro-navbar-inicio) 0%, var(--cedro-navbar-meio) 54%, var(--cedro-navbar-fim) 100%);
+  border-bottom: 3px solid var(--cedro-cor-laranja);
+  box-shadow: 0 8px 25px rgba(0, 29, 7, .24);
+}
+.barra-superior__decoracao { opacity: .055; }
+.barra-superior__botao-notificacoes {
+  width: 42px;
+  height: 42px;
+  color: #e7f7ea;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.13);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+.barra-superior__botao-notificacoes:hover { color: #fff; background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.2); }
+.barra-superior__perfil { border-left-color: rgba(255,255,255,.11); }
+.barra-superior__perfil-avatar { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.17); }
+.barra-superior__perfil-cargo { color: rgba(226,248,231,.76); }
+.barra-superior__popover { border: 1px solid var(--cedro-ui-borda); border-radius: 18px; box-shadow: var(--cedro-ui-sombra-3); }
+.barra-superior__popover::before { content: ""; display: block; height: 3px; background: linear-gradient(90deg, var(--cedro-ui-verde-profundo), var(--cedro-ui-verde), var(--cedro-ui-laranja)); }
+.barra-superior__popover-cabecalho { background: linear-gradient(180deg,#fbfdfb,#f2f7f3); border-bottom-color: var(--cedro-ui-borda); }
+.barra-superior__alerta:hover { background: #f1f7f2; }
+
+/* ------------------------------------------------------------
+   Cabeçalhos e hierarquia de páginas
+   ------------------------------------------------------------ */
+
+.cedro-page-premium {
+  color: var(--cedro-ui-texto);
+}
+
+.cedro-page-premium > header,
+.cedro-page-premium .inventario-cabecalho,
+.cedro-page-premium .administracao-cabecalho,
+.cedro-page-premium .aprovacao-cabecalho,
+.cedro-page-premium .relatorio-cabecalho {
+  position: relative;
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  overflow: hidden;
+  background:
+    linear-gradient(105deg, #ffffff 0%, #f2f8f3 68%, #e8f3eb 100%);
+  border: 1px solid #cad9cd;
+  border-left: 4px solid var(--cedro-ui-verde);
+  border-radius: 17px;
+  box-shadow: var(--cedro-ui-sombra-1);
+}
+
+.cedro-page-premium > header::after,
+.cedro-page-premium .inventario-cabecalho::after,
+.cedro-page-premium .administracao-cabecalho::after,
+.cedro-page-premium .aprovacao-cabecalho::after,
+.cedro-page-premium .relatorio-cabecalho::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 94px;
+  height: 3px;
+  background: var(--cedro-ui-laranja);
+}
+
+.cedro-page-premium h1,
+.cedro-page-premium h2,
+.cedro-page-premium h3,
+.cedro-page-premium h4 {
+  color: var(--cedro-ui-texto) !important;
+}
+.cedro-page-premium h1 { font-size: clamp(22px, 2vw, 28px) !important; font-weight: 900 !important; letter-spacing: -.035em !important; }
+.cedro-page-premium h2 { letter-spacing: -.025em !important; }
+.cedro-page-premium p { color: var(--cedro-ui-texto-secundario); }
+
+/* ------------------------------------------------------------
+   Superfícies, cards e containers
+   ------------------------------------------------------------ */
+
+.cedro-card-premium,
+.painel-cartao,
+.inventario-card,
+.inventario-filtros,
+.inventario-item,
+.aprovacao-fila,
+.aprovacao-item-fila,
+.administracao-cartao,
+.administracao-filtros,
+.administracao-tabela-conteiner,
+.relatorio-secao,
+.setores__grupo-resumo-geral,
+.mapa-ias__elemento-2 {
+  background: linear-gradient(160deg, #ffffff 0%, #f7faf7 100%) !important;
+  border-color: var(--cedro-ui-borda) !important;
+  border-radius: 17px !important;
+  box-shadow: var(--cedro-ui-sombra-1) !important;
+}
+
+@media (hover: hover) {
+  .cedro-card-premium:hover,
+  .painel-cartao:hover,
+  .inventario-item:hover,
+  .aprovacao-item-fila:hover,
+  .administracao-cartao:hover,
+  .mapa-ias__elemento-2:hover {
+    border-color: var(--cedro-ui-borda-forte) !important;
+    box-shadow: var(--cedro-ui-sombra-2) !important;
+  }
+}
+
+/* ------------------------------------------------------------
+   Abas e filtros segmentados
+   ------------------------------------------------------------ */
+
+.cedro-abas,
+.cedro-segmented {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 5px;
+  overflow-x: auto;
+  background: #e7eee9;
+  border: 1px solid #cbd8ce;
+  border-radius: 14px;
+  box-shadow: inset 0 1px 2px rgba(2,43,13,.04);
+  scrollbar-width: none;
+}
+.cedro-abas::-webkit-scrollbar,
+.cedro-segmented::-webkit-scrollbar { display: none; }
+
+.cedro-aba {
+  min-height: 38px;
+  padding: 9px 15px !important;
+  flex-shrink: 0;
+  color: #526459 !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: .015em !important;
+  box-shadow: none !important;
+}
+.cedro-aba:hover { color: var(--cedro-ui-verde) !important; background: rgba(255,255,255,.72) !important; }
+.cedro-aba--ativa {
+  color: #fff !important;
+  background: linear-gradient(135deg, #03350d 0%, #075618 72%, #0a641d 100%) !important;
+  border-color: rgba(1,26,7,.18) !important;
+  box-shadow: 0 6px 14px rgba(2,43,13,.18) !important;
+}
+.cedro-aba--ativa svg { color: #fff !important; }
+
+/* ------------------------------------------------------------
+   Campos e formulários
+   ------------------------------------------------------------ */
+
+.cedro-page-premium input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.cedro-page-premium select,
+.cedro-page-premium textarea,
+.cadastro-campo {
+  color: #172b1d !important;
+  background: #fbfdfb !important;
+  border-color: #c8d6ca !important;
+  border-radius: 12px !important;
+  box-shadow: inset 0 1px 2px rgba(2,43,13,.025) !important;
+}
+.cedro-page-premium input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):hover,
+.cedro-page-premium select:hover,
+.cedro-page-premium textarea:hover,
+.cadastro-campo--editavel:hover { background: #fff !important; border-color: #aebfae !important; }
+.cedro-page-premium input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.cedro-page-premium select:focus,
+.cedro-page-premium textarea:focus,
+.cadastro-campo--editavel:focus {
+  outline: 0 !important;
+  background: #fff !important;
+  border-color: var(--cedro-ui-verde) !important;
+  box-shadow: var(--cedro-ui-foco) !important;
+}
+.cedro-page-premium label { color: #37523e !important; font-size: 9.5px !important; font-weight: 850 !important; letter-spacing: .055em !important; text-transform: uppercase; }
+
+.cadastro-campo {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid #c8d6ca;
+  outline: 0;
+  font-size: 13px;
+  font-weight: 650;
+  transition: border-color var(--cedro-transicao-padrao), box-shadow var(--cedro-transicao-padrao), background-color var(--cedro-transicao-padrao);
+}
+.cadastro-campo--textarea { min-height: 108px; resize: vertical; }
+.cadastro-campo--preenchido { border-color: #9eb9a4 !important; }
+.cadastro-campo--bloqueado { color: #718078 !important; background: #e9eeea !important; border-color: #d3dcd5 !important; cursor: not-allowed; }
+.cadastro-campo--secundario { min-height: 46px; }
+
+.cadastro-secao {
+  background: linear-gradient(180deg,#fff 0%,#f8faf8 100%) !important;
+  border: 1px solid var(--cedro-ui-borda) !important;
+  border-radius: 18px !important;
+  box-shadow: var(--cedro-ui-sombra-1) !important;
+}
+.cadastro-cabecalho { padding-bottom: 14px !important; border-bottom-color: #dbe4dc !important; }
+.cadastro-etapas { background: linear-gradient(180deg,#f5f9f6,#edf4ef) !important; border-color: #cdd9cf !important; }
+.cadastro__grupo-nova-solicitacao { color: #fff !important; background: linear-gradient(90deg,#03350d,#075618) !important; border-radius: 10px; padding: 8px 10px; }
+.cadastro-info--cedro { border-left-color: #075618 !important; }
+.cadastro-info--teal { border-left-color: #17867b !important; }
+.cadastro-info--indigo { border-left-color: #5d62b8 !important; }
+.cadastro-info--amber { border-left-color: #d88a1c !important; }
+.cadastro-info--blue { border-left-color: #3c75b8 !important; }
+.cadastro-info--fuchsia { border-left-color: #a8549e !important; }
+.cadastro-info--rose { border-left-color: #bb4d5c !important; }
+.cadastro-info--cyan { border-left-color: #2f8ea1 !important; }
+.cadastro-info--slate { border-left-color: #718078 !important; }
+
+/* ------------------------------------------------------------
+   Botões — linguagem corporativa consistente
+   ------------------------------------------------------------ */
+
+.cedro-page-premium button { font-family: inherit; }
+
+.cedro-botao-primario,
+.inventario__botao-novo-registro,
+.cadastro__botao-salvar,
+.aprovacoes__botao-registrar-parecer,
+.aprovacoes__botao-7,
+.setores__botao-cadastrar-setor,
+[class*="administracao__botao-salvar"],
+[class*="administracao__botao-adicionar"] {
+  color: #fff !important;
+  background: linear-gradient(135deg, #03350d 0%, #075618 72%, #09651c 100%) !important;
+  border-color: #03350d !important;
+  box-shadow: 0 7px 17px rgba(2,43,13,.17) !important;
+}
+.cedro-botao-primario:hover:not(:disabled),
+.inventario__botao-novo-registro:hover:not(:disabled),
+.aprovacoes__botao-registrar-parecer:hover:not(:disabled),
+.aprovacoes__botao-7:hover:not(:disabled),
+.setores__botao-cadastrar-setor:hover:not(:disabled) {
+  background: linear-gradient(135deg,#02270a,#064d15 68%,#075618) !important;
+  box-shadow: 0 10px 23px rgba(2,43,13,.22) !important;
+}
+.inventario__botao-exportar-inventario,
+.inventario__botao-ver-detalhes,
+.aprovacoes__botao-ver-detalhes,
+.relatorio__botao-voltar-ao-inventario,
+.cedro-botao-secundario {
+  color: #31523a !important;
+  background: #fff !important;
+  border-color: #bfcfc2 !important;
+}
+.inventario__botao-cancelar-solicitacao { color: #9b2f28 !important; background: #fff6f5 !important; border-color: #ecc8c4 !important; }
+
+/* ------------------------------------------------------------
+   Tabelas
+   ------------------------------------------------------------ */
+
+.inventario-tabela,
+.administracao-conteiner table,
+.relatorio-container table,
+.cartao-tabela__tabela {
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+.inventario-tabela thead,
+.administracao-conteiner table thead,
+.relatorio-container table thead,
+.cartao-tabela__tabela thead {
+  background: linear-gradient(180deg,#eef5ef,#e6eee8) !important;
+}
+.inventario-tabela th,
+.administracao-conteiner table th,
+.relatorio-container table th,
+.cartao-tabela__tabela th {
+  color: #3d5744 !important;
+  border-bottom-color: #cddacf !important;
+  font-size: 9px !important;
+  font-weight: 900 !important;
+  letter-spacing: .055em !important;
+  text-transform: uppercase;
+}
+.inventario-tabela tbody tr:nth-child(even),
+.administracao-conteiner table tbody tr:nth-child(even) { background: #fbfcfb; }
+.inventario-tabela tbody tr:hover,
+.administracao-conteiner table tbody tr:hover { background: #f1f7f2 !important; }
+
+/* ------------------------------------------------------------
+   Modais / popups
+   ------------------------------------------------------------ */
+
+.cedro-modal-overlay {
+  background: rgba(1, 23, 6, .64) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.cedro-modal-painel {
+  overflow: hidden;
+  background: #fff !important;
+  border: 1px solid #b9cbbd !important;
+  border-radius: 20px !important;
+  box-shadow: 0 30px 75px rgba(0,25,6,.28) !important;
+}
+.cedro-modal-painel::before { content: ""; display: block; height: 4px; background: linear-gradient(90deg,#02270a,#075618 70%,#f29222); }
+.cedro-modal-cabecalho { background: linear-gradient(180deg,#f8fbf8,#eef5ef) !important; border-bottom-color: #d2ded4 !important; }
+.cedro-modal-rodape { background: #f5f8f5 !important; border-top-color: #d4ded6 !important; }
+
+/* ------------------------------------------------------------
+   Dashboard
+   ------------------------------------------------------------ */
+
+.painel-indicadores { gap: 14px !important; }
+.painel-resumo { gap: 16px !important; }
+.painel-grafico,
+.painel-grafico-status { position: relative; overflow: hidden; }
+.painel-grafico::before,
+.painel-grafico-status::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: linear-gradient(180deg,#075618,#42a856); }
+.painel__titulo-secao-evolucao-do-inventario,
+.painel__titulo-bloco-status-de-aprovacao { color: #193c24 !important; font-weight: 900 !important; }
+
+/* ------------------------------------------------------------
+   Inventário
+   ------------------------------------------------------------ */
+
+.inventario-resumo { gap: 12px !important; }
+.inventario-card { position: relative; overflow: hidden; border-left: 3px solid #b9d0bd !important; }
+.inventario-card:first-child { border-left-color: #075618 !important; }
+.inventario-filtros { padding: 14px !important; background: linear-gradient(180deg,#f9fbf9,#f1f6f2) !important; }
+.inventario-status { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border: 1px solid #d4ddd6; border-radius: 999px; color: #647168; background: #f1f4f2; font-size: 9px; font-weight: 850; white-space: nowrap; }
+.inventario-status__ponto { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.inventario-status--aprovado { color: #08631c; background: #e6f5e9; border-color: #bfe1c5; }
+.inventario-status--restricoes { color: #95610f; background: #fff5df; border-color: #efd6a2; }
+.inventario-status--negado { color: #a42d25; background: #fff0ef; border-color: #eec6c3; }
+.inventario-status--avaliacao { color: #4257a0; background: #f0f2ff; border-color: #cdd3f0; }
+.inventario-status--teste { color: #167484; background: #eaf8fa; border-color: #bfe0e5; }
+.inventario-status--suspenso { color: #58655d; background: #edf1ee; border-color: #d5ddd7; }
+.inventario-status--cancelado { color: #9a560a; background: #fff2e3; border-color: #efca99; }
+.inventario-fluxo__ponto { display: inline-block; width: 10px; height: 10px; border: 2px solid #cdd8cf; border-radius: 50%; background: #edf2ee; }
+.inventario-fluxo__ponto--aprovado { background: #15802b; border-color: #0d6c20; }
+.inventario-fluxo__ponto--negado { background: #c3483f; border-color: #a9342c; }
+.inventario-fluxo__ponto--atual { background: #f0a228; border-color: #cb7e0b; box-shadow: 0 0 0 4px rgba(240,162,40,.15); }
+
+/* ------------------------------------------------------------
+   Aprovações e configuração do fluxo
+   ------------------------------------------------------------ */
+
+.aprovacao-fila { padding: 17px !important; }
+.aprovacao-item-fila { border-left: 3px solid #c3d4c6 !important; }
+.aprovacao-item-fila:hover { border-left-color: #075618 !important; }
+.aprovacoes__botao-registrar-parecer { min-height: 38px; border-radius: 10px !important; font-weight: 850 !important; }
+.aprovacoes__grupo-41 { gap: 15px !important; }
+.aprovacoes__grupo-42 {
+  position: relative;
+  padding: 18px !important;
+  overflow: hidden;
+  background: linear-gradient(150deg,#fff 0%,#f6faf7 100%) !important;
+  border: 1px solid #cad8cd !important;
+  border-radius: 16px !important;
+  box-shadow: var(--cedro-ui-sombra-1) !important;
+}
+.aprovacoes__grupo-42::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: linear-gradient(180deg,#075618,#42a856); }
+.aprovacoes__grupo-44 { color: #fff !important; background: linear-gradient(135deg,#03350d,#075618) !important; border-color: #075618 !important; box-shadow: 0 5px 12px rgba(2,43,13,.15); }
+.configuracao-fluxo__etapa-identificacao { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 4px; padding: 3px 0 6px; }
+.configuracao-fluxo__etapa-nome { color: #14361e; font-size: 14px; font-weight: 900; letter-spacing: -.015em; }
+.configuracao-fluxo__etapa-legenda { color: #78857c; font-size: 8.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.aprovacoes__grupo-45 { padding-top: 14px !important; }
+.aprovacoes__botao-7 { min-height: 48px; border-radius: 12px !important; letter-spacing: .025em; }
+
+/* ------------------------------------------------------------
+   Administração e setores
+   ------------------------------------------------------------ */
+
+.administracao-indicadores { gap: 12px !important; }
+.administracao-cartao { --admin-acento: #5d7162; position: relative; overflow: hidden; border-top: 3px solid var(--admin-acento) !important; }
+.administracao-cartao--pendente { --admin-acento: #d88a1c; }
+.administracao-cartao--aprovado { --admin-acento: #13802b; }
+.administracao-cartao--negado { --admin-acento: #bd4037; }
+.administracao-cartao__icone { color: var(--admin-acento) !important; background: #eef4ef !important; border: 1px solid #d8e2da; border-radius: 11px; }
+.administracao__etapa-status--aguardando,
+.administracao__etapa-status--negada,
+.administracao__etapa-status--aprovada,
+.administracao__etapa-status--atual { display: grid; place-items: center; border: 1px solid; border-radius: 50%; }
+.administracao__etapa-status--aguardando { color: #849188; background: #edf1ee; border-color: #d0d9d2; }
+.administracao__etapa-status--negada { color: #fff; background: #ba3c34; border-color: #9e3029; }
+.administracao__etapa-status--aprovada { color: #fff; background: #0b7122; border-color: #075618; }
+.administracao__etapa-status--atual { color: #4a3107; background: #f4b23e; border-color: #d68e17; box-shadow: 0 0 0 4px rgba(242,146,34,.14); }
+.administracao__metrica-valor--aprovado { color: #087024 !important; }
+.administracao__metrica-valor--pendente { color: #a2640c !important; }
+.administracao__metrica-valor--negado { color: #a9342c !important; }
+.administracao__metrica-valor--total { color: #34493a !important; }
+.administracao__botao-5 { color: #fff !important; background: #075618 !important; border-color: #075618 !important; }
+.setores__grupo-resumo-geral { padding: 18px !important; }
+.setores__botao-cadastrar-setor { min-height: 42px; border-radius: 11px !important; }
+
+.controles-sistema__botao--basico { color: #356a99 !important; background: #eef6fc !important; border-color: #c9ddec !important; }
+.controles-sistema__botao--restrito,
+.controles-sistema__botao--otimizado { color: #075618 !important; background: #edf7ef !important; border-color: #c5dec9 !important; }
+.controles-sistema__botao--auditoria,
+.controles-sistema__botao--alerta { color: #9b620c !important; background: #fff6e5 !important; border-color: #efd7aa !important; }
+.controles-sistema__botao--manutencao { color: #a63129 !important; background: #fff1ef !important; border-color: #ecc4c0 !important; }
+
+/* ------------------------------------------------------------
+   Mapa / relatórios
+   ------------------------------------------------------------ */
+
+.relatorio-mapa-setores .mapa-ias__grupo-frentes-areas-2,
+.relatorio-mapa-setores .mapa-ias__grupo-solucoes-cadastradas,
+.relatorio-mapa-setores .mapa-ias__grupo-aprovadas,
+.relatorio-mapa-setores .mapa-ias__grupo-pendentes { border-radius: 12px !important; box-shadow: inset 0 0 0 1px rgba(2,43,13,.025); }
+.mapa-ias__elemento-2 { border-left: 3px solid #aac5af !important; }
+.mapa-ias__elemento-2:hover { border-left-color: #075618 !important; }
+
+.relatorio-status,
+.relatorio-risco { --status-cor: #5f6e64; display: inline-flex; align-items: center; gap: 6px; color: var(--status-cor) !important; background: #f0f3f1 !important; border: 1px solid #d3dcd5 !important; border-radius: 999px !important; }
+.relatorio-status--aprovado { --status-cor: #087024; background: #e7f6ea !important; border-color: #bee0c4 !important; }
+.relatorio-status--restricoes { --status-cor: #96600d; background: #fff5df !important; border-color: #eed29a !important; }
+.relatorio-status--avaliacao { --status-cor: #4b58a1; background: #f0f2ff !important; border-color: #ccd1ed !important; }
+.relatorio-status--teste { --status-cor: #167384; background: #eaf8fa !important; border-color: #bde1e6 !important; }
+.relatorio-status--suspenso { --status-cor: #5a665e; background: #edf1ee !important; border-color: #d4ddd6 !important; }
+.relatorio-status--cancelado { --status-cor: #99580d; background: #fff2e3 !important; border-color: #efcc9c !important; }
+.relatorio-status--negado { --status-cor: #a8332a; background: #fff0ef !important; border-color: #ebc2bf !important; }
+.relatorio-status__ponto,
+.relatorio-status__ponto--aprovado,
+.relatorio-status__ponto--restricoes,
+.relatorio-status__ponto--avaliacao,
+.relatorio-status__ponto--teste,
+.relatorio-status__ponto--suspenso,
+.relatorio-status__ponto--cancelado,
+.relatorio-status__ponto--negado { width: 7px; height: 7px; border-radius: 50%; background: var(--status-cor, #5f6e64); }
+.relatorio-status__ponto--aprovado { background:#13802b; }.relatorio-status__ponto--restricoes{background:#d08a1c}.relatorio-status__ponto--avaliacao{background:#5766b6}.relatorio-status__ponto--teste{background:#25899b}.relatorio-status__ponto--suspenso{background:#68766c}.relatorio-status__ponto--cancelado{background:#e18820}.relatorio-status__ponto--negado{background:#bd4239}
+.relatorio-status__pulso { width: 13px; height: 13px; border-radius: 50%; opacity: .14; }
+.relatorio-status__pulso--aprovado { background:#13802b; }.relatorio-status__pulso--restricoes{background:#d08a1c}.relatorio-status__pulso--avaliacao{background:#5766b6}.relatorio-status__pulso--teste{background:#25899b}.relatorio-status__pulso--suspenso{background:#68766c}.relatorio-status__pulso--cancelado{background:#e18820}.relatorio-status__pulso--negado{background:#bd4239}
+.relatorio-risco--baixo,.relatorio-risco-texto--baixo{color:#087024!important;background:#e8f6eb!important;border-color:#c3e1c8!important}.relatorio-risco--medio,.relatorio-risco-texto--medio{color:#95600d!important;background:#fff5df!important;border-color:#efd6a2!important}.relatorio-risco--alto,.relatorio-risco-texto--alto{color:#b05b12!important;background:#fff0df!important;border-color:#efc99d!important}.relatorio-risco--critico,.relatorio-risco-texto--critico{color:#9d2a23!important;background:#fff0ef!important;border-color:#eac2be!important}.relatorio-risco--nao-avaliado,.relatorio-risco-texto--nao-avaliado{color:#66736a!important;background:#eff3f0!important;border-color:#d9e1da!important}
+.relatorio-etapa { border-left: 3px solid #cad5cc !important; background: #f8faf8 !important; }
+.relatorio-etapa--aprovada { border-left-color:#13802b!important;background:#edf8ef!important;color:#075618!important }.relatorio-etapa--negada{border-left-color:#bd4239!important;background:#fff3f2!important;color:#8f2922!important}.relatorio-etapa--atual{border-left-color:#df901d!important;background:#fff8ea!important;color:#80500b!important;box-shadow:0 0 0 2px rgba(242,146,34,.1)!important}.relatorio-etapa__icone{color:inherit!important;background:rgba(255,255,255,.7)!important;border:1px solid currentColor!important}.relatorio-etapa__badge{color:inherit!important;background:rgba(255,255,255,.65)!important;border:1px solid currentColor!important}
+
+/* ------------------------------------------------------------
+   Chat
+   ------------------------------------------------------------ */
+
+.pagina-chat,
+.chat-container { background: #e8efea !important; }
+.chat__lista-conversas,
+.chat__mensagens,
+.chat-nova-conversa__lista { scrollbar-color: #9bb19f transparent; }
+.chat-avatar { display: grid; place-items: center; overflow: hidden; flex: 0 0 auto; border-radius: 50%; transition: transform var(--cedro-transicao-padrao); }
+.chat-avatar--pequeno { width: 32px; height: 32px; }
+.chat-avatar--medio { width: 36px; height: 36px; }
+.chat-avatar--grande { width: 40px; height: 40px; }
+.chat-avatar--principal { width: 42px; height: 42px; }
+.chat__online-agora-contato:hover .chat-avatar--grande { transform: scale(1.045); }
+.chat-avatar__iniciais { font-size: 10px; font-weight: 750; }
+.chat-avatar__iniciais--destaque { font-weight: 900; }
+.chat__mensagens { background: linear-gradient(180deg,#f8faf8,#eef4ef) !important; }
+.chat__composer-campo { background:#fff !important; border-color:#c5d4c8 !important; }
+
+/* ------------------------------------------------------------
+   Perfil
+   ------------------------------------------------------------ */
+
+.cedro-profile-hero {
+  background:
+    radial-gradient(circle at 88% 10%, rgba(255,255,255,.09), transparent 26%),
+    linear-gradient(105deg,#02270a 0%,#03440c 55%,#075618 100%) !important;
+  border-color: rgba(255,255,255,.08) !important;
+  box-shadow: 0 16px 36px rgba(1,31,8,.19) !important;
+}
+.cedro-profile-hero h1,
+.cedro-profile-hero h2,
+.cedro-profile-hero h3,
+.cedro-profile-hero p { color: #fff !important; }
+.perfil__elemento-resumo-do-perfil { border-top: 3px solid #075618 !important; }
+
+/* ------------------------------------------------------------
+   Toasts da aplicação
+   ------------------------------------------------------------ */
+
+.aplicacao__notificacoes { position: fixed; right: 22px; bottom: 22px; z-index: 90; display: flex; width: min(390px, calc(100vw - 32px)); flex-direction: column; gap: 10px; pointer-events: none; }
+.aplicacao-toast { --toast-cor:#52675a; --toast-suave:#edf2ee; position:relative; display:flex; gap:11px; padding:14px 38px 16px 14px; overflow:hidden; color:#243b2a; background:#fff; border:1px solid #d2ddd4; border-radius:15px; box-shadow:0 18px 42px rgba(1,31,8,.16); pointer-events:auto; }
+.aplicacao-toast--sucesso { --toast-cor:#0b7725; --toast-suave:#e6f5e9; }.aplicacao-toast--aviso{--toast-cor:#d18417;--toast-suave:#fff2df}.aplicacao-toast--chat{--toast-cor:#075618;--toast-suave:#e6f2e8}.aplicacao-toast--informacao{--toast-cor:#52675a;--toast-suave:#edf2ee}
+.aplicacao-toast__acento { position:absolute; inset:0 auto 0 0; width:4px; background:var(--toast-cor); }
+.aplicacao-toast__icone { display:grid; place-items:center; width:36px; height:36px; flex:0 0 auto; color:var(--toast-cor); background:var(--toast-suave); border-radius:11px; }
+.aplicacao-toast__conteudo { min-width:0; flex:1; }.aplicacao-toast__cabecalho{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.aplicacao-toast__tipo{color:var(--toast-cor);font-size:8.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.aplicacao-toast__titulo{margin:2px 0 0;color:#18351f!important;font-size:12px;font-weight:900}.aplicacao-toast__mensagem{margin:7px 0 0;color:#617067;font-size:10.5px;line-height:1.45}.aplicacao-toast__fechar{position:absolute;top:8px;right:8px;display:grid;place-items:center;width:26px;height:26px;color:#78857c;background:transparent;border:0;border-radius:8px;cursor:pointer}.aplicacao-toast__fechar:hover{background:#eff3f0;color:#243b2a}.aplicacao-toast__acoes{display:flex;justify-content:flex-end;margin-top:10px}.aplicacao-toast__acao{padding:6px 10px;color:#fff;background:var(--toast-cor);border:0;border-radius:8px;font-size:9px;font-weight:850;text-transform:uppercase;cursor:pointer}.aplicacao-toast__progresso{position:absolute;right:0;bottom:0;left:0;height:3px;background:#edf1ee}.aplicacao-toast__progresso>span{display:block;height:100%;background:var(--toast-cor)}
+
+/* ------------------------------------------------------------
+   Responsividade
+   ------------------------------------------------------------ */
+
+@media (max-width: 1023px) {
+  .aplicacao__pagina-mobile { background: transparent; }
+  .cedro-page-premium > header,
+  .cedro-page-premium .inventario-cabecalho,
+  .cedro-page-premium .administracao-cabecalho,
+  .cedro-page-premium .aprovacao-cabecalho,
+  .cedro-page-premium .relatorio-cabecalho { padding: 15px 16px; border-radius: 15px; }
+}
+
+@media (max-width: 767px) {
+  .aplicacao__notificacoes { right: 16px; bottom: 82px; }
+  .cedro-abas { width: 100%; }
+  .cedro-aba { flex: 1 0 auto; }
+  .chat-avatar--principal { width: 38px; height: 38px; }
+  .aprovacoes__grupo-42 { padding: 14px !important; }
+  .cadastro-secao { border-radius: 15px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}

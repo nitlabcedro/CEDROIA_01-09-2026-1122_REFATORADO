@@ -1,0 +1,614 @@
+/* ============================================================
+   CEDRO IA — BARRA LATERAL
+   Arquivo responsável apenas pela sidebar desktop.
+   Convenção: bloco__elemento--estado
+   ============================================================ */
+
+.barra-lateral {
+  position: relative;
+  z-index: 40;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100vh;
+  overflow: visible;
+  color: var(--cedro-sidebar-texto);
+  background:
+    radial-gradient(circle at 12% 5%, rgba(255, 255, 255, .075), transparent 28%),
+    linear-gradient(
+      90deg,
+      var(--cedro-sidebar-fundo-inicio) 0%,
+      var(--cedro-sidebar-fundo-meio) 48%,
+      var(--cedro-sidebar-fundo-fim) 100%
+    );
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--cedro-sidebar-sombra);
+  user-select: none;
+}
+
+.barra-lateral::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.28;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 52%);
+}
+
+.barra-lateral::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  width: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.22),
+    rgba(255, 255, 255, 0.04) 45%,
+    rgba(255, 255, 255, 0.12)
+  );
+}
+
+/* ------------------------------------------------------------
+   Cabeçalho / marca
+   ------------------------------------------------------------ */
+
+.barra-lateral__cabecalho {
+  position: relative;
+  z-index: 2;
+  display: none;
+  height: 96px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--cedro-sidebar-borda);
+  background: rgba(2, 53, 16, 0.16);
+}
+
+.barra-lateral__cabecalho-conteudo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: 0 16px;
+}
+
+.barra-lateral__marca-expandida,
+.barra-lateral__marca-recolhida {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.barra-lateral__marca-expandida {
+  justify-content: space-between;
+}
+
+.barra-lateral__marca-recolhida {
+  justify-content: center;
+}
+
+.barra-lateral__botao-recolher-topo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    color var(--cedro-transicao-rapida),
+    background-color var(--cedro-transicao-rapida),
+    border-color var(--cedro-transicao-rapida),
+    transform var(--cedro-transicao-rapida);
+}
+
+.barra-lateral__botao-recolher-topo:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+/* ------------------------------------------------------------
+   Navegação
+   ------------------------------------------------------------ */
+
+.barra-lateral__navegacao {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  margin-top: 12px;
+  padding: 0 12px 14px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.barra-lateral__navegacao::-webkit-scrollbar {
+  width: 5px;
+}
+
+.barra-lateral__navegacao::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.barra-lateral__navegacao::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+}
+
+.barra-lateral__grupo {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.barra-lateral__separador {
+  height: 1px;
+  margin: 12px 8px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.16) 18%,
+    rgba(255, 255, 255, 0.16) 82%,
+    transparent
+  );
+}
+
+.barra-lateral__grupo-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 30px;
+  padding: 4px 10px;
+  color: var(--cedro-sidebar-texto-secundario);
+  background: transparent;
+  border: 0;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--cedro-transicao-rapida);
+}
+
+.barra-lateral__grupo-cabecalho:hover {
+  color: #fff;
+}
+
+.barra-lateral__grupo-itens {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* ------------------------------------------------------------
+   Item de navegação
+   ------------------------------------------------------------ */
+
+.barra-lateral__item-container {
+  position: relative;
+  
+}
+
+.barra-lateral__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 13px;
+  overflow: hidden;
+  color: rgba(245, 255, 247, 0.8);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    color var(--cedro-transicao-rapida),
+    background-color var(--cedro-transicao-rapida),
+    border-color var(--cedro-transicao-rapida),
+    transform var(--cedro-transicao-rapida),
+    box-shadow var(--cedro-transicao-rapida);
+}
+
+.barra-lateral__item:hover {
+  color: #fff;
+  background: var(--cedro-sidebar-hover);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.barra-lateral__item:active {
+  transform: scale(0.985);
+  
+}
+
+.barra-lateral__item--recolhido {
+  width: 50px;
+  min-height: 50px;
+  margin-inline: auto;
+  padding: 0;
+  justify-content: center;
+  border-radius: 15px;
+}
+
+.barra-lateral__item--ativo {
+  color: #fff;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .15), rgba(255, 255, 255, .075));
+  border-color: rgba(255, 255, 255, .18);
+  box-shadow: inset 3px 0 0 var(--cedro-cor-laranja), 0 8px 18px rgba(0, 20, 5, .13);
+}
+
+
+.barra-lateral__item--ativo:hover {
+  color: #fff;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .10));
+  border-color: rgba(255, 255, 255, .24);
+}
+
+
+.barra-lateral__indicador-ativo {
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: 5px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--cedro-cor-laranja);
+  pointer-events: none;
+}
+
+.barra-lateral__item--recolhido .barra-lateral__indicador-ativo {
+  top: auto;
+  right: 12px;
+  bottom: 4px;
+  left: 12px;
+  width: auto;
+  height: 3px;
+}
+
+.barra-lateral__item-icone {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: rgba(236, 249, 239, 0.72);
+  transition: color var(--cedro-transicao-rapida), transform var(--cedro-transicao-rapida);
+}
+
+.barra-lateral__item:hover .barra-lateral__item-icone {
+  color: #fff;
+  transform: translateX(1px);
+}
+
+.barra-lateral__item--ativo .barra-lateral__item-icone,
+.barra-lateral__item--ativo:hover .barra-lateral__item-icone {
+  color: #ffffff;
+}
+
+.barra-lateral__item-texto {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  margin-left: 13px;
+  overflow: hidden;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ------------------------------------------------------------
+   Badges / notificações
+   ------------------------------------------------------------ */
+
+.barra-lateral__badge {
+  position: relative;
+  z-index: 1;
+  margin-left: auto;
+  padding: 4px 8px;
+  color: var(--cedro-cor-verde-950);
+  background: #dff2e4;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.barra-lateral__item--ativo .barra-lateral__badge {
+  color: #fff;
+  background: var(--cedro-cor-verde-900);
+  border-color: var(--cedro-cor-verde-900);
+}
+
+.barra-lateral__badge--alerta {
+  color: #5c3600;
+  background: #ffca70;
+  border-color: rgba(255, 202, 112, 0.55);
+}
+
+.barra-lateral__item--ativo .barra-lateral__badge--alerta {
+  color: #5c3600;
+  background: #ffd58d;
+  border-color: #ffd58d;
+}
+
+.barra-lateral__badge--novo {
+  color: #fff;
+  background: var(--cedro-cor-laranja);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.barra-lateral__item--ativo .barra-lateral__badge--novo {
+  color: #fff;
+  background: var(--cedro-cor-laranja);
+  border-color: var(--cedro-cor-laranja);
+}
+
+.barra-lateral__ponto-badge {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  z-index: 3;
+  width: 9px;
+  height: 9px;
+  background: #ffb33c;
+  border: 2px solid var(--cedro-sidebar-fundo-meio);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ------------------------------------------------------------
+   Tooltip do modo recolhido
+   ------------------------------------------------------------ */
+
+.barra-lateral__tooltip {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  z-index: 50;
+  min-width: 190px;
+  max-width: 250px;
+  padding: 12px 13px;
+  transform: translateY(-50%);
+  color: var(--cedro-cor-texto);
+  background: #fff;
+  border: 1px solid #d9e6dd;
+  border-radius: 14px;
+  box-shadow: 0 14px 36px rgba(3, 43, 13, 0.17);
+  pointer-events: none;
+  white-space: normal;
+}
+
+.barra-lateral__tooltip::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  transform: translateY(-50%) rotate(45deg);
+  background: #fff;
+  border-bottom: 1px solid #d9e6dd;
+  border-left: 1px solid #d9e6dd;
+}
+
+.barra-lateral__tooltip-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 5px;
+  color: var(--cedro-cor-verde-950);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.barra-lateral__tooltip-descricao {
+  margin: 0;
+  color: var(--cedro-cor-texto-secundario);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* ------------------------------------------------------------
+   Rodapé / perfil
+   ------------------------------------------------------------ */
+
+.barra-lateral__rodape {
+  position: relative;
+  z-index: 2;
+  display: none;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: auto;
+  padding: 12px;
+  border-top: 1px solid var(--cedro-sidebar-borda);
+  background: var(--cedro-sidebar-rodape);
+}
+
+.barra-lateral__botao-recolher {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 9px;
+  color: rgba(245, 255, 247, 0.74);
+  background: rgba(255, 255, 255, 0.065);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    color var(--cedro-transicao-rapida),
+    background-color var(--cedro-transicao-rapida),
+    border-color var(--cedro-transicao-rapida);
+}
+
+.barra-lateral__botao-recolher:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.11);
+  border-color: rgba(255, 255, 255, 0.17);
+}
+
+.barra-lateral__botao-recolher-conteudo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.barra-lateral__atalho {
+  padding: 2px 6px;
+  color: rgba(255, 255, 255, 0.68);
+  background: rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  font-family: monospace;
+  font-size: 8.5px;
+  font-weight: 700;
+}
+
+.barra-lateral__perfil {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+  min-height: 48px;
+  padding: 5px 7px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 13px;
+  transition: background-color var(--cedro-transicao-rapida);
+}
+
+.barra-lateral__perfil:hover {
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.barra-lateral__perfil--recolhido {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.barra-lateral__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  overflow: hidden;
+  color: var(--cedro-cor-verde-950);
+  background: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.13);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.barra-lateral__avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.barra-lateral__perfil-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.barra-lateral__perfil-nome,
+.barra-lateral__perfil-papel {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.barra-lateral__perfil-nome {
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.barra-lateral__perfil-papel {
+  margin-top: 1px;
+  color: var(--cedro-sidebar-texto-secundario);
+  font-size: 9.5px;
+  text-transform: capitalize;
+}
+
+/* ------------------------------------------------------------
+   Estado recolhido
+   ------------------------------------------------------------ */
+
+.barra-lateral--recolhida .barra-lateral__navegacao {
+  padding-inline: 10px;
+}
+
+.barra-lateral--recolhida .barra-lateral__grupo {
+  margin-bottom: 8px;
+}
+
+.barra-lateral--recolhida .barra-lateral__separador {
+  margin: 10px 12px;
+}
+
+.barra-lateral--recolhida .barra-lateral__botao-recolher {
+  justify-content: center;
+  width: 48px;
+  margin-inline: auto;
+}
+
+/* ------------------------------------------------------------
+   Desktop
+   ------------------------------------------------------------ */
+
+@media (min-width: 768px) {
+  .barra-lateral {
+    position: static;
+  }
+
+  .barra-lateral__cabecalho,
+  .barra-lateral__rodape {
+    display: flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barra-lateral *,
+  .barra-lateral *::before,
+  .barra-lateral *::after {
+    transition-duration: 0.01ms !important;
+  }
+}

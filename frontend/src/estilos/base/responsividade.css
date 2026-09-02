@@ -1,0 +1,90 @@
+/* Proteções responsivas globais da interface Cedro IA. */
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+canvas,
+video {
+  max-width: 100%;
+}
+
+@media (max-width: 1023px) {
+  html,
+  body,
+  #root {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .aplicacao,
+  .aplicacao__estrutura-mobile,
+  .aplicacao__conteudo-mobile,
+  .aplicacao__pagina-mobile,
+  .pagina,
+  .pagina > *,
+  .pagina form,
+  .pagina fieldset,
+  .pagina [class*="grade"],
+  .pagina [class*="grid"],
+  .pagina [class*="conteudo"],
+  .pagina [class*="cabecalho"] {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .pagina p,
+  .pagina h1,
+  .pagina h2,
+  .pagina h3,
+  .pagina h4,
+  .pagina td,
+  .pagina th,
+  .pagina label,
+  .pagina span {
+    overflow-wrap: anywhere;
+  }
+
+  .pagina input,
+  .pagina textarea,
+  .pagina select,
+  .pagina button,
+  .pagina .menu-suspenso,
+  .pagina .menu-suspenso__controle {
+    max-width: 100%;
+  }
+
+  .cedro-modal-overlay {
+    max-width: 100vw;
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+  }
+}
+
+@media (max-width: 560px) {
+  .aplicacao__conteudo-mobile--pagina {
+    padding: 10px 10px max(28px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .pagina input:not([type="checkbox"]):not([type="radio"]),
+  .pagina textarea,
+  .pagina select {
+    min-width: 0;
+    font-size: 16px;
+  }
+
+  .pagina button,
+  .pagina [role="button"] {
+    touch-action: manipulation;
+  }
+}

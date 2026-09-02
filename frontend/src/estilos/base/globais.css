@@ -1,0 +1,43 @@
+/* Regras globais novas. O legado permanece isolado em /legado. */
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--cedro-cor-fundo);
+  color: var(--cedro-cor-texto);
+}
+
+/* Imagens de navegação não devem herdar aceleração forçada do CSS legado. */
+.marca-cedro__imagem,
+.barra-lateral img,
+.menu-mobile img,
+.barra-superior img {
+  transform: none !important;
+  filter: none;
+  image-rendering: auto !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+  will-change: auto !important;
+}
+
+.botao-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  cursor: pointer;
+  transition: background-color var(--cedro-transicao-rapida),
+    color var(--cedro-transicao-rapida),
+    border-color var(--cedro-transicao-rapida),
+    transform var(--cedro-transicao-rapida);
+}
+
+.botao-icone:active {
+  transform: scale(0.96);
+}

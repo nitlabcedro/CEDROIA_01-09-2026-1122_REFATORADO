@@ -1,0 +1,370 @@
+.pagina-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 32px;
+  color: #334155;
+}
+
+@media (min-width: 640px) {
+  .pagina-dashboard { gap: 24px; padding-bottom: 40px; }
+}
+
+@media (min-width: 1024px) {
+  .pagina-dashboard { gap: 32px; }
+}
+
+/* === INICIO ESTRUTURA MIGRADA DO JSX ===
+   Regras estruturais migradas do JSX para CSS dedicado.
+   Não adicionar utilitários no JSX; evoluir estes seletores semanticamente.
+   ============================================================ */
+
+.painel__icone-clock {
+  color: #f59e0b;
+  animation: cedro-pulsar 2s cubic-bezier(.4,0,.6,1) infinite;
+}
+
+.painel__icone-pluscircle {
+  color: #075618;
+}
+
+.painel__painel-indicadores-estrutura {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .painel__painel-indicadores-estrutura {
+  gap: 1rem;
+}
+}
+
+@media (min-width: 1024px) {
+  .painel__painel-indicadores-estrutura {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+}
+
+.painel__painel-resumo-estrutura {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .painel__painel-resumo-estrutura {
+  gap: 1.5rem;
+}
+}
+
+.painel__painel-cartao-estrutura {
+  grid-column: span 12 / span 12;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .painel__painel-cartao-estrutura {
+  padding: 1.25rem;
+}
+}
+
+@media (min-width: 1024px) {
+  .painel__painel-cartao-estrutura {
+  padding: 1.5rem;
+}
+}
+
+@media (min-width: 1280px) {
+  .painel__painel-cartao-estrutura {
+  grid-column: span 8 / span 8;
+}
+}
+
+.painel__grupo-evolucao-do-inventario {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .painel__grupo-evolucao-do-inventario {
+  margin-bottom: 1.5rem;
+  flex-direction: row;
+  align-items: center;
+}
+}
+
+@media (min-width: 1024px) {
+  .painel__grupo-evolucao-do-inventario-crescim {
+  display: none;
+}
+}
+
+.painel__titulo-secao-evolucao-do-inventario {
+  font-size: .875rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  color: #075618;
+}
+
+.painel__descricao-crescimento-acumulado-das-ias- {
+  margin-top: 0.125rem;
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.painel__icone-customdropdown {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .painel__icone-customdropdown {
+  width: 12rem;
+}
+}
+
+.painel__grupo {
+  height: 14rem;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .painel__grupo {
+  height: 16rem;
+}
+}
+
+@media (min-width: 1024px) {
+  .painel__grupo {
+  height: 17rem;
+}
+}
+
+.painel__painel-cartao-estrutura-2 {
+  grid-column: span 12 / span 12;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .painel__painel-cartao-estrutura-2 {
+  padding: 1.25rem;
+}
+}
+
+@media (min-width: 1024px) {
+  .painel__painel-cartao-estrutura-2 {
+  padding: 1.5rem;
+}
+}
+
+@media (min-width: 1280px) {
+  .painel__painel-cartao-estrutura-2 {
+  grid-column: span 4 / span 4;
+}
+}
+
+.painel__grupo-status-de-aprovacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.painel__titulo-bloco-status-de-aprovacao {
+  font-size: .875rem;
+  font-weight: 900;
+  color: #075618;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.painel__grupo-2 {
+  position: relative;
+  margin-bottom: 0.25rem;
+  height: 11rem;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .painel__grupo-2 {
+  height: 12rem;
+}
+}
+
+@media (min-width: 1024px) {
+  .painel__grupo-2 {
+  height: 11rem;
+}
+}
+
+.painel__grupo-total {
+  position: absolute;
+  top: 0rem;
+  right: 0rem;
+  bottom: 0rem;
+  left: 0rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.painel__texto {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #1e293b;
+  letter-spacing: -0.025em;
+}
+
+.painel__texto-total {
+  font-size: 8px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.painel__grupo-3 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  border-top-width: 1px;
+  border-style: solid;
+  border-color: #f8fafc;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .painel__grupo-3 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+}
+
+@media (min-width: 1024px) {
+  .painel__grupo-3 {
+  gap: 0.375rem;
+}
+}
+
+.painel__grupo-4 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.painel__texto-2 {
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+}
+
+.painel__texto-3 {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+}
+
+.painel__texto-4 {
+  font-size: .875rem;
+  font-weight: 900;
+  color: #1e293b;
+  margin-top: 0.25rem;
+}
+
+.painel__texto-5 {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.painel__grupo-5 {
+  grid-column: span 12 / span 12;
+}
+
+@media (min-width: 1280px) {
+  .painel__grupo-5 {
+  grid-column: span 8 / span 8;
+}
+}
+
+.painel__grupo-6 {
+  grid-column: span 12 / span 12;
+}
+
+@media (min-width: 1280px) {
+  .painel__grupo-6 {
+  grid-column: span 4 / span 4;
+}
+}
+
+.painel__grupo-6 {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (max-width: 560px) {
+  .pagina-dashboard,
+  .painel__grupo,
+  .painel__grupo-2,
+  .painel__grupo-evolucao-do-inventario,
+  .painel__grupo-status-de-aprovacao {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .pagina-dashboard canvas,
+  .pagina-dashboard .recharts-responsive-container,
+  .pagina-dashboard .recharts-wrapper,
+  .pagina-dashboard .recharts-surface {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .painel__painel-indicadores-estrutura,
+  .painel__grupo-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .painel__texto-2 {
+    white-space: normal;
+  }
+}
+
+
+/* Oculta somente os dois gráficos no mobile */
+@media (max-width: 1023px) {
+
+  .pagina-dashboard .painel__painel-cartao-estrutura,
+  .pagina-dashboard .painel__painel-cartao-estrutura-2 {
+    display: none !important;
+  }
+}

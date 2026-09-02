@@ -1,0 +1,417 @@
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  MessageSquare,
+  X } from
+"lucide-react";
+
+import { Sidebar } from "@/componentes/layout/BarraLateral";
+import { Topbar } from "@/componentes/layout/BarraSuperior";
+import MenuMobile from "@/componentes/layout/MenuMobile";
+import FundoLaboratorio from "@/componentes/fundo/FundoLaboratorio";
+import { useAplicacao } from "@/hooks/useAplicacao";
+import Painel from "@/paginas/painel/Painel";
+import Inventario from "@/paginas/inventario/Inventario";
+import MapaSetores from "@/paginas/relatorios/MapaSetores";
+import PainelAdministrativo from "@/paginas/administracao/PainelAdministrativo";
+import GerenciadorSetores from "@/paginas/administracao/GerenciadorSetores";
+import FormularioCadastro from "@/paginas/inventario/FormularioCadastro";
+import VisualizacaoRelatorio from "@/paginas/relatorios/VisualizacaoRelatorio";
+import { Auth as Autenticacao } from "@/paginas/autenticacao/Autenticacao";
+import { UserProfileView as PerfilUsuario } from "@/paginas/autenticacao/PerfilUsuario";
+import { Chat } from "@/paginas/chat/Chat";
+import PaginaAprovacao from "@/paginas/aprovacoes/PaginaAprovacao";
+import RedefinirSenha from "@/paginas/autenticacao/RedefinirSenha";
+import NotificacaoPerguntasTI from "@/componentes/aprovacoes/NotificacaoPerguntasTI";
+
+export default function Aplicacao() {
+  const {
+    user,
+    profile,
+    authLoading,
+    isCurrentUserAdmin,
+    isCurrentUserPrivileged,
+    activeTab,
+    setActiveTab,
+    records,
+    workflows,
+    approvalConfig,
+    profiles,
+    supabaseStatus,
+    selectedRecord,
+    setSelectedRecord,
+    originTab,
+    isSidebarOpen,
+    setIsSidebarOpen,
+    isSidebarCollapsed,
+    setIsSidebarCollapsed,
+    isDarkMode,
+    triggerAlertsRefresh,
+    systemAlerts,
+    activeUnreadAlertsCount,
+    unreadChatCount,
+    toasts,
+    removeToast,
+    isSyncing,
+    handleSync,
+    handleEdit,
+    handleView,
+    handleDelete,
+    handleCancelRequest,
+    handleSave,
+    handleSaveApprovalConfig,
+    handleUpdateStatus,
+    handleResetStatus,
+    handleUpdateUserRole,
+    handleDeleteUser,
+    refreshRecords,
+    signOut
+  } = useAplicacao();
+  const [isDesktopViewport, setIsDesktopViewport] = useState(() =>
+  window.matchMedia("(min-width: 1024px)").matches
+  );
+  const isResetPasswordPage = window.location.pathname === "/reset-password";
+  const mobileContentRef = useRef<HTMLElement | null>(null);
+  const desktopContentRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    const atualizarViewport = (event: MediaQueryListEvent) => {
+      setIsDesktopViewport(event.matches);
+    };
+
+    setIsDesktopViewport(mediaQuery.matches);
+    mediaQuery.addEventListener("change", atualizarViewport);
+
+    return () => mediaQuery.removeEventListener("change", atualizarViewport);
+  }, []);
+
+  useEffect(() => {
+    const resetarPosicao = () => {
+      mobileContentRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      desktopContentRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    };
+
+    const frame = window.requestAnimationFrame(resetarPosicao);
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeTab]);
+
+  if (isResetPasswordPage) {
+    return (
+      <div className={isDarkMode ? "dark" : ""}>
+        <RedefinirSenha />
+      </div>);
+
+  }
+
+  if (authLoading) {
+    return (
+      <div className="aplicacao__grupo">
+        <div className="aplicacao__grupo-2"></div>
+      </div>);
+
+  }
+
+  if (!user) {
+    return (
+      <div className={isDarkMode ? "dark" : ""}>
+        <Autenticacao />
+      </div>);
+
+  }
+
+  const renderConteudoAtivo = () =>
+  <>
+      {activeTab === "dashboard" &&
+    <Painel records={records} onNavigate={(tab) => setActiveTab(tab)} onView={handleView} isAdmin={isCurrentUserAdmin} workflows={workflows} approvalConfig={approvalConfig} currentUserId={user.id} />
+    }
+      {activeTab === "inventory" &&
+    <Inventario
+      records={records}
+      onEdit={handleEdit}
+      onView={handleView}
+      onDelete={handleDelete}
+      onAdd={() => {
+        setSelectedRecord(null);
+        setActiveTab("new");
+      }}
+      onRefresh={refreshRecords}
+      approvalConfig={approvalConfig}
+      onSaveApprovalConfig={handleSaveApprovalConfig}
+      isAdmin={isCurrentUserAdmin}
+      workflows={workflows}
+      currentUser={user}
+      currentUserProfile={profile}
+      onCancelRequest={handleCancelRequest} />
+
+    }
+      {activeTab === "sectors" && isCurrentUserAdmin &&
+    <MapaSetores records={records} profiles={profiles} />
+    }
+      {activeTab === "sectors_mgr" && isCurrentUserAdmin &&
+    <GerenciadorSetores records={records} profiles={profiles} onRefresh={refreshRecords} approvalConfig={approvalConfig} onSaveApprovalConfig={handleSaveApprovalConfig} />
+    }
+      {activeTab === "approval_queue" && isCurrentUserPrivileged &&
+    <PaginaAprovacao
+      records={records}
+      profiles={profiles}
+      workflows={workflows}
+      approvalConfig={approvalConfig}
+      currentUserId={user.id}
+      onUpdateStatus={handleUpdateStatus}
+      onSaveApprovalConfig={handleSaveApprovalConfig}
+      onViewRecord={handleView}
+      isAdmin={isCurrentUserAdmin} />
+
+    }
+      {activeTab === "admin" && isCurrentUserPrivileged &&
+    <PainelAdministrativo
+      records={records}
+      profiles={profiles}
+      onUpdateStatus={handleUpdateStatus}
+      onViewRecord={handleView}
+      onEditRecord={handleEdit}
+      onDeleteRecord={handleDelete}
+      onUpdateUserRole={handleUpdateUserRole}
+      onDeleteUser={handleDeleteUser}
+      approvalConfig={approvalConfig}
+      onSaveApprovalConfig={handleSaveApprovalConfig}
+      currentUserId={user.id}
+      workflows={workflows}
+      supabaseStatus={supabaseStatus}
+      isSyncing={isSyncing}
+      onSync={handleSync}
+      onResetStatus={handleResetStatus}
+      onNavigate={(tab) => setActiveTab(tab)} />
+
+    }
+      {activeTab === "new" &&
+    <FormularioCadastro
+      initialData={selectedRecord}
+      onSave={handleSave}
+      onCancel={() => setActiveTab("inventory")}
+      isAdmin={isCurrentUserAdmin} />
+
+    }
+      {activeTab === "report" && (
+    selectedRecord ?
+    <VisualizacaoRelatorio
+      record={selectedRecord}
+      onBack={() => {
+        setSelectedRecord(null);
+        if (originTab && originTab !== "report") {
+          setActiveTab(originTab);
+        } else {
+          setActiveTab("inventory");
+        }
+      }}
+      onEdit={handleEdit}
+      isAdmin={isCurrentUserAdmin}
+      workflows={workflows}
+      approvalConfig={approvalConfig} /> :
+
+
+    <Inventario
+      records={records}
+      onEdit={handleEdit}
+      onView={handleView}
+      onDelete={handleDelete}
+      onAdd={() => {
+        setSelectedRecord(null);
+        setActiveTab("new");
+      }}
+      onRefresh={refreshRecords}
+      approvalConfig={approvalConfig}
+      onSaveApprovalConfig={handleSaveApprovalConfig}
+      isAdmin={isCurrentUserAdmin}
+      workflows={workflows}
+      currentUser={user}
+      currentUserProfile={profile}
+      onCancelRequest={handleCancelRequest} />)
+
+
+    }
+      {activeTab === "chat" && <Chat />}
+      {activeTab === "profile" && <PerfilUsuario />}
+    </>;
+
+
+  return (
+    <div id="cedro-aplicacao" data-componente="aplicacao" className={`aplicacao ${isDarkMode ? "dark" : ""}`}>
+      <FundoLaboratorio />
+
+      {/* VERSÃO MOBILE DO CEDRO IA MONITOR */}
+      {!isDesktopViewport &&
+      <div id="cedro-estrutura-mobile" className="aplicacao__estrutura-mobile">
+        <MenuMobile
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          profile={profile}
+          isCurrentUserAdmin={isCurrentUserAdmin}
+          isCurrentUserPrivileged={isCurrentUserPrivileged}
+          onNewSolicitation={() => setSelectedRecord(null)}
+          unreadChatCount={unreadChatCount} />
+        
+
+        {/* 2. CONTEÚDO */}
+        <main
+          ref={mobileContentRef}
+          id="cedro-conteudo-principal-mobile"
+          className={`aplicacao__conteudo-mobile ${
+          activeTab === "chat" ?
+          "aplicacao__conteudo-mobile--chat" :
+          "aplicacao__conteudo-mobile--pagina mobile-safe-bottom"}`
+          }>
+          
+          <div
+            id={`pagina-${activeTab}`}
+            className={`pagina aplicacao__pagina-mobile ${
+            activeTab === "chat" ? "pagina--chat aplicacao__pagina-mobile--chat" : "aplicacao__pagina-mobile--padrao"}`
+            }
+            data-pagina={activeTab}
+            key={activeTab}>
+            
+            {renderConteudoAtivo()}
+          </div>
+        </main>
+      </div>
+      }
+
+      {/* VERSÃO DESKTOP COMPLETA DO CEDRO IA MONITOR */}
+      {isDesktopViewport &&
+      <div id="cedro-estrutura-desktop" className="aplicacao__estrutura-desktop">
+
+      <Sidebar
+          isSidebarOpen={isSidebarOpen}
+          setIsSidebarOpen={setIsSidebarOpen}
+          isSidebarCollapsed={isSidebarCollapsed}
+          setIsSidebarCollapsed={setIsSidebarCollapsed}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          profile={profile}
+          isCurrentUserAdmin={isCurrentUserAdmin}
+          isCurrentUserPrivileged={isCurrentUserPrivileged}
+          onNewSolicitation={() => setSelectedRecord(null)}
+          unreadChatCount={unreadChatCount} />
+        
+
+      {/* Main Content Area */}
+      <main id="cedro-conteudo-principal-desktop" className="aplicacao__conteudo-desktop">
+        <Topbar
+            profile={profile}
+            isCurrentUserAdmin={isCurrentUserAdmin}
+            activeUnreadAlertsCount={activeUnreadAlertsCount}
+            setActiveTab={setActiveTab}
+            systemAlerts={systemAlerts}
+            triggerAlertsRefresh={triggerAlertsRefresh}
+            records={records}
+            setSelectedRecord={setSelectedRecord}
+            signOut={signOut} />
+          
+
+        <div
+            ref={desktopContentRef}
+            className={`aplicacao__area-pagina rolagem-personalizada ${activeTab === "chat" ? "aplicacao__area-pagina--chat" : ""}`}>
+            
+
+          <div
+              key={activeTab}
+              data-pagina={activeTab}
+              id={`pagina-${activeTab}`}
+              className={`pagina aplicacao__pagina-desktop ${
+              activeTab === "chat" ? "pagina--chat aplicacao__pagina-desktop--chat" : ""}`
+              }>
+              
+              {renderConteudoAtivo()}
+          </div>
+        </div>
+      </main>
+    </div>
+      }
+
+      {/* Pendência persistente de perguntas da Etapa 2 — TI */}
+      <NotificacaoPerguntasTI />
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {/* Removed redundant delete modal as it's handled by components */}
+      </AnimatePresence>
+
+      {/* Notificações da aplicação */}
+      <div className="aplicacao__notificacoes">
+        <AnimatePresence>
+          {toasts.map((toast) => {
+            const configuracao = toast.type === "success"
+              ? { icone: CheckCircle2, rotulo: "Sucesso", variante: "sucesso" }
+              : toast.type === "warning"
+                ? { icone: AlertTriangle, rotulo: "Aviso / Alerta", variante: "aviso" }
+                : toast.type === "chat"
+                  ? { icone: MessageSquare, rotulo: "Mensagem Chat", variante: "chat" }
+                  : { icone: Info, rotulo: "Sistema", variante: "informacao" };
+            const IconComponent = configuracao.icone;
+
+            return (
+              <motion.article
+                key={toast.id}
+                initial={{ scale: 0.97, opacity: 0, y: 24 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.96, opacity: 0, x: 36 }}
+                transition={{ type: "spring", stiffness: 330, damping: 30 }}
+                className={`aplicacao-toast aplicacao-toast--${configuracao.variante}`}
+              >
+                <span className="aplicacao-toast__acento" />
+                <span className="aplicacao-toast__icone"><IconComponent size={20} /></span>
+
+                <div className="aplicacao-toast__conteudo">
+                  <div className="aplicacao-toast__cabecalho">
+                    <div>
+                      <span className="aplicacao-toast__tipo">{configuracao.rotulo}</span>
+                      <h4 className="aplicacao-toast__titulo">{toast.title}</h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeToast(toast.id)}
+                      className="aplicacao-toast__fechar"
+                      title="Fechar"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  <p className="aplicacao-toast__mensagem">{toast.message}</p>
+
+                  {toast.actionLabel && toast.onAction && (
+                    <div className="aplicacao-toast__acoes">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          toast.onAction?.();
+                          removeToast(toast.id);
+                        }}
+                        className="aplicacao-toast__acao"
+                      >
+                        {toast.actionLabel}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <span className="aplicacao-toast__progresso">
+                  <motion.span
+                    initial={{ width: "100%" }}
+                    animate={{ width: "0%" }}
+                    transition={{ duration: 6, ease: "linear" }}
+                  />
+                </span>
+              </motion.article>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+    </div>);
+
+}

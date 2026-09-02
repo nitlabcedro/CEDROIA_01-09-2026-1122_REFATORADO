@@ -1,0 +1,84 @@
+/* ============================================================
+   CEDRO IA — MARCA
+   A imagem não recebe filter/backdrop-filter para evitar custo de renderização.
+   ============================================================ */
+
+.marca-cedro {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.marca-cedro__icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 180px;
+  height: 56px;
+
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.marca-cedro__imagem {
+  display: block;
+
+  width: 100%;
+  height: auto;
+  max-height: 56px;
+
+  object-fit: contain;
+  flex-shrink: 0;
+
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Em fundos verdes usa a versão branca da marca, sem placa de fundo. */
+.marca-cedro--escuro .marca-cedro__icone {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+/* A marca usa sempre o arquivo transparente e branco. */
+.marca-cedro--claro .marca-cedro__icone {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.marca-cedro__texto {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.marca-cedro--escuro .marca-cedro__texto {
+  color: #fff;
+}
+
+.marca-cedro--claro .marca-cedro__texto {
+  color: #fff;
+}
+
+.marca-cedro__texto-ia {
+  font-weight: 600;
+  opacity: 0.74;
+}
+
+.marca-cedro__texto--grande {
+  font-size: 28px;
+}
+
+.marca-cedro--compacta {
+  gap: 0;
+}

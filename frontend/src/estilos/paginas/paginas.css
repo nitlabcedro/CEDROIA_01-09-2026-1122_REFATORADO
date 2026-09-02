@@ -1,0 +1,15 @@
+/*
+ * Classe-base para todas as páginas do Cedro IA.
+ * Cada tela deve possuir também um id único: pagina-<nome>.
+ */
+.pagina {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pagina--chat {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}

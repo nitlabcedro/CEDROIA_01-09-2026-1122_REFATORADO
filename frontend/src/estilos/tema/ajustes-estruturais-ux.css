@@ -1,0 +1,902 @@
+/* ============================================================
+   CEDRO IA — AJUSTES ESTRUTURAIS UX/UI 2026
+   Correções de layout após a migração sem Tailwind.
+   Objetivos: eliminar overflow global, restaurar grids, suavizar
+   containers e padronizar ritmo visual sem alterar regras de negócio.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. FUNDAÇÃO DE LAYOUT
+   ------------------------------------------------------------ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root,
+.aplicacao {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.aplicacao__estrutura-desktop,
+.aplicacao__conteudo-desktop,
+.aplicacao__area-pagina,
+.aplicacao__pagina-desktop,
+.pagina,
+.cedro-page-premium {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.aplicacao__area-pagina {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.aplicacao__pagina-desktop:not(.aplicacao__pagina-desktop--chat) {
+  width: 100%;
+  padding: 24px 28px 40px;
+}
+
+.cedro-page-premium {
+  width: 100%;
+}
+
+.cedro-page-premium > *,
+.pagina-dashboard > *,
+.pagina-inventario > *,
+.pagina-nova-solicitacao > *,
+.pagina-aprovacoes > *,
+.pagina-perfil > *,
+.pagina-mapa-ias > *,
+.pagina-relatorio > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Rolagem horizontal somente onde ela é funcional. */
+.inventario-tabela-container,
+.inventario__grupo-11,
+.administracao-tabela-conteiner,
+.relatorio-abas,
+.cedro-abas,
+.cedro-segmented {
+  max-width: 100%;
+}
+
+.inventario__grupo-11,
+.administracao-tabela-conteiner {
+  overflow-x: auto;
+}
+
+/* Ritmo visual mais refinado. */
+.cedro-page-premium {
+  --cedro-espaco-xs: 8px;
+  --cedro-espaco-sm: 12px;
+  --cedro-espaco-md: 16px;
+  --cedro-espaco-lg: 24px;
+  --cedro-espaco-xl: 32px;
+}
+
+.cedro-page-premium .cedro-card-premium,
+.cedro-page-premium .painel-cartao,
+.cedro-page-premium .inventario-card,
+.cedro-page-premium .administracao-cartao,
+.cedro-page-premium .relatorio-secao,
+.cedro-page-premium .mapa-ias__elemento-2 {
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: #d2ded4 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 24px rgba(2, 43, 13, .055) !important;
+}
+
+/* ------------------------------------------------------------
+   2. CABEÇALHOS DE PÁGINA
+   ------------------------------------------------------------ */
+
+.cedro-page-premium > header,
+.cedro-page-premium .inventario-cabecalho,
+.cedro-page-premium .administracao-cabecalho,
+.cedro-page-premium .aprovacao-cabecalho,
+.cedro-page-premium .relatorio-cabecalho {
+  min-height: 0;
+  margin-bottom: 20px;
+  padding: 18px 20px;
+}
+
+.cedro-page-premium h1 {
+  margin: 0;
+  line-height: 1.08;
+}
+
+/* ------------------------------------------------------------
+   3. DASHBOARD
+   ------------------------------------------------------------ */
+
+.pagina-dashboard {
+  gap: 20px;
+}
+
+.painel__painel-indicadores-estrutura {
+  gap: 14px;
+}
+
+.cartao-kpi {
+  min-height: 112px;
+  padding: 16px 17px;
+  border-radius: 15px;
+}
+
+.cartao-kpi__valor {
+  font-size: 30px;
+}
+
+.cartao-kpi__icone {
+  width: 40px;
+  height: 40px;
+}
+
+.painel__painel-resumo-estrutura {
+  gap: 18px;
+}
+
+.painel__painel-cartao-estrutura,
+.painel__painel-cartao-estrutura-2 {
+  min-width: 0;
+  padding: 20px;
+}
+
+.painel__grupo {
+  height: 250px;
+}
+
+.painel__grupo-2 {
+  height: 165px;
+}
+
+@media (min-width: 1280px) {
+  .painel__painel-cartao-estrutura {
+    grid-column: span 8 / span 8;
+  }
+  .painel__painel-cartao-estrutura-2 {
+    grid-column: span 4 / span 4;
+  }
+}
+
+/* ------------------------------------------------------------
+   4. INVENTÁRIO
+   ------------------------------------------------------------ */
+
+.pagina-inventario {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.inventario__inventario-cabecalho-estrutura {
+  justify-content: space-between;
+  align-items: center;
+  min-height: 86px;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.inventario-cabecalho__texto {
+  min-width: 0;
+}
+
+.inventario-cabecalho__sobretitulo {
+  display: block;
+  margin-bottom: 5px;
+  color: #76857a;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.inventario-cabecalho__titulo {
+  margin: 0;
+  color: #102617;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -.035em;
+}
+
+.inventario-cabecalho__descricao {
+  margin: 5px 0 0;
+  color: #68776c;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.inventario__inventario-acoes-estrutura {
+  width: auto;
+  flex-shrink: 0;
+}
+
+.inventario__inventario-resumo-estrutura {
+  gap: 14px;
+}
+
+.inventario__inventario-card-estrutura {
+  min-height: 94px;
+  padding: 16px 18px;
+}
+
+.inventario__inventario-filtros-estrutura {
+  padding: 12px 14px;
+}
+
+.inventario__grupo-3 {
+  gap: 12px;
+}
+
+.inventario__inventario-busca-estrutura {
+  min-width: 0;
+}
+
+.inventario__inventario-tabela-container-estrutura {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+/* ------------------------------------------------------------
+   5. NOVA SOLICITAÇÃO
+   ------------------------------------------------------------ */
+
+.pagina-nova-solicitacao,
+.cadastro-container,
+.cedro-form-shell {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cedro-form-shell {
+  display: flex;
+  width: 100%;
+  align-items: stretch;
+  background: #fbfdfb;
+  border: 1px solid #cedbd0;
+  border-radius: 20px;
+  box-shadow: 0 16px 38px rgba(2, 43, 13, .075);
+}
+
+.cadastro__cadastro-etapas-estrutura {
+  width: 250px;
+  padding: 18px;
+  gap: 9px;
+  background: linear-gradient(180deg, #f4f8f4 0%, #edf4ef 100%);
+  border-right: 1px solid #d3dfd5;
+  border-bottom: 0;
+}
+
+.cadastro__grupo-nova-solicitacao {
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  color: #fff;
+  background: linear-gradient(135deg, #02330c 0%, #075618 100%);
+  border-radius: 12px;
+  font-size: 11px;
+  letter-spacing: .04em;
+}
+
+.cadastro__botao-4 {
+  min-height: 82px;
+  padding: 14px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: transparent;
+}
+
+.cadastro__botao-5 {
+  color: #075618;
+  background: #e7f1e9;
+  border-color: #a9c8b0;
+  box-shadow: inset 3px 0 0 #075618;
+}
+
+.cadastro__botao-6 {
+  color: #68766c;
+  background: rgba(255,255,255,.52);
+  border-color: #d7e1d9;
+}
+
+.cadastro__botao-6:hover {
+  color: #17301d;
+  background: #fff;
+  border-color: #b9cdbd;
+}
+
+.cadastro__cadastro-formulario-estrutura {
+  min-width: 0;
+  background: #fff;
+}
+
+.cadastro__grupo-8 {
+  padding: 26px 30px 22px;
+}
+
+.cadastro__cadastro-cabecalho-estrutura {
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #dbe4dd;
+}
+
+.cadastro__grupo-10 {
+  gap: 16px;
+}
+
+.cadastro-campo-grupo,
+.cadastro__cadastro-campo-grupo-estrutura {
+  min-width: 0;
+}
+
+.cadastro__cadastro-acoes-estrutura {
+  padding: 16px 24px;
+  background: #f6f9f6;
+  border-top: 1px solid #d6e0d8;
+}
+
+.cadastro__botao-cancelar-registro,
+.cadastro__botao-btnsalvarsolicitacao,
+.cadastro__botao-proxima-fase {
+  min-height: 42px;
+  border-radius: 11px;
+}
+
+@media (max-width: 1023px) {
+  .cedro-form-shell {
+    flex-direction: column;
+  }
+  .cadastro__cadastro-etapas-estrutura {
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-right: 0;
+    border-bottom: 1px solid #d3dfd5;
+  }
+  .cadastro__grupo-nova-solicitacao {
+    display: none;
+  }
+  .cadastro__botao-4 {
+    min-height: 70px;
+  }
+}
+
+/* ------------------------------------------------------------
+   6. APROVAÇÕES — correção estrutural prioritária
+   ------------------------------------------------------------ */
+
+.pagina-aprovacoes,
+.aprovacao-container {
+  min-width: 0;
+}
+
+.aprovacoes__grupo-aprovacao-de-sistemas-3,
+.aprovacoes__grupo-aprovacao-de-sistemas-4,
+.aprovacoes__grupo-fila-de-aprovacao-2 {
+  min-width: 0;
+}
+
+.aprovacao-layout,
+.aprovacoes__grupo-6 {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.78fr);
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+  align-items: start;
+}
+
+.aprovacao-layout__fila,
+.aprovacoes__grupo-fila-de-aprovacao-3 {
+  grid-column: auto !important;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #d2ddd4;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.aprovacao-layout__detalhes,
+.aprovacoes__grupo-15 {
+  grid-column: auto !important;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px;
+  overflow: visible;
+  border: 1px solid #d2ddd4;
+  border-radius: 16px;
+  background: linear-gradient(150deg, #fff 0%, #f8fbf8 100%);
+  box-shadow: 0 10px 28px rgba(2,43,13,.06);
+}
+
+.aprovacoes__grupo-16,
+.aprovacoes__grupo-17,
+.aprovacoes__grupo-19,
+.aprovacoes__grupo-status-de-aprovacao,
+.aprovacoes__grupo-28,
+.aprovacoes__grupo-29,
+.aprovacoes__grupo-30 {
+  min-width: 0;
+}
+
+.aprovacoes__grupo-16 {
+  align-items: center;
+}
+
+.aprovacoes__grupo-17 {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.aprovacoes__grupo-19 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.aprovacao-fluxo-etapas,
+.aprovacoes__grupo-20 {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0 0;
+}
+
+.aprovacoes__grupo-21 {
+  display: none;
+}
+
+.aprovacao-fluxo-etapas__item,
+.aprovacoes__grupo-22 {
+  min-width: 0;
+  padding: 8px 5px;
+  border-radius: 11px;
+  background: #f5f8f5;
+  border: 1px solid #dce5de;
+}
+
+.aprovacoes__texto-18 {
+  width: 100%;
+  max-width: none;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
+.aprovacao-responsaveis,
+.aprovacoes__grupo-28 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.aprovacoes__grupo-28 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0;
+}
+
+.aprovacao-responsaveis__cartao,
+.aprovacoes__grupo-29 {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #dce5de;
+  border-radius: 13px;
+  box-shadow: none;
+}
+
+.aprovacoes__grupo-8 {
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 3px;
+}
+
+@media (max-width: 1280px) {
+  .aprovacao-layout,
+  .aprovacoes__grupo-6 {
+    grid-template-columns: minmax(300px, .9fr) minmax(0, 1.5fr);
+  }
+  .aprovacao-responsaveis,
+  .aprovacoes__grupo-28 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1023px) {
+  .aprovacao-layout,
+  .aprovacoes__grupo-6 {
+    grid-template-columns: 1fr;
+  }
+  .aprovacao-fluxo-etapas,
+  .aprovacoes__grupo-20 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ------------------------------------------------------------
+   7. MAPA DE IAs
+   ------------------------------------------------------------ */
+
+.mapa-ias__grupo-mapa-de-ias-por-setor {
+  min-height: 92px;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.mapa-ias__grupo {
+  min-width: 0;
+  padding: 10px 12px;
+  gap: 10px;
+}
+
+.mapa-ias__grupo-2 {
+  min-width: 240px;
+}
+
+.mapa-ias__grupo-status {
+  flex-shrink: 0;
+}
+
+.mapa-ias__elemento {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.mapa-ias__elemento-2 {
+  min-width: 0;
+  max-width: 100%;
+  padding: 18px;
+}
+
+/* ------------------------------------------------------------
+   8. SETORES E ADMINISTRAÇÃO
+   ------------------------------------------------------------ */
+
+.setores__grupo-setores {
+  min-height: 72px;
+}
+
+.setores__grupo-3 {
+  min-width: 0;
+}
+
+.setores__grupo-8 {
+  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.setores__grupo-resumo-geral {
+  grid-column: auto !important;
+  min-width: 0;
+}
+
+.setores__grupo-resumo-geral-2 {
+  padding: 16px;
+  border-radius: 15px;
+}
+
+.setores__grupo-20 {
+  grid-column: auto !important;
+  min-width: 0;
+}
+
+.setores__grupo-22 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.setores__elemento-3 {
+  min-width: 0;
+  min-height: 168px;
+  padding: 16px;
+}
+
+.administracao__administracao-cabecalho-estrutura {
+  min-height: 92px;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.administracao__administracao-indicadores-estrutura {
+  gap: 12px;
+}
+
+.administracao__grupo {
+  padding: 16px;
+}
+
+.administracao__administracao-filtros-estrutura {
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.administracao__grupo-6 {
+  min-width: 0;
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+.administracao__grupo-7 {
+  width: auto;
+  min-width: 210px;
+}
+
+@media (max-width: 1180px) {
+  .setores__grupo-8 {
+    grid-template-columns: 1fr;
+  }
+  .setores__grupo-resumo-geral-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .setores__grupo-resumo-geral-2 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0;
+  }
+}
+
+/* ------------------------------------------------------------
+   9. RELATÓRIO / FICHA
+   ------------------------------------------------------------ */
+
+.pagina-relatorio {
+  gap: 22px;
+  padding-bottom: 56px;
+}
+
+.relatorio__relatorio-cabecalho-estrutura {
+  min-width: 0;
+}
+
+.relatorio__grupo-3,
+.relatorio__grupo-4,
+.relatorio__grupo-5,
+.relatorio__relatorio-acoes-estrutura {
+  min-width: 0;
+}
+
+.relatorio__secao-resumo-executivo,
+.relatorio__secao-situacao-da-aprovacao,
+.relatorio-secao {
+  padding: 22px 24px;
+  border: 1px solid #d4dfd6;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(2,43,13,.045);
+}
+
+.relatorio__grupo-finalidade-da-ia {
+  gap: 16px;
+}
+
+.relatorio__grupo-29,
+.relatorio__grupo-30 {
+  min-width: 0;
+}
+
+.relatorio__grupo-30 {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.relatorio__grupo-31 {
+  min-width: 0;
+  padding: 14px;
+}
+
+.relatorio__descricao-5,
+.relatorio__texto-11 {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1280px) {
+  .relatorio__grupo-30 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .relatorio__grupo-30 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------
+   10. CHAT
+   ------------------------------------------------------------ */
+
+.pagina-chat-conteudo,
+.cedro-chat-shell,
+.chat__estrutura {
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .chat__estrutura {
+    grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+  }
+}
+
+.chat__painel-conversas,
+.chat__painel-conversa {
+  min-width: 0;
+}
+
+.chat__painel-conversas {
+  background: #f9fbf9;
+}
+
+.chat__conversas-cabecalho {
+  padding: 16px 18px;
+  background: #f6faf7;
+}
+
+.chat__lista-conversas {
+  padding: 4px 10px 10px;
+  background: #f6f9f6;
+}
+
+.chat__contato {
+  margin: 0;
+  gap: 10px;
+  padding: 12px 10px;
+  border: 0;
+  border-bottom: 1px solid #e3ebe5;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.chat__contato:hover,
+.chat__contato--padrao:hover {
+  background: #edf5ef;
+  border-color: #d6e3d8;
+}
+
+.chat__contato--nao-lido,
+.chat__contato--ativo {
+  border: 0;
+  border-left: 3px solid #075618;
+  background: #e8f3eb;
+  box-shadow: none;
+}
+
+.chat__online-agora {
+  margin: 6px 2px 8px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------
+   11. PERFIL
+   ------------------------------------------------------------ */
+
+.pagina-perfil,
+.perfil__grupo,
+.perfil__perfil-dados-estrutura,
+.perfil__grupo-informacoes-pessoais,
+.perfil__perfil-formulario-estrutura {
+  min-width: 0;
+}
+
+.perfil__grupo > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 20px;
+}
+
+.perfil__perfil-cabecalho-estrutura {
+  padding: 24px;
+  border-radius: 20px;
+}
+
+.perfil__perfil-dados-estrutura {
+  display: grid;
+  grid-template-columns: minmax(260px, .72fr) minmax(0, 1.48fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.perfil__grupo-11,
+.perfil__grupo-informacoes-pessoais {
+  grid-column: auto !important;
+  min-width: 0;
+}
+
+.perfil__elemento-resumo-do-perfil,
+.perfil__elemento-informacoes-pessoais {
+  min-width: 0;
+  padding: 20px;
+}
+
+.perfil__grupo-resumo-do-perfil,
+.perfil__grupo-informacoes-pessoais-2 {
+  margin: 0 0 18px;
+  padding: 0 0 12px;
+  border: 0;
+  border-bottom: 1px solid #dbe5dd;
+}
+
+.perfil__titulo-item-resumo-do-perfil,
+.perfil__titulo-bloco-informacoes-pessoais {
+  margin: 0;
+  color: #17301d !important;
+  font-size: 14px !important;
+  font-weight: 900;
+  letter-spacing: -.01em;
+}
+
+.perfil__grupo-14 {
+  gap: 16px;
+}
+
+.perfil__elemento-nome-completo,
+.perfil__elemento-cargo-setor,
+.perfil__elemento-url-da-foto-de-perfil {
+  min-width: 0;
+}
+
+.perfil__campo-ex-carlos-ferreira,
+.perfil__campo,
+.perfil__campo-minimo-6-digitos {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 13px;
+  border: 1px solid #cad8cd;
+  border-radius: 11px;
+}
+
+@media (max-width: 1080px) {
+  .perfil__perfil-dados-estrutura {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------
+   12. BREAKPOINTS DE SEGURANÇA
+   ------------------------------------------------------------ */
+
+@media (max-width: 1366px) {
+  .aplicacao__pagina-desktop:not(.aplicacao__pagina-desktop--chat) {
+    padding: 20px 22px 34px;
+  }
+
+  .cedro-page-premium > header,
+  .cedro-page-premium .inventario-cabecalho,
+  .cedro-page-premium .administracao-cabecalho,
+  .cedro-page-premium .aprovacao-cabecalho,
+  .cedro-page-premium .relatorio-cabecalho {
+    padding: 16px 18px;
+  }
+}
+
+@media (max-width: 900px) {
+  .inventario__inventario-cabecalho-estrutura {
+    align-items: stretch;
+  }
+  .inventario__inventario-acoes-estrutura {
+    width: 100%;
+  }
+  .mapa-ias__grupo {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .mapa-ias__grupo-status {
+    width: 100%;
+  }
+  .setores__grupo-22 {
+    grid-template-columns: 1fr;
+  }
+}

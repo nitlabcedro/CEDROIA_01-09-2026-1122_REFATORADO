@@ -1,0 +1,6 @@
+{
+  "name": "Cedro IA Monitor",
+  "description": "Sistema de inventário e governança de soluções de inteligência artificial com gestão administrativa avançada.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
