@@ -368,7 +368,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
                   <input
                     id="auth-email"
                     type="email"
-                    placeholder={mode === "signup" ? `seuemail${DOMINIO_EMAIL_INSTITUCIONAL}` : "seu.nome@empresa.com.br"}
+                    placeholder={mode === "signup" ? `seuemail${DOMINIO_EMAIL_INSTITUCIONAL}` : "nome@labcedro.com.br"}
                     autoComplete="email"
                     required
                     value={email}
