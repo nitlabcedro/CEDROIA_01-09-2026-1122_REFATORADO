@@ -1,7 +1,7 @@
 import { CHAVES_ARMAZENAMENTO_LOCAL } from "@/constantes/armazenamento-local";
 import { DOMINIO_EMAIL_INSTITUCIONAL } from "@/constantes/institucional";
 import { TABELAS_SUPABASE } from "@/constantes/supabase";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/servicos/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, User, Loader2, Building, Briefcase, Eye, EyeOff, KeyRound } from "lucide-react";
@@ -29,6 +29,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const [message, setMessage] = useState<{type: "success" | "error";text: string;} | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const paginaAutenticacaoRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     getSectors().then(setSectors);
@@ -42,6 +43,20 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
       console.error("Erro ao ler e-mail lembrado do localStorage:", e);
     }
   }, []);
+
+  useEffect(() => {
+    // Login, cadastro e recuperacao possuem alturas diferentes. Ao trocar de
+    // modo, navegadores mobile podem preservar a posicao anterior e esconder
+    // o inicio ou o fim do formulario.
+    const frame = window.requestAnimationFrame(() => {
+      paginaAutenticacaoRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [mode]);
 
   const fetchCargosParaSetor = async (sectorName: string) => {
     if (!sectorName || cargosPorSetor[sectorName]) return;
@@ -235,7 +250,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <div id="pagina-autenticacao" data-componente="pagina-autenticacao" className={`pagina-autenticacao pagina-autenticacao--${mode}`}>
+    <div ref={paginaAutenticacaoRef} id="pagina-autenticacao" data-componente="pagina-autenticacao" className={`pagina-autenticacao pagina-autenticacao--${mode}`}>
       <aside className="pagina-autenticacao__visual" aria-hidden="true">
         <div className="pagina-autenticacao__visual-overlay" />
         <div className="pagina-autenticacao__ondas pagina-autenticacao__ondas--superior" />

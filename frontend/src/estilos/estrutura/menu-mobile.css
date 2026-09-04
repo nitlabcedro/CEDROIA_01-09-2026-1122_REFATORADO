@@ -1,9 +1,9 @@
 .menu-mobile {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 40;
   display: none;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  min-height: calc(var(--cedro-altura-cabecalho-mobile) + env(safe-area-inset-top, 0px));
   padding-top: env(safe-area-inset-top, 0px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background-image:
@@ -13,6 +13,7 @@
   box-shadow: 0 8px 24px rgba(4, 58, 18, 0.2);
   width: 100%;
   max-width: 100vw;
+  isolation: isolate;
 }
 
 .menu-mobile__barra {

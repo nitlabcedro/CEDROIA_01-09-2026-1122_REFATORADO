@@ -902,6 +902,18 @@ export const Chat: React.FC = () => {
     [unreadCountsMap]
   );
 
+  const voltarParaListaDeConversas = () => {
+    // Um campo focado pode manter o teclado aberto e a viewport reduzida no mobile.
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
+    setIsEmojiOpen(false);
+    setChatSearchOpen(false);
+    setChatSearchQuery("");
+    setSelectedConvId("");
+  };
+
   return (
     <div id="chat-conteudo" data-componente="pagina-chat" className="pagina-chat-conteudo chat__pagina">
       {/* Estrutura fixa: cabeçalhos/rodapés permanecem no lugar e somente as listas rolam. */}
@@ -1101,9 +1113,11 @@ export const Chat: React.FC = () => {
                   
                   {/* Botão voltar para lista no layout mobile */}
                   <button
-                  onClick={() => setSelectedConvId("")}
-                  className="chat__conversa-voltar"
-                  title="Voltar para lista">
+                    type="button"
+                    onClick={voltarParaListaDeConversas}
+                    className="chat__conversa-voltar"
+                    title="Voltar para lista"
+                    aria-label="Voltar para a lista de conversas">
                   
                     <ChevronLeft size={16} strokeWidth={2.5} />
                   </button>
