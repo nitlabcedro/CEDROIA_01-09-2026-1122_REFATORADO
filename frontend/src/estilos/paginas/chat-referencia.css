@@ -1257,7 +1257,9 @@ body #pagina-chat.aplicacao__pagina-desktop.aplicacao__pagina-desktop--chat {
    ============================================================ */
 @media (max-width: 1023px) {
   #chat-conteudo .chat__layout {
-    display: block !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
     width: 100% !important;
     height: 100% !important;
     min-height: 0 !important;
@@ -1272,8 +1274,48 @@ body #pagina-chat.aplicacao__pagina-desktop.aplicacao__pagina-desktop--chat {
   #chat-conteudo .chat__painel-conversas.chat__painel--visivel-mobile,
   #chat-conteudo .chat__painel-conversa.chat__painel--visivel-mobile {
     display: flex !important;
+    grid-area: 1 / 1 !important;
     width: 100% !important;
     height: 100% !important;
     min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #chat-conteudo .chat__conversas-cabecalho,
+  #chat-conteudo .chat__conversa-cabecalho {
+    position: relative !important;
+    inset: auto !important;
+    z-index: 5 !important;
+    flex: 0 0 auto !important;
+  }
+
+  #chat-conteudo .chat__lista-conversas,
+  #chat-conteudo .chat__mensagens {
+    min-height: 0 !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #chat-conteudo .chat__composer {
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+@media (max-width: 560px) {
+  #chat-conteudo .chat__conversas-cabecalho {
+    padding: 14px max(12px, env(safe-area-inset-right, 0px)) 12px max(12px, env(safe-area-inset-left, 0px)) !important;
+  }
+
+  #chat-conteudo .chat__conversa-cabecalho {
+    padding: 8px max(9px, env(safe-area-inset-right, 0px)) 8px max(9px, env(safe-area-inset-left, 0px)) !important;
+  }
+
+  #chat-conteudo .chat__nova-conversa-botao {
+    min-width: 0 !important;
+  }
+
+  #chat-conteudo .chat__composer {
+    padding-right: max(8px, env(safe-area-inset-right, 0px)) !important;
+    padding-left: max(8px, env(safe-area-inset-left, 0px)) !important;
   }
 }

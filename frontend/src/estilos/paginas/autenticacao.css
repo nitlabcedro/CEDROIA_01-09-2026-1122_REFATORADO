@@ -309,8 +309,24 @@
 }
 
 @media (max-width: 820px) {
-  .pagina-autenticacao { display: flex; min-height: 100dvh; flex-direction: column; overflow: auto; background: #061d17; }
-  .pagina-autenticacao__visual { min-height: 205px; background-position: center 45%; }
+  .pagina-autenticacao {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    height: 100svh;
+    height: 100dvh;
+    min-height: 0;
+    max-height: none;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+    background: #061d17;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    scroll-padding-block: 16px 64px;
+  }
+  .pagina-autenticacao__visual { min-height: 205px; flex: 0 0 auto; background-position: center 45%; }
   .pagina-autenticacao__visual::after { display: none; }
   .pagina-autenticacao__marca { width: min(62%, 330px); transform: translate(-50%, -50%); }
   .pagina-autenticacao__visual-logo { width: min(100%, 285px); }
@@ -318,16 +334,24 @@
   .pagina-autenticacao__produto { font-size: 25px; }
   .pagina-autenticacao__slogan { margin-top: 5px; font-size: 11px; }
   .pagina-autenticacao__ondas { opacity: 0.22; }
-  .pagina-autenticacao__conteudo { min-height: auto; flex: 1; padding: 24px 18px 30px; overflow: visible; }
+  .pagina-autenticacao__conteudo {
+    min-height: auto;
+    flex: 1 0 auto;
+    padding: 24px max(18px, env(safe-area-inset-right, 0px)) max(48px, calc(env(safe-area-inset-bottom, 0px) + 24px)) max(18px, env(safe-area-inset-left, 0px));
+    overflow: visible;
+  }
   .autenticacao-card, .autenticacao-card--signup, .autenticacao-card--forgot { width: min(100%, 560px); max-height: none; padding: 32px 28px 0; overflow: visible; border-radius: 21px; }
   .autenticacao-card--forgot { padding-bottom: 30px; }
   .autenticacao-card__rodape { margin-inline: -28px; }
 
   .pagina-autenticacao--login,
   .pagina-autenticacao--forgot {
+    height: 100vh;
+    height: 100svh;
     height: 100dvh;
-    min-height: 100dvh;
-    overflow: hidden;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .pagina-autenticacao--login .pagina-autenticacao__visual,
@@ -340,13 +364,13 @@
   .pagina-autenticacao--forgot .pagina-autenticacao__conteudo {
     min-height: 0;
     padding-block: clamp(12px, 2.5vh, 24px);
-    overflow: hidden;
+    overflow: visible;
   }
 
   .pagina-autenticacao--login .autenticacao-card,
   .pagina-autenticacao--forgot .autenticacao-card {
-    max-height: 100%;
-    overflow: hidden;
+    max-height: none;
+    overflow: visible;
   }
 }
 
@@ -356,7 +380,10 @@
   .pagina-autenticacao__visual-logo { width: 225px; }
   .pagina-autenticacao__produto { font-size: 22px; }
   .pagina-autenticacao__slogan { font-size: 9.5px; }
-  .pagina-autenticacao__conteudo { padding: 15px 12px 24px; align-items: flex-start; }
+  .pagina-autenticacao__conteudo {
+    padding: 15px max(12px, env(safe-area-inset-right, 0px)) max(48px, calc(env(safe-area-inset-bottom, 0px) + 24px)) max(12px, env(safe-area-inset-left, 0px));
+    align-items: flex-start;
+  }
   .autenticacao-card, .autenticacao-card--signup, .autenticacao-card--forgot { padding: 27px 20px 0; border-radius: 18px; }
   .autenticacao-card--forgot { padding-bottom: 25px; }
   .autenticacao-card__icone { width: 50px; height: 50px; margin-bottom: 14px; }
@@ -385,34 +412,42 @@
   }
 }
 
-/* Alturas reduzidas: prioriza integralmente Login e Recuperação sem rolagem. */
+/* Alturas reduzidas: compacta a imagem e mantem todo o formulario rolavel. */
 @media (max-width: 820px) and (max-height: 760px) {
   .pagina-autenticacao--login .pagina-autenticacao__visual,
   .pagina-autenticacao--forgot .pagina-autenticacao__visual {
-    display: none;
+    display: block;
+    min-height: 0;
+    flex-basis: clamp(100px, 16dvh, 128px);
   }
 
   .pagina-autenticacao--login,
   .pagina-autenticacao--forgot {
-    display: block;
+    display: flex;
+    height: 100vh;
+    height: 100svh;
     height: 100dvh;
-    min-height: 100dvh;
-    overflow: hidden;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .pagina-autenticacao--login .pagina-autenticacao__conteudo,
   .pagina-autenticacao--forgot .pagina-autenticacao__conteudo {
-    height: 100dvh;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100svh;
     min-height: 100dvh;
-    padding-block: 12px;
-    overflow: hidden;
+    padding-top: max(12px, env(safe-area-inset-top, 0px));
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    overflow: visible;
   }
 
   .pagina-autenticacao--login .autenticacao-card,
   .pagina-autenticacao--forgot .autenticacao-card {
-    max-height: calc(100dvh - 24px);
+    max-height: none;
     padding-top: 24px;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .pagina-autenticacao--login .autenticacao-card__icone,
@@ -435,6 +470,31 @@
   .pagina-autenticacao--login .autenticacao-card__rodape {
     margin-top: 20px;
     padding-block: 18px 20px;
+  }
+}
+
+/* Celulares e tablets em paisagem: cabecalho compacto, sem desaparecer. */
+@media (max-width: 820px) and (max-height: 600px) {
+  .pagina-autenticacao__visual {
+    display: block;
+    min-height: 0;
+    flex: 0 0 clamp(86px, 24dvh, 108px);
+  }
+
+  .pagina-autenticacao__marca {
+    width: min(58%, 230px);
+  }
+
+  .pagina-autenticacao__visual-logo {
+    width: min(100%, 190px);
+  }
+
+  .pagina-autenticacao__conteudo {
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+    padding-top: max(12px, env(safe-area-inset-top, 0px));
+    align-items: flex-start;
   }
 }
 
