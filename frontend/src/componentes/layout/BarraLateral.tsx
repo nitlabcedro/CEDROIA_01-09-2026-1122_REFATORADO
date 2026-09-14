@@ -24,6 +24,7 @@ import {
 
 import { UserProfile } from "@/tipos";
 import MarcaCedroIA from "@/componentes/layout/MarcaCedroIA";
+import type { NavegarPara } from "@/hooks/useAplicacao";
 
 interface SidebarProps {
   isSidebarOpen?: boolean;
@@ -31,7 +32,7 @@ interface SidebarProps {
   isSidebarCollapsed?: boolean;
   setIsSidebarCollapsed?: (collapsed: boolean) => void;
   activeTab: AbaAplicacao;
-  setActiveTab: (tab: AbaAplicacao) => void;
+  navegarPara: NavegarPara;
   profile?: UserProfile | null;
   isCurrentUserAdmin?: boolean;
   isCurrentUserPrivileged?: boolean;
@@ -39,7 +40,6 @@ interface SidebarProps {
   recordsCount?: number;
   pendingCount?: number;
   pendingMyTurnCount?: number;
-  onNewSolicitation?: () => void;
   unreadChatCount?: number;
 }
 
@@ -60,14 +60,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isSidebarCollapsed: externalCollapsed,
   setIsSidebarCollapsed: setExternalCollapsed,
   activeTab,
-  setActiveTab,
+  navegarPara,
   profile,
   isCurrentUserAdmin = false,
   isCurrentUserPrivileged = false,
   isAdmin = false,
   recordsCount = 0,
   pendingCount = 0,
-  onNewSolicitation,
   unreadChatCount = 0
 }) => {
   const [internalCollapsed, setInternalCollapsed] = useState(false);
@@ -299,8 +298,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           data-pagina={item.id}
                           type="button"
                           onClick={() => {
-                            if (item.id === "new" && onNewSolicitation) onNewSolicitation();
-                            setActiveTab(item.id);
+                            navegarPara(item.id);
                             if (window.innerWidth < 768 && setIsSidebarOpen) setIsSidebarOpen(false);
                           }}
                           onMouseEnter={() => setHoveredItemId(item.id)}
@@ -385,7 +383,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           type="button"
           className={`barra-lateral__perfil ${visuallyCollapsed ? "barra-lateral__perfil--recolhido" : ""}`}
-          onClick={() => setActiveTab("profile")}
+          onClick={() => navegarPara("profile")}
           title="Abrir meu perfil"
           aria-label="Abrir meu perfil">
           <div className="barra-lateral__avatar" title={profile?.full_name || "Usuário Cedro"}>

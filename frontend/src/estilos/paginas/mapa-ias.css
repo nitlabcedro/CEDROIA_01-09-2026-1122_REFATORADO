@@ -185,7 +185,6 @@
 }
 
 .pagina-mapa-ias .mapa-ias__grupo-status-2,
-.pagina-mapa-ias .mapa-ias__grupo-risco,
 .pagina-mapa-ias .mapa-ias__grupo-ordenacao {
   display: flex;
   align-items: center;
@@ -983,22 +982,6 @@
   text-transform: uppercase;
   letter-spacing: .035em;
   border: 0;
-}
-
-.pagina-mapa-ias .mapa-ias__modal-secao--recomendacoes .mapa-ias__grupo-23 {
-  border: 0;
-  border-radius: 0;
-}
-
-.pagina-mapa-ias .mapa-ias__grupo-24 {
-  padding: 11px 15px;
-  color: #47554c;
-  background: #fff;
-  font-size: 11px;
-}
-
-.pagina-mapa-ias .mapa-ias__grupo-25 {
-  background: #0b8750;
 }
 
 .pagina-mapa-ias .mapa-ias__grupo-26 {

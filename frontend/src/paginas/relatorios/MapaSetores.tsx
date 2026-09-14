@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
 import {
   Users,
@@ -31,10 +31,15 @@ import {
   Bot,
   Shield
 } from "lucide-react";
-import { IARecord, UserProfile, StatusAuditoria } from "@/tipos";
+import { IARecord, UserProfile, ApprovalWorkflow } from "@/tipos";
 import { obterUltimoParecerLimpo as getCleanLastOpinion } from "@/utilitarios/pareceres";
 import { motion, AnimatePresence } from "framer-motion";
 import { identificarMarcaIA } from "@/utilitarios/inteligencia-artificial";
+import {
+  obterStatusGeralDoRegistro,
+  STATUS_GERAIS_OFICIAIS,
+  type StatusGeral,
+} from "@/utilitarios/status-solicitacao";
 
 
 function IconeInteligenciaArtificial({ nome }: { nome?: string }) {
@@ -90,6 +95,7 @@ function IconeInteligenciaArtificial({ nome }: { nome?: string }) {
 interface SectorMapProps {
   records: IARecord[];
   profiles: UserProfile[];
+  workflows?: ApprovalWorkflow[];
 }
 
 const hasUsefulValue = (value?: unknown) => {
@@ -118,14 +124,24 @@ const hasUsefulValue = (value?: unknown) => {
 };
 
 
-export default function SectorMap({ records, profiles }: SectorMapProps) {
+export default function SectorMap({ records, profiles, workflows = [] }: SectorMapProps) {
+  const obterStatus = (record: IARecord) =>
+    obterStatusGeralDoRegistro(record, workflows.find((wf) => wf.iaRecordId === record.id));
   const [selectedIA, setSelectedIA] = useState<IARecord | null>(null);
   const [expandedSectors, setExpandedSectors] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"All" | "Aprovado" | "Pendente" | "Negado">("All");
-  const [riskFilter, setRiskFilter] = useState<"All" | "Baixo" | "Médio" | "Alto">("All");
+  const [statusFilter, setStatusFilter] = useState<"All" | StatusGeral>("All");
   const [orderBy, setOrderBy] = useState<"volume" | "az" | "pending">("volume");
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedIA) return;
+    const fecharComEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedIA(null);
+    };
+    window.addEventListener("keydown", fecharComEscape);
+    return () => window.removeEventListener("keydown", fecharComEscape);
+  }, [selectedIA]);
 
   const toggleSector = (sector: string) => {
     setExpandedSectors((prev) => {
@@ -139,8 +155,11 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
   // Overall Inventory Stats (Calculated from baseline records for compliance oversight)
   const statsOverview = useMemo(() => {
     const sectorsSet = new Set(records.map((r) => r.unidadeSetor || "Não Informado"));
-    const approved = records.filter((r) => r.statusAuditoria === StatusAuditoria.APROVADO).length;
-    const pending = records.filter((r) => r.statusAuditoria === StatusAuditoria.PENDENTE).length;
+    const approved = records.filter((r) => obterStatus(r) === "Aprovada").length;
+    const pending = records.filter((r) => {
+      const status = obterStatus(r);
+      return status === "Em análise" || status === "Em teste";
+    }).length;
 
     return {
       totalSectors: sectorsSet.size,
@@ -148,9 +167,9 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
       approvedSolutions: approved,
       pendingSolutions: pending
     };
-  }, [records]);
+  }, [records, workflows]);
 
-  // Search, Status and Risk Filter logic
+  // Search and status filter logic
   const filteredRecords = useMemo(() => {
     return records.filter((r) => {
       const searchLower = searchTerm.toLowerCase().trim();
@@ -160,12 +179,11 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
       r.responsavelPreenchimento && r.responsavelPreenchimento.toLowerCase().includes(searchLower) ||
       r.fornecedor && r.fornecedor.toLowerCase().includes(searchLower);
 
-      const matchesStatus = statusFilter === "All" || r.statusAuditoria === statusFilter;
-      const matchesRisk = riskFilter === "All" || r.riscoResidual === riskFilter;
+      const matchesStatus = statusFilter === "All" || obterStatus(r) === statusFilter;
 
-      return matchesSearch && matchesStatus && matchesRisk;
+      return matchesSearch && matchesStatus;
     });
-  }, [records, searchTerm, statusFilter, riskFilter]);
+  }, [records, searchTerm, statusFilter, workflows]);
 
   // Group records by sector after application of filters
   const sectorGroups = useMemo(() => {
@@ -193,8 +211,9 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
 
       groups[sector].records.push(r);
       groups[sector].totalIAs++;
-      if (r.statusAuditoria === StatusAuditoria.APROVADO) groups[sector].authorizedCount++;
-      if (r.statusAuditoria === StatusAuditoria.PENDENTE) groups[sector].pendingCount++;
+      const statusGeral = obterStatus(r);
+      if (statusGeral === "Aprovada") groups[sector].authorizedCount++;
+      if (statusGeral === "Em análise" || statusGeral === "Em teste") groups[sector].pendingCount++;
       if (r.responsavelPreenchimento) groups[sector].users.add(r.responsavelPreenchimento);
     });
 
@@ -211,32 +230,6 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
 
     return list;
   }, [filteredRecords, orderBy]);
-
-  // Dynamic recommendations for custom compliance GRC panel
-  const getComplianceRecommendations = (ia: IARecord) => {
-    const recs: string[] = [];
-
-    if (ia.riscoResidual === "Alto") {
-      recs.push("Exigir emissão regular de Relatório de Impacto à Proteção de Dados (RIPD).");
-      recs.push("Forçar criptografia avançada de fluxo nos servidores de inteligência.");
-      recs.push("Impor auditoria semestral de logs de auditoria das decisões computacionais.");
-    } else if (ia.riscoResidual === "Médio") {
-      recs.push("Recomendar revisão anual nas matrizes de acesso de usuários.");
-      recs.push("Promover reciclagem anual opcional para os validadores humanos.");
-    } else {
-      recs.push("Atividade em conformidade habitual com monitoração de rotina.");
-    }
-
-    if (ia.usaDadosPessoais === "Sim" || ia.usaDadosSensiveis === "Sim") {
-      recs.push("Fator de risco de privacidade detectado: garantir que termos de uso respeitem a LGPD de forma explícita.");
-    }
-
-    if (ia.validacaoHumana === "Não") {
-      recs.push("Ausência de validação humana: estruturar barreira de validação pré-faturamento.");
-    }
-
-    return recs;
-  };
 
   const showTempFeedback = (msg: string) => {
     setActionFeedback(msg);
@@ -300,14 +293,14 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
           <div className="mapa-ias__grupo-aprovadas mapa-ias__kpi mapa-ias__kpi--aprovadas">
             <span className="mapa-ias__kpi-icone"><CheckCircle2 size={22} /></span>
             <span className="mapa-ias__kpi-conteudo">
-              <span className="mapa-ias__texto-aprovadas">Aprovadas</span>
+              <span className="mapa-ias__texto-aprovadas">Aprovada</span>
               <span className="mapa-ias__texto"><strong>{statsOverview.approvedSolutions}</strong></span>
             </span>
           </div>
           <div className="mapa-ias__grupo-pendentes mapa-ias__kpi mapa-ias__kpi--pendentes">
             <span className="mapa-ias__kpi-icone"><Clock size={22} /></span>
             <span className="mapa-ias__kpi-conteudo">
-              <span className="mapa-ias__texto-pendentes">Pendentes</span>
+              <span className="mapa-ias__texto-pendentes">Em andamento</span>
               <span className="mapa-ias__texto-2"><strong>{statsOverview.pendingSolutions}</strong></span>
             </span>
           </div>
@@ -339,26 +332,7 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
               onChange={(val) => setStatusFilter(val as any)}
               options={[
               { value: "All", label: "Todos" },
-              { value: "Aprovado", label: "Aprovadas" },
-              { value: "Pendente", label: "Pendentes" },
-              { value: "Negado", label: "Negadas" }]
-              }
-              size="sm"
-              className="mapa-ias__icone-customdropdown" />
-            
-          </div>
-
-          {/* Risk Level Filter */}
-          <div className="mapa-ias__grupo-risco">
-            <span className="mapa-ias__texto-status">Risco:</span>
-            <CustomDropdown
-              value={riskFilter}
-              onChange={(val) => setRiskFilter(val as any)}
-              options={[
-              { value: "All", label: "Todos" },
-              { value: "Baixo", label: "Baixo" },
-              { value: "Médio", label: "Médio" },
-              { value: "Alto", label: "Alto" }]
+              ...STATUS_GERAIS_OFICIAIS.map((status) => ({ value: status, label: status }))]
               }
               size="sm"
               className="mapa-ias__icone-customdropdown" />
@@ -423,10 +397,10 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
               <div className="mapa-ias__grupo-3">
                 <div className="mapa-ias__grupo-aprovadas-2">
                   <span className="mapa-ias__texto-aprovadas-2">
-                    <span className="mapa-ias__texto-4"></span> Aprovadas: {group.authorizedCount}
+                    <span className="mapa-ias__texto-4"></span> Aprovada: {group.authorizedCount}
                   </span>
                   <span className="mapa-ias__texto-pendentes-2">
-                    <span className="mapa-ias__texto-5"></span> Pendentes: {group.pendingCount}
+                    <span className="mapa-ias__texto-5"></span> Em andamento: {group.pendingCount}
                   </span>
                   <span className="mapa-ias__texto-responsaveis">
                     Responsáveis: {group.users.size}
@@ -442,7 +416,7 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
                   <div style={{ width: `${pendingPercent}%` }} className="mapa-ias__grupo-6" title={`Pendentes: ${group.pendingCount}`} />
                   }
                   {group.totalIAs - group.authorizedCount - group.pendingCount > 0 &&
-                  <div style={{ width: `${100 - approvedPercent - pendingPercent}%` }} className="mapa-ias__grupo-negado-outros" title="Negado/Outros" />
+                  <div style={{ width: `${100 - approvedPercent - pendingPercent}%` }} className="mapa-ias__grupo-negado-outros" title="Outros status" />
                   }
                 </div>
               </div>
@@ -470,20 +444,14 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
                       <div className="mapa-ias__grupo-10">
                         {/* Status Badge */}
                         <span className={`mapa-ias__texto-6 ${
-                      r.statusAuditoria === "Aprovado" ? "mapa-ias__texto-7" :
-                      r.statusAuditoria === "Negado" ? "mapa-ias__texto-8" :
-                      "mapa-ias__texto-9"}`
+                      (() => {
+                        const statusGeral = obterStatus(r);
+                        if (statusGeral === "Aprovada") return "mapa-ias__texto-7";
+                        if (statusGeral === "Não aprovada" || statusGeral === "Cancelada") return "mapa-ias__texto-8";
+                        return "mapa-ias__texto-9";
+                      })()}`
                       }>
-                          {r.statusAuditoria || "Pendente"}
-                        </span>
-
-                        {/* Risco Badge */}
-                        <span className={`mapa-ias__texto-6 ${
-                      r.riscoResidual === "Alto" ? "mapa-ias__texto-8" :
-                      r.riscoResidual === "Médio" ? "mapa-ias__texto-9" :
-                      "mapa-ias__texto-7"}`
-                      }>
-                          {r.riscoResidual || "Baixo"}
+                          {obterStatus(r)}
                         </span>
 
                         <ChevronRight size={12} className="mapa-ias__icone-chevronright" />
@@ -511,7 +479,7 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
         <div className="mapa-ias__grupo-nenhuma-solucao-localizada">
             <AlertCircle className="mapa-ias__icone-alertcircle" />
             <h3 className="mapa-ias__titulo-bloco-nenhuma-solucao-localizada">Nenhuma solução localizada</h3>
-            <p className="mapa-ias__descricao-verifique-os-filtros-de-busca-">Verifique os filtros de busca, status ou criticidade.</p>
+            <p className="mapa-ias__descricao-verifique-os-filtros-de-busca-">Verifique os filtros de busca ou status.</p>
           </div>
         }
       </motion.div>
@@ -547,14 +515,15 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
                     </span>
                     <span
                       className={`mapa-ias__texto-11 ${
-                        selectedIA.statusAuditoria === StatusAuditoria.APROVADO
-                          ? "mapa-ias__texto-12"
-                          : selectedIA.statusAuditoria === StatusAuditoria.NEGADO
-                            ? "mapa-ias__texto-11--negado"
-                            : "mapa-ias__texto-13"
+                        (() => {
+                          const statusGeral = obterStatus(selectedIA);
+                          if (statusGeral === "Aprovada") return "mapa-ias__texto-12";
+                          if (statusGeral === "Não aprovada" || statusGeral === "Cancelada") return "mapa-ias__texto-11--negado";
+                          return "mapa-ias__texto-13";
+                        })()
                       }`}
                     >
-                      {selectedIA.statusAuditoria || "Pendente"}
+                      {obterStatus(selectedIA)}
                     </span>
                     {selectedIA.unidadeSetor && (
                       <span className="mapa-ias__texto-14">{selectedIA.unidadeSetor}</span>
@@ -607,24 +576,8 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
                     return parts.join(", ");
                   };
 
-                  const getPrivacySummary = () => {
-                    const parts: string[] = [];
-                    if (selectedIA.usaDadosPessoais === "Sim") parts.push("Dados Pessoais");
-                    if (selectedIA.usaDadosSensiveis === "Sim") parts.push("Dados Sensíveis");
-
-                    let summary = parts.length > 0 ? parts.join(" e ") : "";
-                    if (hasUsefulValue(selectedIA.quaisDados)) {
-                      summary = summary
-                        ? `${summary} (${selectedIA.quaisDados})`
-                        : String(selectedIA.quaisDados);
-                    }
-                    return summary || "Sem dados pessoais";
-                  };
-
                   const iaText = getTipoIAText();
                   const processText = selectedIA.etapaOutro || selectedIA.etapaProcesso;
-                  const recommendations = getComplianceRecommendations(selectedIA);
-
                   return (
                     <div className="mapa-ias__modal-secoes">
                       <section className="mapa-ias__modal-secao">
@@ -698,26 +651,10 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
                           <h3>3. Parâmetros de Governança</h3>
                         </div>
                         <div className="mapa-ias__modal-secao-corpo mapa-ias__governanca-grid">
-                          {hasUsefulValue(selectedIA.criticidade) && (
-                            <div className="mapa-ias__campo-informacao">
-                              <span>Criticidade</span>
-                              <strong className="mapa-ias__valor-governanca">
-                                {selectedIA.criticidade ? selectedIA.criticidade.split(":")[0] : "Baixa"}
-                              </strong>
-                            </div>
-                          )}
-
                           <div className="mapa-ias__campo-informacao">
-                            <span>Privacidade / Tipo de dado</span>
-                            <strong className="mapa-ias__valor-governanca">{getPrivacySummary()}</strong>
+                            <span>Status da solicitação</span>
+                            <strong className="mapa-ias__valor-governanca">{obterStatus(selectedIA)}</strong>
                           </div>
-
-                          {hasUsefulValue(selectedIA.statusUso) && (
-                            <div className="mapa-ias__campo-informacao">
-                              <span>Etapa atual do fluxo</span>
-                              <strong className="mapa-ias__valor-governanca">{selectedIA.statusUso}</strong>
-                            </div>
-                          )}
 
                           <div className="mapa-ias__ultimo-parecer">
                             <span>Último parecer</span>
@@ -751,22 +688,6 @@ export default function SectorMap({ records, profiles }: SectorMapProps) {
                         </div>
                       )}
 
-                      {recommendations.length > 0 && (
-                        <section className="mapa-ias__modal-secao mapa-ias__modal-secao--recomendacoes">
-                          <div className="mapa-ias__modal-secao-cabecalho">
-                            <ShieldCheck size={20} />
-                            <h3>4. Recomendações e Plano de Mitigação GRC</h3>
-                          </div>
-                          <div className="mapa-ias__grupo-23">
-                            {recommendations.map((rec, i) => (
-                              <div key={i} className="mapa-ias__grupo-24">
-                                <div className="mapa-ias__grupo-25" />
-                                <span className="mapa-ias__texto-17">{rec}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </section>
-                      )}
                     </div>
                   );
                 })()}

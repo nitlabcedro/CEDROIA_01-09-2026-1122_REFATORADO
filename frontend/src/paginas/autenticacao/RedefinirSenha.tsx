@@ -1,73 +1,149 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/servicos/supabase";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Lock, Eye, EyeOff, Loader2, FlaskConical, Pipette, Sparkles, Microscope, TestTube, Atom, Dna } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, KeyRound, Loader2, Lock } from "lucide-react";
+import { useAuth } from "@/contextos/ContextoAutenticacao";
+import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
+import {
+  criarEstadoHistoricoCedroIA,
+  ehEstadoHistoricoCedroIA,
+} from "@/utilitarios/historico-navegacao";
 
-export default function ResetPassword() {
+const TAMANHO_MINIMO_SENHA = 8;
+
+type ErrosCampos = {
+  novaSenha?: string;
+  confirmarSenha?: string;
+};
+
+const variantesFormulario = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.05
+    }
+  }
+};
+
+const variantesCampo = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring" as const, stiffness: 110, damping: 18 }
+  }
+};
+
+interface RedefinirSenhaProps {
+  onConcluida?: (mensagem: string) => void;
+  onRetornarLogin?: () => void;
+}
+
+export default function ResetPassword({
+  onConcluida,
+  onRetornarLogin,
+}: RedefinirSenhaProps) {
+  const {
+    session,
+    loading: authLoading,
+    recuperacaoSenhaEmAndamento,
+    finalizarRecuperacaoSenha,
+    signOut,
+  } = useAuth();
   const [loading, setLoading] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [message, setMessage] = useState<{type: "success" | "error";text: string;} | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<ErrosCampos>({});
+  const [message, setMessage] = useState<{ type: "error"; text: string } | null>(null);
 
-  useEffect(() => {
-    // Garantir que a sessão do Supabase esteja carregada/inicializada ao abrir /reset-password
-    const checkSession = async () => {
-      try {
-        await supabase.auth.getSession();
-      } catch (err) {
-        console.error("Erro ao obter sessão no ResetPassword:", err);
-      }
-    };
-    checkSession();
-  }, []);
+  const recuperacaoValida = Boolean(
+    !authLoading
+    && recuperacaoSenhaEmAndamento
+    && session?.user,
+  );
+
+  const irParaLogin = async () => {
+    try {
+      await signOut({ somenteLocal: true });
+    } catch {
+      // Mesmo se o encerramento da sessão falhar, a rota inicial exibe o login.
+    }
+    const navigationIndex = ehEstadoHistoricoCedroIA(window.history.state)
+      ? window.history.state.navigationIndex
+      : 0;
+    window.history.replaceState(
+      criarEstadoHistoricoCedroIA({
+        protegida: false,
+        navigationIndex,
+      }),
+      "",
+      "/",
+    );
+    onRetornarLogin?.();
+  };
+
+  const validarCampos = () => {
+    const erros: ErrosCampos = {};
+    const cleanPassword = newPassword.trim();
+    const cleanConfirm = confirmPassword.trim();
+
+    if (!cleanPassword) {
+      erros.novaSenha = "Informe a nova senha.";
+    } else if (cleanPassword.length < TAMANHO_MINIMO_SENHA) {
+      erros.novaSenha = "A senha deve possuir pelo menos 8 caracteres.";
+    }
+
+    if (!cleanConfirm) {
+      erros.confirmarSenha = "Informe a confirmação da senha.";
+    } else if (cleanPassword !== cleanConfirm) {
+      erros.confirmarSenha = "As senhas não coincidem.";
+    }
+
+    return { erros, cleanPassword };
+  };
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
 
-    const cleanPassword = newPassword.trim();
-    const cleanConfirm = confirmPassword.trim();
+    const { erros, cleanPassword } = validarCampos();
+    setFieldErrors(erros);
 
-    if (!cleanPassword || !cleanConfirm) {
-      setMessage({ type: "error", text: "Preencha todos os campos." });
+    if (erros.novaSenha || erros.confirmarSenha) {
       return;
     }
-
-    if (cleanPassword.length < 6) {
-      setMessage({ type: "error", text: "A senha deve ter pelo menos 6 caracteres." });
-      return;
-    }
-
-    if (cleanPassword !== cleanConfirm) {
-      setMessage({ type: "error", text: "As senhas informadas não coincidem." });
+    if (!recuperacaoValida) {
+      setMessage({
+        type: "error",
+        text: "Este link de redefinição de senha é inválido ou expirou. Solicite um novo link.",
+      });
       return;
     }
 
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: cleanPassword
-      });
-
-      if (error) throw error;
-
-      setMessage({
-        type: "success",
-        text: "Senha atualizada com sucesso. Você já pode acessar o Cedro IA com sua nova senha."
-      });
-
-      // Redireciona para o login após 3 segundos
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 3000);
-    } catch (err: any) {
-      console.error("Erro ao atualizar senha:", err);
+      await finalizarRecuperacaoSenha(cleanPassword);
+      const navigationIndex = ehEstadoHistoricoCedroIA(window.history.state)
+        ? window.history.state.navigationIndex
+        : 0;
+      window.history.replaceState(
+        criarEstadoHistoricoCedroIA({
+          protegida: false,
+          navigationIndex,
+        }),
+        "",
+        "/",
+      );
+      onConcluida?.("Senha redefinida com sucesso. Faça login com sua nova senha.");
+    } catch (error: unknown) {
+      console.error("Erro ao redefinir senha:", error);
       setMessage({
         type: "error",
-        text: "Não foi possível atualizar a senha. Solicite um novo link de recuperação e tente novamente."
+        text: obterMensagemErroUsuario(error, "redefinicao-senha"),
       });
     } finally {
       setLoading(false);
@@ -76,218 +152,211 @@ export default function ResetPassword() {
 
   return (
     <div
-      id="pagina-redefinir-senha" data-componente="pagina-redefinir-senha" className="pagina-autenticacao autenticacao-conteiner"
-      style={{
-        backgroundImage: `url('https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1920&q=80')`
-      }}>
-      
-      {/* Solid green overlay */}
-      <div className="redefinir-senha__grupo" />
-
-      {/* LEFT COLUMN: Logo */}
-      <div className="pagina-autenticacao__marca autenticacao-logo">
-        <div className="redefinir-senha__grupo-2">
+      id="pagina-redefinir-senha"
+      data-componente="pagina-redefinir-senha"
+      className="pagina-autenticacao pagina-autenticacao--reset"
+    >
+      <aside className="pagina-autenticacao__visual" aria-hidden="true">
+        <div className="pagina-autenticacao__visual-overlay" />
+        <div className="pagina-autenticacao__ondas pagina-autenticacao__ondas--superior" />
+        <div className="pagina-autenticacao__ondas pagina-autenticacao__ondas--inferior" />
+        <div className="pagina-autenticacao__marca">
           <img
             src="/NIT.webp"
-            alt="Laboratório Cedro"
-            className="redefinir-senha__imagem" />
-          
+            alt=""
+            className="pagina-autenticacao__visual-logo"
+          />
+          <span className="pagina-autenticacao__marca-traco" />
         </div>
-      </div>
+      </aside>
 
-      {/* RIGHT COLUMN: Password Reset Card */}
-      <div className="pagina-autenticacao__painel autenticacao-cartao rolagem-personalizada">
-        
-        {/* Subtle Laboratory Overlay Elements */}
-        <div className="redefinir-senha__grupo-3">
-          <div className="redefinir-senha__grupo-4" />
-          
-          <motion.div
-            className="redefinir-senha__elemento"
-            style={{ color: "rgba(7, 86, 24, 0.065)" }}
-            animate={{ y: [0, -6, 0], rotate: [0, 6, -6, 0] }}
-            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}>
-            
-            <FlaskConical size={64} strokeWidth={1.2} />
-          </motion.div>
+      <main className="pagina-autenticacao__conteudo">
+        <div className="pagina-autenticacao__halo pagina-autenticacao__halo--superior" />
+        <div className="pagina-autenticacao__halo pagina-autenticacao__halo--inferior" />
 
-          <motion.div
-            className="redefinir-senha__elemento-2"
-            style={{ color: "rgba(242, 146, 34, 0.055)" }}
-            animate={{ y: [0, 8, 0], rotate: [0, -8, 8, 0] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}>
-            
-            <Pipette size={52} strokeWidth={1.2} />
-          </motion.div>
-
-          <motion.div
-            className="redefinir-senha__elemento-3"
-            style={{ color: "rgba(242, 146, 34, 0.05)" }}
-            animate={{ scale: [0.9, 1.15, 0.9], opacity: [0.4, 0.8, 0.4] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
-            
-            <Sparkles size={36} strokeWidth={1.2} />
-          </motion.div>
-
-          <motion.div
-            className="redefinir-senha__elemento-4"
-            style={{ color: "rgba(7, 86, 24, 0.065)" }}
-            animate={{ y: [0, -8, 0], rotate: [0, -4, 4, 0] }}
-            transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 2 }}>
-            
-            <Microscope size={68} strokeWidth={1.2} />
-          </motion.div>
-
-          <motion.div
-            className="redefinir-senha__elemento-5"
-            style={{ color: "rgba(7, 86, 24, 0.065)" }}
-            animate={{ y: [0, 6, 0], rotate: [0, 8, -8, 0] }}
-            transition={{ duration: 7.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}>
-            
-            <TestTube size={56} strokeWidth={1.2} />
-          </motion.div>
-
-          <motion.div
-            className="redefinir-senha__elemento-6"
-            style={{ color: "rgba(242, 146, 34, 0.055)" }}
-            animate={{ scale: [0.95, 1.05, 0.95], rotate: [0, 360] }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
-            
-            <Atom size={60} strokeWidth={1.2} />
-          </motion.div>
-
-          <motion.div
-            className="redefinir-senha__elemento-7"
-            style={{ color: "rgba(7, 86, 24, 0.075)" }}
-            animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}>
-            
-            <Dna size={72} strokeWidth={1.0} />
-          </motion.div>
-        </div>
-
-        {/* Top brand indicator (only visible on mobile) */}
-        <div className="redefinir-senha__grupo-cedro">
-          <img
-            src="/NIT.webp"
-            alt="Laboratório Cedro"
-            className="redefinir-senha__imagem-2" />
-          
-          <div className="redefinir-senha__grupo-cedro-2">
-            <span className="redefinir-senha__texto-cedro">
-              Cedro
-            </span>
-            <span className="redefinir-senha__texto">
-              IA
-            </span>
-          </div>
-        </div>
-
-        <div className="redefinir-senha__grupo-redefinir-senha">
-          
-          {/* Header Title */}
-          <div className="redefinir-senha__grupo-redefinir-senha-2">
-            <h2 className="redefinir-senha__titulo-secao-redefinir-senha">
-              Redefinir senha
-            </h2>
-            <p className="redefinir-senha__descricao-crie-uma-nova-senha-para-acess">
-              Crie uma nova senha para acessar o Cedro IA.
-            </p>
-          </div>
-
-          <form id="formRedefinirSenha" onSubmit={handleUpdatePassword} className="autenticacao-formulario">
-            
-            {/* New Password Input */}
-            <div className="autenticacao-campo autenticacao-campo--neutro">
-              <div className="redefinir-senha__grupo-5">
-                <Lock size={20} strokeWidth={1.75} />
-              </div>
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Nova senha"
-                required
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="caret-[#075618] redefinir-senha__campo-nova-senha" />
-              
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="redefinir-senha__botao">
-                
-                {showPassword ? <EyeOff size={20} strokeWidth={1.75} /> : <Eye size={20} strokeWidth={1.75} />}
-              </button>
-            </div>
-
-            {/* Confirm New Password Input */}
-            <div className="autenticacao-campo autenticacao-campo--neutro">
-              <div className="redefinir-senha__grupo-5">
-                <Lock size={20} strokeWidth={1.75} />
-              </div>
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="Confirmar nova senha"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="caret-[#075618] redefinir-senha__campo-nova-senha" />
-              
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="redefinir-senha__botao">
-                
-                {showConfirmPassword ? <EyeOff size={20} strokeWidth={1.75} /> : <Eye size={20} strokeWidth={1.75} />}
-              </button>
-            </div>
-
-            {/* Status / Error messages */}
-            {message &&
-            <div className={`redefinir-senha__grupo-6 ${
-            message.type === "success" ? "redefinir-senha__grupo-8" : "redefinir-senha__grupo-9"} redefinir-senha__grupo-7`
-            }>
-                <span className={`redefinir-senha__texto-2 ${message.type === "success" ? "redefinir-senha__texto-3" : "redefinir-senha__texto-4"}`} />
-                <span>
-                  {message.text}
+        <motion.section
+          initial="hidden"
+          animate="visible"
+          variants={variantesFormulario}
+          className="autenticacao-card autenticacao-card--reset"
+        >
+          {!authLoading && !recuperacaoValida ? (
+            <>
+              <motion.header variants={variantesCampo} className="autenticacao-card__cabecalho">
+                <span className="autenticacao-card__icone" aria-hidden="true">
+                  <AlertCircle size={25} strokeWidth={1.7} />
                 </span>
-              </div>
-            }
+                <h1 className="autenticacao-card__titulo">Link inválido ou expirado</h1>
+                <p className="autenticacao-card__descricao">
+                  Este link de redefinição de senha é inválido ou expirou. Solicite um novo link.
+                </p>
+              </motion.header>
 
-            {/* Submit Button */}
-            <button
-              id="btnRedefinirSenha"
-              type="submit"
-              disabled={loading}
-              className="autenticacao-acoes">
-              
-              {loading ?
-              <Loader2 className="redefinir-senha__icone-loader2" size={16} /> :
+              <motion.div variants={variantesCampo}>
+                <button
+                  type="button"
+                  className="autenticacao-submit"
+                  onClick={irParaLogin}
+                >
+                  Voltar para o login
+                </button>
+              </motion.div>
+            </>
+          ) : authLoading ? (
+            <motion.header variants={variantesCampo} className="autenticacao-card__cabecalho">
+              <span className="autenticacao-card__icone" aria-hidden="true">
+                <Loader2 className="autenticacao-submit__loader" size={25} />
+              </span>
+              <h1 className="autenticacao-card__titulo">Validando link</h1>
+              <p className="autenticacao-card__descricao">Aguarde um instante.</p>
+            </motion.header>
+          ) : (
+            <>
+              <motion.header variants={variantesCampo} className="autenticacao-card__cabecalho">
+                <span className="autenticacao-card__icone" aria-hidden="true">
+                  <KeyRound size={25} strokeWidth={1.7} />
+                </span>
+                <h1 className="autenticacao-card__titulo">Redefinir senha</h1>
+                <p className="autenticacao-card__descricao">
+                  Crie uma nova senha para acessar o Cedro IA.
+                </p>
+              </motion.header>
 
-              "Atualizar senha"
-              }
-            </button>
-          </form>
+              <form
+                id="formRedefinirSenha"
+                onSubmit={handleUpdatePassword}
+                className="autenticacao-formulario"
+                noValidate
+              >
+                <motion.div variants={variantesCampo} className="autenticacao-campo-grupo">
+                  <label htmlFor="reset-nova-senha" className="autenticacao-campo__rotulo">
+                    Nova senha
+                  </label>
+                  <div className={`autenticacao-campo${fieldErrors.novaSenha ? " autenticacao-campo--erro" : ""}`}>
+                    <span className="autenticacao-campo__icone">
+                      <Lock size={20} strokeWidth={1.8} />
+                    </span>
+                    <input
+                      id="reset-nova-senha"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Digite sua nova senha"
+                      autoComplete="new-password"
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        if (fieldErrors.novaSenha) {
+                          setFieldErrors((atual) => ({ ...atual, novaSenha: undefined }));
+                        }
+                      }}
+                      className="autenticacao-campo__input autenticacao-campo__input--senha"
+                      aria-invalid={Boolean(fieldErrors.novaSenha)}
+                      aria-describedby="reset-senha-ajuda reset-senha-erro"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((atual) => !atual)}
+                      className="autenticacao-campo__visibilidade"
+                      aria-label={showPassword ? "Ocultar nova senha" : "Mostrar nova senha"}
+                    >
+                      {showPassword ? <EyeOff size={19} strokeWidth={1.7} /> : <Eye size={19} strokeWidth={1.7} />}
+                    </button>
+                  </div>
+                  <p id="reset-senha-ajuda" className="autenticacao-formulario__ajuda">
+                    Use pelo menos 8 caracteres.
+                  </p>
+                  {fieldErrors.novaSenha && (
+                    <p id="reset-senha-erro" className="autenticacao-campo__erro" role="alert">
+                      {fieldErrors.novaSenha}
+                    </p>
+                  )}
+                </motion.div>
 
-          {/* Back to login */}
-          <div className="redefinir-senha__grupo-voltar-para-o-login">
-            <button
-              type="button"
-              onClick={() => {window.location.href = "/";}}
-              className="redefinir-senha__botao-voltar-para-o-login">
-              
-              Voltar para o login
-            </button>
-          </div>
-        </div>
+                <motion.div variants={variantesCampo} className="autenticacao-campo-grupo">
+                  <label htmlFor="reset-confirmar-senha" className="autenticacao-campo__rotulo">
+                    Confirmar nova senha
+                  </label>
+                  <div className={`autenticacao-campo${fieldErrors.confirmarSenha ? " autenticacao-campo--erro" : ""}`}>
+                    <span className="autenticacao-campo__icone">
+                      <Lock size={20} strokeWidth={1.8} />
+                    </span>
+                    <input
+                      id="reset-confirmar-senha"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Digite novamente sua senha"
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        if (fieldErrors.confirmarSenha) {
+                          setFieldErrors((atual) => ({ ...atual, confirmarSenha: undefined }));
+                        }
+                      }}
+                      className="autenticacao-campo__input autenticacao-campo__input--senha"
+                      aria-invalid={Boolean(fieldErrors.confirmarSenha)}
+                      aria-describedby={fieldErrors.confirmarSenha ? "reset-confirmar-erro" : undefined}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((atual) => !atual)}
+                      className="autenticacao-campo__visibilidade"
+                      aria-label={showConfirmPassword ? "Ocultar confirmação de senha" : "Mostrar confirmação de senha"}
+                    >
+                      {showConfirmPassword ? <EyeOff size={19} strokeWidth={1.7} /> : <Eye size={19} strokeWidth={1.7} />}
+                    </button>
+                  </div>
+                  {fieldErrors.confirmarSenha && (
+                    <p id="reset-confirmar-erro" className="autenticacao-campo__erro" role="alert">
+                      {fieldErrors.confirmarSenha}
+                    </p>
+                  )}
+                </motion.div>
 
-        {/* Footer info */}
-        <div className="redefinir-senha__grupo-cedro-ia">
-          <p className="redefinir-senha__descricao-cedro-ia">
-            Cedro IA &copy; {new Date().getFullYear()}
-          </p>
-        </div>
+                {message && (
+                  <motion.div
+                    variants={variantesCampo}
+                    className="autenticacao-mensagem autenticacao-mensagem--error"
+                    role="alert"
+                    aria-live="assertive"
+                  >
+                    <span className="autenticacao-mensagem__icone" aria-hidden="true">
+                      <AlertCircle size={18} />
+                    </span>
+                    <span>{message.text}</span>
+                  </motion.div>
+                )}
 
-      </div>
-    </div>);
+                <motion.div variants={variantesCampo}>
+                  <button
+                    id="btnRedefinirSenha"
+                    type="submit"
+                    disabled={loading}
+                    className="autenticacao-submit"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="autenticacao-submit__loader" size={18} />
+                        <span>Atualizando...</span>
+                      </>
+                    ) : (
+                      <span>Atualizar senha</span>
+                    )}
+                  </button>
+                </motion.div>
+              </form>
 
+              <motion.div variants={variantesCampo} className="autenticacao-card__rodape">
+                <button
+                  type="button"
+                  onClick={irParaLogin}
+                  className="autenticacao-card__trocar"
+                >
+                  ← Voltar para o login
+                </button>
+              </motion.div>
+            </>
+          )}
+        </motion.section>
+      </main>
+    </div>
+  );
 }

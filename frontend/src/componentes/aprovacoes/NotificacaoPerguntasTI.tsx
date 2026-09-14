@@ -8,6 +8,7 @@ import {
   salvarRascunhoRespostasTI } from
 "@/servicos/interacoes-ti";
 import type { SolicitacaoInformacoesTI } from "@/tipos";
+import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 
 export default function NotificacaoPerguntasTI() {
   const [pendencias, setPendencias] = useState<SolicitacaoInformacoesTI[]>([]);
@@ -102,8 +103,9 @@ export default function NotificacaoPerguntasTI() {
         setSalvando(true);
         await salvarRascunhoRespostasTI(solicitacaoAberta.id, respostasPayload);
         setRascunhoAlterado(false);
-      } catch (error: any) {
-        setErro(error?.message || "Não foi possível salvar o rascunho.");
+      } catch (error: unknown) {
+        console.error("Erro ao salvar rascunho das respostas da TI:", error);
+        setErro(obterMensagemErroUsuario(error, "aprovacao"));
       } finally {
         setSalvando(false);
       }
@@ -122,8 +124,9 @@ export default function NotificacaoPerguntasTI() {
         setSalvando(true);
         await salvarRascunhoRespostasTI(solicitacaoAberta.id, respostasPayload);
         setRascunhoAlterado(false);
-      } catch (error: any) {
-        setErro(error?.message || "Não foi possível salvar o rascunho.");
+      } catch (error: unknown) {
+        console.error("Erro ao salvar rascunho ao fechar perguntas da TI:", error);
+        setErro(obterMensagemErroUsuario(error, "aprovacao"));
         setSalvando(false);
         return;
       } finally {
@@ -144,8 +147,9 @@ export default function NotificacaoPerguntasTI() {
       setRespostas({});
       setRascunhoAlterado(false);
       await carregarPendencias();
-    } catch (error: any) {
-      setErro(error?.message || "Não foi possível enviar as respostas.");
+    } catch (error: unknown) {
+      console.error("Erro ao enviar respostas para a TI:", error);
+      setErro(obterMensagemErroUsuario(error, "aprovacao"));
     } finally {
       setEnviando(false);
     }

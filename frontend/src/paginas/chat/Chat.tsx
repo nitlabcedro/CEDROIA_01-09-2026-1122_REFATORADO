@@ -9,6 +9,7 @@ import { getProfiles } from "@/servicos/armazenamento";
 import "@/estilos/paginas/chat-referencia.css";
 import { useAuth } from "@/contextos/ContextoAutenticacao";
 import { ChatMessage, UserProfile } from "@/tipos";
+import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, User, MoreVertical, MessageSquare, X,
@@ -815,7 +816,7 @@ export const Chat: React.FC = () => {
 
       if (insertError) {
         console.error("Erro ao salvar mensagem no Supabase:", insertError);
-        setUiError(`Erro ao enviar mensagem: ${insertError.message || insertError.details || "Código do banco: " + insertError.code}`);
+        setUiError(obterMensagemErroUsuario(insertError, "chat"));
 
         // Marcar mensagem local temporária como erro
         setMessages((prev) => prev.map((m) => m.id === tempId ? { ...m, status: "error" } : m));
@@ -843,9 +844,9 @@ export const Chat: React.FC = () => {
         // Atualizar listagem de prévias lateral
         fetchAllLastMessages();
       }
-    } catch (dbErr: any) {
+    } catch (dbErr: unknown) {
       console.error("Erro fatal ao processar envio de mensagem:", dbErr);
-      setUiError(`Erro ao processar envio: ${dbErr.message || dbErr}`);
+      setUiError(obterMensagemErroUsuario(dbErr, "chat"));
       setMessages((prev) => prev.map((m) => m.id === tempId ? { ...m, status: "error" } : m));
       setNewMessage(textToSend);
       setSelectedFile(fileToUpload);

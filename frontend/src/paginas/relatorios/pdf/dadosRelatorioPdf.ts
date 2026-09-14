@@ -1,7 +1,9 @@
-import { criarEtapasWorkflowPadrao } from "@/constantes/fluxo-aprovacao";
-import { ApprovalConfig, ApprovalStep, ApprovalWorkflow, IARecord, StatusUso } from "@/tipos";
+import { ETAPAS_APROVACAO_OFICIAIS } from "@/constantes/fluxo-aprovacao";
+import { ApprovalConfig, ApprovalStep, ApprovalWorkflow, IARecord } from "@/tipos";
+import { obterStatusGeralDoRegistro } from "@/utilitarios/status-solicitacao";
 
 export interface RelatorioPdfAssinatura {
+  stepNumber: number;
   etapa: string;
   responsavel: string;
   status: string;
@@ -41,16 +43,34 @@ const formatarDataHora = (valor?: string) => {
   return data.toLocaleString("pt-BR");
 };
 
-const formatarStatusEtapa = (status?: string) => {
+const formatarStatusEtapa = (
+  step: ApprovalStep | undefined,
+  stepNumber: number,
+  workflow?: ApprovalWorkflow,
+  solicitacaoCancelada = false,
+) => {
+  const etapaCancelamento = workflow?.currentStep;
+  const etapaCancelamentoValida = typeof etapaCancelamento === "number"
+    && Number.isInteger(etapaCancelamento)
+    && etapaCancelamento >= 1
+    && etapaCancelamento <= ETAPAS_APROVACAO_OFICIAIS.length;
+
+  if (solicitacaoCancelada && etapaCancelamentoValida) {
+    if (stepNumber === etapaCancelamento) return "Cancelada";
+    if (stepNumber > etapaCancelamento) return "Não iniciada";
+  }
+
+  const status = step?.status;
   switch ((status || "").toLowerCase()) {
     case "aprovado":
+    case "opiniao":
       return "Aprovado";
     case "negado":
       return "Negado";
-    case "opiniao":
-      return "Parecer registrado";
     default:
-      return "Pendente";
+      return workflow?.finalStatus === "pendente" && workflow.currentStep === stepNumber
+        ? "Em andamento"
+        : "Não iniciada";
   }
 };
 
@@ -84,66 +104,45 @@ const extrairParecer = (comentario?: string) => {
   return (linhasLimpas.join(" ") || FALLBACK_PARECER).trim();
 };
 
-const obterEtapasEfetivas = (
-  record: IARecord,
-  workflow?: ApprovalWorkflow,
-  approvalConfig?: ApprovalConfig,
-): ApprovalStep[] => {
-  if (workflow?.steps?.length) {
-    return workflow.steps;
-  }
-
-  if (approvalConfig?.steps?.length) {
-    return approvalConfig.steps.map((step) => ({
-      stepNumber: step.stepNumber,
-      roleName: step.roleName,
-      assignedUserId: step.userId,
-      assignedUserName: step.userName,
-      status: "aguardando" as const,
-      isOpinionOnly: step.isOpinionOnly,
-    }));
-  }
-
-  return criarEtapasWorkflowPadrao();
-};
-
-const formatarStatusGeral = (status: StatusUso | string) => {
-  switch (status) {
-    case StatusUso.APROVADO:
-      return "Aprovado";
-    case StatusUso.APROVADO_COM_RESTRICOES:
-      return "Aprovado com restrições";
-    case StatusUso.NAO_APROVADO:
-      return "Negado";
-    case StatusUso.CANCELADA:
-      return "Cancelado";
-    case StatusUso.SUSPENSO:
-      return "Suspenso";
-    case StatusUso.EM_TESTE_PILOTO:
-      return "Em teste";
-    default:
-      return "Pendente";
-  }
-};
-
 export function montarDadosRelatorioPdf(
   record: IARecord,
   workflow?: ApprovalWorkflow,
   approvalConfig?: ApprovalConfig,
 ): RelatorioPdfDados {
-  const etapas = obterEtapasEfetivas(record, workflow, approvalConfig);
-  const assinaturas = etapas.map((step) => ({
-    etapa: step.roleName,
-    responsavel: step.assignedUserName?.trim() || FALLBACK_RESPONSAVEL,
-    status: formatarStatusEtapa(step.status),
-    parecer: extrairParecer(step.comment),
-    data: step.decidedAt ? formatarData(step.decidedAt) : undefined,
-  }));
+  const statusGeral = obterStatusGeralDoRegistro(record, workflow);
+  const solicitacaoCancelada = statusGeral === "Cancelada";
+  const etapasWorkflowPorNumero = new Map(
+    (workflow?.steps || []).map((step) => [step.stepNumber, step]),
+  );
+  const configuracaoPorNumero = new Map(
+    (approvalConfig?.steps || []).map((step) => [step.stepNumber, step]),
+  );
+  const assinaturas = ETAPAS_APROVACAO_OFICIAIS.map((etapaOficial) => {
+    const step = etapasWorkflowPorNumero.get(etapaOficial.stepNumber);
+    const configStep = configuracaoPorNumero.get(etapaOficial.stepNumber);
+
+    return {
+      stepNumber: etapaOficial.stepNumber,
+      etapa: etapaOficial.shortName,
+      responsavel:
+        step?.assignedUserName?.trim() ||
+        configStep?.userName?.trim() ||
+        FALLBACK_RESPONSAVEL,
+      status: formatarStatusEtapa(
+        step,
+        etapaOficial.stepNumber,
+        workflow,
+        solicitacaoCancelada,
+      ),
+      parecer: extrairParecer(step?.comment),
+      data: step?.decidedAt ? formatarData(step.decidedAt) : undefined,
+    };
+  });
 
   return {
     protocolo: record.id,
     nomeIa: record.nomeFerramenta || "Inteligência Artificial",
-    status: formatarStatusGeral(record.statusUso),
+    status: statusGeral,
     atualizadoEm: formatarDataHora(record.updatedAt || record.createdAt),
     dataCadastro: formatarData(record.dataRegistro || record.createdAt),
     solicitante: record.responsavelPreenchimento || "Não informado",

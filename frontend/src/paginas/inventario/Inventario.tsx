@@ -4,11 +4,18 @@
  */
 
 import { ETAPAS_APROVACAO_OFICIAIS } from "@/constantes/fluxo-aprovacao";
-import React, { useState, useMemo } from "react";
-import { Search, Eye, ArrowUpDown, AlertTriangle, CheckCircle2, PlusCircle, Database, FileSpreadsheet, ChevronLeft, ChevronRight, RotateCcw, ShieldAlert, ClipboardList, ShieldCheck, MoreVertical, Pencil, XCircle } from "lucide-react";
-import { IARecord, StatusUso, Criticidade, ClassificacaoRisco, ApprovalWorkflow } from "@/tipos";
+import React, { useEffect, useRef, useState, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { Search, Eye, ArrowUpDown, AlertTriangle, CheckCircle2, PlusCircle, Database, FileSpreadsheet, ChevronLeft, ChevronRight, RotateCcw, ClipboardList, ShieldCheck, MoreVertical, Pencil, XCircle } from "lucide-react";
+import { IARecord, ApprovalWorkflow } from "@/tipos";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import {
+  obterStatusGeralDoRegistro,
+  obterVarianteStatus,
+  STATUS_GERAIS_OFICIAIS,
+  type StatusGeral,
+} from "@/utilitarios/status-solicitacao";
 
 interface InventoryProps {
   records: IARecord[];
@@ -43,15 +50,56 @@ export default function Inventory({
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSetor, setFilterSetor] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  const [filterRisco, setFilterRisco] = useState("");
-  const [filterDadosSensiveis, setFilterDadosSensiveis] = useState("");
   const [sortField, setSortField] = useState<keyof IARecord | "">("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
+  const [actionMenuPosition, setActionMenuPosition] = useState({ top: 0, left: 0 });
+  const actionMenuRef = useRef<HTMLDivElement | null>(null);
+  const actionMenuButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const [cancelTargetRecord, setCancelTargetRecord] = useState<IARecord | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+
+  useEffect(() => {
+    if (!actionMenuId) return;
+
+    const fecharAoClicarFora = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        !actionMenuRef.current?.contains(target) &&
+        !actionMenuButtonRef.current?.contains(target)
+      ) {
+        setActionMenuId(null);
+      }
+    };
+    const fecharComEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setActionMenuId(null);
+    };
+    const fecharAoReposicionar = () => setActionMenuId(null);
+
+    document.addEventListener("mousedown", fecharAoClicarFora);
+    window.addEventListener("keydown", fecharComEscape);
+    window.addEventListener("resize", fecharAoReposicionar);
+    window.addEventListener("scroll", fecharAoReposicionar, true);
+    return () => {
+      document.removeEventListener("mousedown", fecharAoClicarFora);
+      window.removeEventListener("keydown", fecharComEscape);
+      window.removeEventListener("resize", fecharAoReposicionar);
+      window.removeEventListener("scroll", fecharAoReposicionar, true);
+    };
+  }, [actionMenuId]);
+
+  useEffect(() => {
+    if (!warningMessage && !cancelTargetRecord) return;
+    const fecharComEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || isCancelling) return;
+      setWarningMessage(null);
+      setCancelTargetRecord(null);
+    };
+    window.addEventListener("keydown", fecharComEscape);
+    return () => window.removeEventListener("keydown", fecharComEscape);
+  }, [warningMessage, cancelTargetRecord, isCancelling]);
 
   const normalizeText = (value?: string) =>
   String(value || "").
@@ -61,24 +109,11 @@ export default function Inventory({
   replace(/[^a-z0-9@._-]/g, "").
   trim();
 
-  const normalizeStatusUso = (status?: string): StatusUso => {
-    if (!status) return StatusUso.EM_AVALIACAO;
-    const normalized = String(status).
-    normalize("NFD").
-    replace(/[\u0300-\u036f]/g, "").
-    toLowerCase().
-    trim();
-    if (
-    normalized === "cancelada" ||
-    normalized === "cancelado" ||
-    normalized === "cancelada pelo solicitante" ||
-    normalized.includes("cancelada") ||
-    normalized.includes("cancelado"))
-    {
-      return StatusUso.CANCELADA;
-    }
-    return status as StatusUso;
-  };
+  const obterWorkflow = (record: IARecord) =>
+    workflows?.find((workflow) => workflow.iaRecordId === record.id);
+
+  const obterStatus = (record: IARecord): StatusGeral =>
+    obterStatusGeralDoRegistro(record, obterWorkflow(record));
 
   const isRequester = (record: IARecord) => {
     if (!currentUser) return false;
@@ -134,39 +169,19 @@ export default function Inventory({
 
     const workflow = workflows?.find((w) => w.iaRecordId === record.id);
 
-    const statusUso = normalizeText(record.statusUso);
-    const statusAuditoria = normalizeText(record.statusAuditoria as any);
-    const finalStatus = normalizeText(workflow?.finalStatus);
-
-    const finalStatuses = [
-    normalizeText("Aprovado"),
-    normalizeText("Aprovado com restrições"),
-    normalizeText("Não aprovado"),
-    normalizeText("Negado"),
-    normalizeText("Cancelada"),
-    normalizeText("Cancelada pelo solicitante"),
-    normalizeText("cancelado"),
-    normalizeText("aprovado"),
-    normalizeText("negado")];
-
-
-    const isFinal =
-    finalStatuses.includes(statusUso) ||
-    finalStatuses.includes(statusAuditoria) ||
-    finalStatuses.includes(finalStatus);
-
-    return !isFinal;
+    const statusGeral = obterStatus(record);
+    return !["Aprovada", "Não aprovada", "Cancelada"].includes(statusGeral);
   };
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   const totalIAs = records.length;
-  const emAvaliacaoCount = records.filter((r) => normalizeStatusUso(r.statusUso) === StatusUso.EM_AVALIACAO).length;
-  const aprovadasCount = records.filter((r) => {
-    const status = normalizeStatusUso(r.statusUso);
-    return status === StatusUso.APROVADO || status === StatusUso.APROVADO_COM_RESTRICOES;
+  const emAndamentoCount = records.filter((r) => {
+    const status = obterStatus(r);
+    return status === "Em análise" || status === "Em teste";
   }).length;
+  const aprovadasCount = records.filter((r) => obterStatus(r) === "Aprovada").length;
 
   const setoresDisponiveis = useMemo(() =>
     Array.from(new Set(records.map((record) => record.unidadeSetor).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
@@ -193,16 +208,12 @@ export default function Inventory({
       r.fornecedor.toLowerCase().includes(searchLower) ||
       r.id.toLowerCase().includes(searchLower) ||
       r.unidadeSetor && r.unidadeSetor.toLowerCase().includes(searchLower) ||
-      r.classificacaoRiscoManual && r.classificacaoRiscoManual.toLowerCase().includes(searchLower) ||
-      r.statusUso && r.statusUso.toLowerCase().includes(searchLower) ||
-      r.usaDadosSensiveis && r.usaDadosSensiveis.toLowerCase().includes(searchLower);
+      obterStatus(r).toLowerCase().includes(searchLower);
 
       const matchesSetor = !filterSetor || r.unidadeSetor === filterSetor;
-      const matchesStatus = !filterStatus || normalizeStatusUso(r.statusUso) === filterStatus;
-      const matchesRisco = !filterRisco || r.classificacaoRiscoManual === filterRisco;
-      const matchesSensiveis = !filterDadosSensiveis || r.usaDadosSensiveis === filterDadosSensiveis;
+      const matchesStatus = !filterStatus || obterStatus(r) === filterStatus;
 
-      return matchesSearch && matchesSetor && matchesStatus && matchesRisco && matchesSensiveis;
+      return matchesSearch && matchesSetor && matchesStatus;
     }).sort((a, b) => {
       if (!sortField) return 0;
       const valA = a[sortField];
@@ -213,7 +224,7 @@ export default function Inventory({
       }
       return 0;
     });
-  }, [records, searchTerm, filterSetor, filterStatus, filterRisco, filterDadosSensiveis, sortField, sortDirection]);
+  }, [records, searchTerm, filterSetor, filterStatus, sortField, sortDirection, workflows]);
 
   const paginatedRecords = useMemo(() => {
     const startIdx = (currentPage - 1) * itemsPerPage;
@@ -238,7 +249,7 @@ export default function Inventory({
     const brandGreen = "00C875";
     const labDark = "0F172A";
 
-    worksheet.mergeCells('A1:H1');
+    worksheet.mergeCells('A1:F1');
     const titleCell = worksheet.getRow(1).getCell(1);
     titleCell.value = "LABORATÓRIO CEDRO - INVENTÁRIO DE INTELIGÊNCIA ARTIFICIAL";
     titleCell.font = { size: 16, bold: true, color: { argb: 'FFFFFF' } };
@@ -246,7 +257,7 @@ export default function Inventory({
     titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
     worksheet.getRow(1).height = 40;
 
-    worksheet.mergeCells('A2:H2');
+    worksheet.mergeCells('A2:F2');
     const subTitleRow = worksheet.getRow(2);
     subTitleRow.getCell(1).value = `Relatório gerado em: ${new Date().toLocaleString('pt-BR')}`;
     subTitleRow.getCell(1).font = { italic: true, color: { argb: '64748B' } };
@@ -262,8 +273,6 @@ export default function Inventory({
     { header: "FORNECEDOR", key: "fornecedor", width: 25 },
     { header: "SETOR", key: "setor", width: 25 },
     { header: "STATUS", key: "status", width: 22 },
-    { header: "CLASSIFICAÇÃO RISCO", key: "risco", width: 25 },
-    { header: "DADOS SENSÍVEIS", key: "dados_sensiveis", width: 18 },
     { header: "DATA DE REGISTRO", key: "data", width: 20 }];
 
 
@@ -299,9 +308,7 @@ export default function Inventory({
       r.nomeFerramenta,
       r.fornecedor,
       r.unidadeSetor,
-      normalizeStatusUso(r.statusUso),
-      r.classificacaoRiscoManual,
-      r.usaDadosSensiveis,
+      obterStatus(r),
       r.dataRegistro]
       );
 
@@ -315,16 +322,12 @@ export default function Inventory({
         };
 
         if (colNumber === 5) {
-          const norm = normalizeStatusUso(r.statusUso);
-          if (norm === StatusUso.APROVADO) {
+          const statusGeral = obterStatus(r);
+          if (statusGeral === "Aprovada") {
             cell.font = { color: { argb: '059669' }, bold: true };
-          } else if (norm === StatusUso.CANCELADA) {
+          } else if (statusGeral === "Cancelada" || statusGeral === "Não aprovada") {
             cell.font = { color: { argb: 'F29222' }, bold: true };
           }
-        }
-
-        if (colNumber === 6 && (r.classificacaoRiscoManual === ClassificacaoRisco.ALTO || r.classificacaoRiscoManual === ClassificacaoRisco.CRITICO)) {
-          cell.font = { color: { argb: 'DC2626' }, bold: true };
         }
       });
     });
@@ -336,18 +339,9 @@ export default function Inventory({
     saveAs(blob, `inventario_ia_cedro_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const getStatusBadge = (rawStatus: StatusUso) => {
-    const status = normalizeStatusUso(rawStatus);
-    const variantes: Partial<Record<StatusUso, string>> = {
-      [StatusUso.APROVADO]: "aprovado",
-      [StatusUso.APROVADO_COM_RESTRICOES]: "restricoes",
-      [StatusUso.NAO_APROVADO]: "negado",
-      [StatusUso.EM_AVALIACAO]: "avaliacao",
-      [StatusUso.EM_TESTE_PILOTO]: "teste",
-      [StatusUso.SUSPENSO]: "suspenso",
-      [StatusUso.CANCELADA]: "cancelado",
-    };
-    const variante = variantes[status] || "neutro";
+  const getStatusBadge = (record: IARecord) => {
+    const status = obterStatus(record);
+    const variante = obterVarianteStatus(status);
 
     return (
       <span className={`inventario-status inventario-status--${variante}`}>
@@ -366,8 +360,9 @@ export default function Inventory({
     }));
 
 
-    const isApprov = record.statusAuditoria === "Aprovado" || recordWorkflow?.finalStatus === "aprovado" || record.statusUso === StatusUso.APROVADO;
-    const isNeg = record.statusAuditoria === "Negado" || recordWorkflow?.finalStatus === "negado" || record.statusUso === StatusUso.NAO_APROVADO;
+    const statusGeral = obterStatus(record);
+    const isApprov = statusGeral === "Aprovada";
+    const isNeg = statusGeral === "Não aprovada";
 
     const currentStepNum = recordWorkflow ? recordWorkflow.currentStep : isApprov || isNeg ? 0 : 1;
 
@@ -523,9 +518,9 @@ export default function Inventory({
             <ClipboardList size={22} />
           </div>
           <div className="inventario-resumo__conteudo">
-            <p className="inventario-resumo__rotulo">Em avaliação</p>
-            <strong className="inventario-resumo__valor">{emAvaliacaoCount}</strong>
-            <span className="inventario-resumo__legenda">{emAvaliacaoCount === 1 ? "solução" : "soluções"}</span>
+            <p className="inventario-resumo__rotulo">Em andamento</p>
+            <strong className="inventario-resumo__valor">{emAndamentoCount}</strong>
+            <span className="inventario-resumo__legenda">{emAndamentoCount === 1 ? "solução" : "soluções"}</span>
           </div>
         </div>
 
@@ -534,7 +529,7 @@ export default function Inventory({
             <ShieldCheck size={22} />
           </div>
           <div className="inventario-resumo__conteudo">
-            <p className="inventario-resumo__rotulo">Aprovadas</p>
+            <p className="inventario-resumo__rotulo">Aprovada</p>
             <strong className="inventario-resumo__valor">{aprovadasCount}</strong>
             <span className="inventario-resumo__legenda">{aprovadasCount === 1 ? "solução" : "soluções"}</span>
           </div>
@@ -568,13 +563,9 @@ export default function Inventory({
               className="inventario-filtro__select"
             >
               <option value="">Todos</option>
-              <option value={StatusUso.EM_AVALIACAO}>Em avaliação</option>
-              <option value={StatusUso.EM_TESTE_PILOTO}>Em teste/piloto</option>
-              <option value={StatusUso.APROVADO}>Aprovado</option>
-              <option value={StatusUso.APROVADO_COM_RESTRICOES}>Aprovado com restrições</option>
-              <option value={StatusUso.NAO_APROVADO}>Não aprovado</option>
-              <option value={StatusUso.SUSPENSO}>Suspenso</option>
-              <option value={StatusUso.CANCELADA}>Cancelada</option>
+              {STATUS_GERAIS_OFICIAIS.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
             </select>
           </label>
 
@@ -600,14 +591,12 @@ export default function Inventory({
           </div>
         </div>
 
-        {(searchTerm || filterSetor || filterStatus || filterRisco || filterDadosSensiveis) && (
+        {(searchTerm || filterSetor || filterStatus) && (
           <button
             onClick={() => {
               setSearchTerm("");
               setFilterSetor("");
               setFilterStatus("");
-              setFilterRisco("");
-              setFilterDadosSensiveis("");
               setCurrentPage(1);
             }}
             className="inventario-filtros__limpar"
@@ -629,7 +618,7 @@ export default function Inventory({
               <span className="inventario__texto-11">
                 {record.id}
               </span>
-              <div className="inventario__texto-8">{getStatusBadge(record.statusUso)}</div>
+              <div className="inventario__texto-8">{getStatusBadge(record)}</div>
             </div>
 
             <div className="inventario__grupo-6">
@@ -792,7 +781,7 @@ export default function Inventory({
                     </span>
                   </td>
                   <td className="inventario__celula-3">
-                    {getStatusBadge(record.statusUso)}
+                    {getStatusBadge(record)}
                   </td>
                   <td className="inventario__celula-3">
                     {getWorkflowBadge(record)}
@@ -815,6 +804,7 @@ export default function Inventory({
 
                       <div className="inventario-acoes-linha__menu-container">
                         <button
+                          ref={actionMenuId === record.id ? actionMenuButtonRef : undefined}
                           type="button"
                           className="inventario-acoes-linha__menu-botao"
                           aria-label={`Mais ações para ${record.nomeFerramenta}`}
@@ -822,14 +812,44 @@ export default function Inventory({
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            setActionMenuId((current) => current === record.id ? null : record.id);
+                            if (actionMenuId === record.id) {
+                              setActionMenuId(null);
+                              return;
+                            }
+
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const menuWidth = 210;
+                            const menuHeight = 12 + (2 + (isAdmin ? 1 : 0) + (canCancel(record) ? 1 : 0)) * 38;
+                            const gap = 7;
+                            const margin = 8;
+                            const top = window.innerHeight - rect.bottom >= menuHeight + gap
+                              ? rect.bottom + gap
+                              : Math.max(margin, rect.top - menuHeight - gap);
+                            const left = Math.min(
+                              window.innerWidth - menuWidth - margin,
+                              Math.max(margin, rect.right - menuWidth),
+                            );
+
+                            actionMenuButtonRef.current = e.currentTarget;
+                            setActionMenuPosition({ top, left });
+                            setActionMenuId(record.id);
                           }}
                         >
                           <MoreVertical size={17} />
                         </button>
 
-                        {actionMenuId === record.id && (
-                          <div className="inventario-acoes-menu">
+                        {actionMenuId === record.id && createPortal(
+                          <div
+                            ref={actionMenuRef}
+                            className="inventario-acoes-menu"
+                            style={{
+                              position: "fixed",
+                              top: actionMenuPosition.top,
+                              left: actionMenuPosition.left,
+                              right: "auto",
+                              width: 210,
+                            }}
+                          >
                             <button type="button" onClick={() => { setActionMenuId(null); onView(record); }}>
                               <Eye size={15} /> Ver ficha
                             </button>
@@ -850,7 +870,8 @@ export default function Inventory({
                                 <XCircle size={15} /> Cancelar solicitação
                               </button>
                             )}
-                          </div>
+                          </div>,
+                          document.body,
                         )}
                       </div>
                     </div>
@@ -932,8 +953,13 @@ export default function Inventory({
       </div>
 
       {warningMessage &&
-      <div className="cedro-modal-overlay inventario__grupo-19">
-          <div className="cedro-modal-painel cedro-modal-painel--compacto inventario__grupo-20">
+      <div
+        className="cedro-modal-overlay inventario__grupo-19"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setWarningMessage(null);
+        }}
+      >
+          <div className="cedro-modal-painel cedro-modal-painel--compacto inventario__grupo-20" onClick={(event) => event.stopPropagation()}>
             <div className="inventario__grupo-21">
               <div className="inventario__grupo-22">
                 <div className="inventario__grupo-23">
@@ -958,22 +984,24 @@ export default function Inventory({
       }
 
       {cancelTargetRecord &&
-      <div className="cedro-modal-overlay inventario__grupo-19">
-          <div className="cedro-modal-painel cedro-modal-painel--compacto inventario__grupo-24">
+      <div
+        className="cedro-modal-overlay inventario__grupo-19"
+        onClick={(event) => {
+          if (event.target === event.currentTarget && !isCancelling) setCancelTargetRecord(null);
+        }}
+      >
+          <div className="cedro-modal-painel cedro-modal-painel--compacto inventario__grupo-24" onClick={(event) => event.stopPropagation()}>
             <div className="inventario__grupo-21">
               <div className="inventario__grupo-25">
                 <div className="inventario__grupo-26">
                   <AlertTriangle size={20} />
                 </div>
                 <h3 className="inventario__titulo-bloco-cancelar-solicitacao-de-ia">
-                  Cancelar solicitação de IA?
+                  Cancelar esta solicitação?
                 </h3>
               </div>
-              <p className="inventario__descricao-voce-esta-prestes-a-cancelar-a">
-                Você está prestes a cancelar a solicitação para a ferramenta <strong className="inventario__elemento-2">{cancelTargetRecord.nomeFerramenta}</strong>.
-              </p>
               <p className="inventario__descricao-esta-acao-ira-cancelar-a-solic">
-                Esta ação irá cancelar a solicitação e interromper o andamento do fluxo de aprovação. O registro permanecerá disponível para consulta no inventário e no histórico.
+                Após o cancelamento, ela não seguirá para aprovação.
               </p>
             </div>
             <div className="inventario__grupo-voltar">
@@ -996,7 +1024,7 @@ export default function Inventory({
               disabled={isCancelling}
               className="inventario__botao-6">
               
-                {isCancelling ? "Cancelando..." : "Confirmar cancelamento"}
+                {isCancelling ? "Cancelando..." : "Sim, cancelar"}
               </button>
             </div>
           </div>

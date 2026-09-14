@@ -5,18 +5,20 @@
 
 import React from "react";
 import { ArrowRight, CheckCircle2, ChevronRight } from "lucide-react";
-import { IARecord } from "@/tipos";
-import { RiskBadge, StatusBadge } from "./IndicadoresStatus";
+import { ApprovalWorkflow, IARecord } from "@/tipos";
+import { StatusBadge } from "./IndicadoresStatus";
+import { obterStatusGeralDoRegistro } from "@/utilitarios/status-solicitacao";
 
 interface TableCardProps {
   title: string;
   subtitle?: string;
   records: IARecord[];
+  workflows?: ApprovalWorkflow[];
   onNavigate: (tab: string) => void;
   onViewRecord: (record: IARecord) => void;
 }
 
-export const TableCard: React.FC<TableCardProps> = ({ title, subtitle, records, onNavigate, onViewRecord }) => (
+export const TableCard: React.FC<TableCardProps> = ({ title, subtitle, records, workflows = [], onNavigate, onViewRecord }) => (
   <article className="cartao-tabela cedro-card-premium" data-componente="cartao-tabela">
     <header className="cartao-tabela__cabecalho">
       <div>
@@ -52,8 +54,7 @@ export const TableCard: React.FC<TableCardProps> = ({ title, subtitle, records, 
                     <ChevronRight size={18} />
                   </span>
                   <span className="cartao-tabela__indicadores">
-                    <StatusBadge status={record.statusUso} />
-                    <RiskBadge risk={record.criticidade || "Não avaliado"} />
+                    <StatusBadge status={obterStatusGeralDoRegistro(record, workflows.find((workflow) => workflow.iaRecordId === record.id))} />
                   </span>
                   <span className="cartao-tabela__item-mobile-rodape"><small>{record.id}</small><strong>Analisar</strong></span>
                 </span>
@@ -66,7 +67,6 @@ export const TableCard: React.FC<TableCardProps> = ({ title, subtitle, records, 
               <tr>
                 <th>ID / Nome</th>
                 <th>Setor</th>
-                <th>Risco</th>
                 <th>Status</th>
                 <th className="cartao-tabela__coluna-acoes">Ações</th>
               </tr>
@@ -76,8 +76,7 @@ export const TableCard: React.FC<TableCardProps> = ({ title, subtitle, records, 
                 <tr key={record.id}>
                   <td><strong>{record.nomeFerramenta}</strong><small>{record.id}</small></td>
                   <td>{record.unidadeSetor}</td>
-                  <td><RiskBadge risk={record.criticidade || "Não avaliado"} /></td>
-                  <td><StatusBadge status={record.statusUso} /></td>
+                  <td><StatusBadge status={obterStatusGeralDoRegistro(record, workflows.find((workflow) => workflow.iaRecordId === record.id))} /></td>
                   <td className="cartao-tabela__coluna-acoes">
                     <button type="button" onClick={() => onViewRecord(record)} className="cartao-tabela__analisar">Analisar</button>
                   </td>
