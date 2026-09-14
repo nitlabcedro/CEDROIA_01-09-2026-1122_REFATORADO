@@ -29,9 +29,16 @@ import {
   Bookmark,
   ExternalLink } from
 "lucide-react";
-import { IARecord, StatusUso, ClassificacaoRisco, StatusAuditoria, ApprovalWorkflow, ApprovalStep, ApprovalConfig, SolicitacaoInformacoesTI } from "@/tipos";
+import { IARecord, StatusAuditoria, ApprovalWorkflow, ApprovalStep, ApprovalConfig, SolicitacaoInformacoesTI } from "@/tipos";
 import { listarInteracoesTI } from "@/servicos/interacoes-ti";
 import { obterUltimoParecerLimpo } from "@/utilitarios/pareceres";
+import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
+import {
+  obterStatusGeralDoRegistro,
+  obterVarianteStatus,
+  type StatusGeral,
+  type VarianteStatusGeral,
+} from "@/utilitarios/status-solicitacao";
 import { montarDadosRelatorioPdf } from "./pdf/dadosRelatorioPdf";
 import { gerarRelatorioPdfEstruturado } from "./pdf/gerarRelatorioPdf";
 import "./RelatorioPdfPainel.css";
@@ -138,6 +145,11 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
     [workflows, record.id],
   );
 
+  const statusGeral = useMemo(
+    () => obterStatusGeralDoRegistro(record, workflow),
+    [record, workflow],
+  );
+
   const dadosPdf = useMemo(
     () => montarDadosRelatorioPdf(record, workflow, approvalConfig),
     [record, workflow, approvalConfig],
@@ -153,10 +165,11 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
         setErroInteracoesTiRelatorio("");
         const dados = await listarInteracoesTI(record.id);
         if (ativo) setInteracoesTiRelatorio(dados);
-      } catch (error: any) {
+      } catch (error: unknown) {
+        console.error("Erro ao carregar mensagens da TI no relatório:", error);
         if (ativo) {
           setInteracoesTiRelatorio([]);
-          setErroInteracoesTiRelatorio(error?.message || "Não foi possível carregar as mensagens trocadas com a TI.");
+          setErroInteracoesTiRelatorio(obterMensagemErroUsuario(error, "aprovacao"));
         }
       } finally {
         if (ativo) setCarregandoInteracoesTiRelatorio(false);
@@ -228,7 +241,7 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
   };
 
   // Dynamic approval workflow helpers
-  const isWfFinished = !!(workflow && (workflow.finalStatus === "aprovado" || workflow.finalStatus === "negado" || workflow.finalStatus === "cancelado")) || record.statusUso === StatusUso.CANCELADA || record.statusUso === StatusUso.SUSPENSO;
+  const isWfFinished = statusGeral === "Aprovada" || statusGeral === "Não aprovada" || statusGeral === "Cancelada";
   const currentStepNum = workflow ? workflow.currentStep : 1;
   const deniedSteps = workflow?.steps?.filter((s) => s.status === "negado") || [];
 
@@ -237,10 +250,6 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
     if (workflow && workflow.steps && workflow.steps.length > 0) {
       return [...workflow.steps].sort((a, b) => a.stepNumber - b.stepNumber);
     }
-
-    const st = record.statusUso;
-    const isApproved = st === StatusUso.APROVADO || st === StatusUso.APROVADO_COM_RESTRICOES;
-    const isDenied = st === StatusUso.NAO_APROVADO || st === StatusUso.SUSPENSO || st === StatusUso.CANCELADA;
 
     const comentariosPorEtapa: Record<number, { aprovado: string; negado: string; aguardando: string }> = {
       1: {
@@ -271,11 +280,7 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
     };
 
     return ETAPAS_APROVACAO_OFICIAIS.map((etapa): ApprovalStep => {
-      const status: ApprovalStep["status"] = isApproved
-        ? "aprovado"
-        : isDenied && !etapa.isOpinionOnly
-          ? "negado"
-          : "aguardando";
+      const status: ApprovalStep["status"] = "aguardando";
 
       const comentario = comentariosPorEtapa[etapa.stepNumber];
       const assignedUserName = etapa.stepNumber === 1
@@ -289,11 +294,7 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
         roleName: etapa.roleName,
         assignedUserName,
         status,
-        comment: status === "aprovado"
-          ? comentario.aprovado
-          : status === "negado"
-            ? comentario.negado
-            : comentario.aguardando,
+        comment: comentario.aguardando,
         isOpinionOnly: etapa.isOpinionOnly,
       };
     });
@@ -340,12 +341,15 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
 
   const getEtapaAtualText = () => {
     if (!workflow) {
-      if (record.statusUso === StatusUso.APROVADO) return "Homologado";
-      if (record.statusUso === StatusUso.EM_AVALIACAO) return "Triagem Inicial NIT";
+      if (statusGeral === "Aprovada") return "Homologado";
+      if (statusGeral === "Em análise" || statusGeral === "Em teste") return "Triagem Inicial NIT";
+      if (statusGeral === "Cancelada") return "Cancelada";
       return "Cadastro Concluído";
     }
     if (isWfFinished) {
-      return workflow.finalStatus === "aprovado" ? "Homologado (Concluído)" : "Declinado / Não Aprovado";
+      if (statusGeral === "Aprovada") return "Homologado (Concluído)";
+      if (statusGeral === "Cancelada") return "Cancelada";
+      return "Declinado / Não Aprovado";
     }
     const def = getActiveStepDef();
     return def ? `${currentStepNum}. ${def.roleName}` : `Etapa ${currentStepNum}`;
@@ -361,143 +365,45 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
     return wfStep?.assignedUserName || def?.userName || record.quemValida || "Aguardando definição";
   };
 
-  const getSituacaoFluxoText = () => {
-    if (!workflow) {
-      if (record.statusUso === StatusUso.EM_AVALIACAO) return "Aguardando parecer da etapa atual";
-      return "Cadastro concluído e ativo";
-    }
-    if (isWfFinished) {
-      return workflow.finalStatus === "aprovado" ?
-      "Homologada em produção com auditorias regulares" :
-      "Proposta rejeitada no fluxo regulatório";
-    }
-    const def = getActiveStepDef();
-    return `Aguardando deliberação de ${def?.roleName || "Comitê"}`;
-  };
-
-  const getDynamicNextStepText = () => {
-    if (!workflow) {
-      return getNextStepDescription(record.statusUso);
-    }
-    if (isWfFinished) {
-      return workflow.finalStatus === "aprovado" ?
-      "Processo 100% concluído. Monitoramento das atividades laboratoriais em andamento." :
-      "Processo indeferido pelo comitê. Revisar proposta regulatória.";
-    }
-    const def = getActiveStepDef();
-    return def ?
-    `Próxima ação de aprovação com: "${def.roleName}". Responsável: ${def.userName || "Comitê de Avaliadores"}.` :
-    getNextStepDescription(record.statusUso);
-  };
-
-  const normalizeStatusUso = (status?: string): StatusUso => {
-    if (!status) return StatusUso.EM_AVALIACAO;
-    const normalized = String(status).
-    normalize("NFD").
-    replace(/[\u0300-\u036f]/g, "").
-    toLowerCase().
-    trim();
-    if (
-    normalized === "cancelada" ||
-    normalized === "cancelado" ||
-    normalized === "cancelada pelo solicitante" ||
-    normalized.includes("cancelada") ||
-    normalized.includes("cancelado"))
-    {
-      return StatusUso.CANCELADA;
-    }
-    return status as StatusUso;
-  };
-
-  const formatStatusUsoDisplay = (status?: string): string => {
-    if (!status) return "Em análise";
-    if (
-    status === StatusUso.EM_TESTE_PILOTO ||
-    status === "Em teste/piloto" ||
-    status === "Em teste piloto" ||
-    status.toLowerCase().includes("piloto"))
-    {
-      return "Em análise";
-    }
-    return status;
-  };
-
-  const getStatusVariant = (rawStatus: StatusUso) => {
-    const status = normalizeStatusUso(rawStatus);
-    switch (status) {
-      case StatusUso.APROVADO: return "aprovado";
-      case StatusUso.APROVADO_COM_RESTRICOES: return "restricoes";
-      case StatusUso.EM_AVALIACAO: return "avaliacao";
-      case StatusUso.EM_TESTE_PILOTO: return "teste";
-      case StatusUso.SUSPENSO: return "suspenso";
-      case StatusUso.CANCELADA: return "cancelado";
-      case StatusUso.NAO_APROVADO:
-      default: return "negado";
-    }
-  };
-
-  const getStatusBgColor = (rawStatus: StatusUso) =>
-    `relatorio-status relatorio-status--${getStatusVariant(rawStatus)}`;
-
-  const getStatusMetadata = (rawStatus: StatusUso) => {
-    const variante = getStatusVariant(rawStatus);
+  const mapVarianteCss = (variante: VarianteStatusGeral) => {
     switch (variante) {
-      case "aprovado":
-        return { variante, label: "Aprovado", sub: "", icon: <CheckCircle2 className="relatorio__icone-checkcircle2" /> };
-      case "restricoes":
-        return { variante, label: "Aprovado com restrições", sub: "Autorizado sob condicionantes específicos de monitoramento.", icon: <ShieldAlert className="relatorio__icone-shieldalert" /> };
-      case "avaliacao":
-        return { variante, label: "Em avaliação", sub: "Em análise ativa pelo comitê técnico-jurídico multidisciplinar.", icon: <Activity className="relatorio__icone-activity" /> };
+      case "aprovada": return "aprovado";
+      case "teste": return "teste";
+      case "cancelada": return "cancelado";
+      case "negada": return "negado";
+      default: return "avaliacao";
+    }
+  };
+
+  const getStatusIcon = (variante: VarianteStatusGeral) => {
+    switch (variante) {
+      case "aprovada":
+        return <CheckCircle2 className="relatorio__icone-checkcircle2" />;
       case "teste":
-        return { variante, label: "Em teste piloto", sub: "Fase de experimentação assistida para validações empíricas.", icon: <TrendingUp className="relatorio__icone-trendingup" /> };
-      case "suspenso":
-        return { variante, label: "Suspenso", sub: "Operação pausada temporariamente para adequação.", icon: <AlertTriangle className="relatorio__icone-alerttriangle" /> };
-      case "cancelado":
-        return { variante, label: "Cancelada pelo solicitante", sub: "A solicitação foi cancelada diretamente pelo solicitante.", icon: <AlertTriangle className="relatorio__icone-alerttriangle-2" /> };
+        return <TrendingUp className="relatorio__icone-trendingup" />;
+      case "cancelada":
+        return <AlertTriangle className="relatorio__icone-alerttriangle-2" />;
+      case "negada":
+        return <ShieldAlert className="relatorio__icone-shieldalert-2" />;
       default:
-        return { variante: "negado", label: "Não aprovado", sub: "Proposta indeferida por não atender aos requisitos de integridade.", icon: <ShieldAlert className="relatorio__icone-shieldalert-2" /> };
+        return <Activity className="relatorio__icone-activity" />;
     }
   };
 
-  const getRiskVariant = (risk: ClassificacaoRisco) => {
-    switch (risk) {
-      case ClassificacaoRisco.BAIXO: return "baixo";
-      case ClassificacaoRisco.MEDIO: return "medio";
-      case ClassificacaoRisco.ALTO: return "alto";
-      case ClassificacaoRisco.CRITICO: return "critico";
-      default: return "nao-avaliado";
-    }
-  };
-
-  const getRiskTextColor = (risk: ClassificacaoRisco) =>
-    `relatorio-risco-texto relatorio-risco-texto--${getRiskVariant(risk)}`;
-
-  const getStatusColor = (rawStatus: StatusUso) =>
-    `relatorio-status relatorio-status--${getStatusVariant(rawStatus)}`;
-
-  const getRiskColor = (risk: ClassificacaoRisco) =>
-    `relatorio-risco relatorio-risco--${getRiskVariant(risk)}`;
-
-  const getNextStepDescription = (rawStatus: StatusUso) => {
-    const status = normalizeStatusUso(rawStatus);
+  const getStatusGradientClass = (status: StatusGeral) => {
     switch (status) {
-      case StatusUso.EM_AVALIACAO:
-        return "Aguardar parecer técnico das comissões multidisciplinares de TI, Inovação e diretrizes do dpo.";
-      case StatusUso.APROVADO:
-        return "Fluxo regular de monitoramento contínuo nas atividades laboratoriais regulares.";
-      case StatusUso.APROVADO_COM_RESTRICOES:
-        return "Acompanhar cumprimento de pendências técnicas indicadas no termo do comitê.";
-      case StatusUso.EM_TESTE_PILOTO:
-        return "Avaliar logs de segurança e métricas de precisão emitidos no ciclo experimental.";
-      case StatusUso.SUSPENSO:
-        return "Operação retida. Solicitar auditoria extraordinária ou reunião técnica reguladora.";
-      case StatusUso.CANCELADA:
-        return "Solicitação encerrada pelo solicitante através do inventário.";
-      case StatusUso.NAO_APROVADO:
-      default:
-        return "Revisar diretrizes rejeitadas ou reformular cadastro regulatório junto ao NIT.";
+      case "Aprovada": return "relatorio__grupo-22";
+      case "Em teste": return "relatorio__grupo-25";
+      case "Não aprovada": return "relatorio__grupo-27";
+      case "Cancelada": return "relatorio__grupo-26";
+      default: return "relatorio__grupo-24";
     }
   };
+
+  const getStatusCssVariant = () => mapVarianteCss(obterVarianteStatus(statusGeral));
+
+  const getStatusColor = () =>
+    `relatorio-status relatorio-status--${getStatusCssVariant()}`;
 
   return (
     <div id="relatorio-conteudo" data-componente="pagina-relatorio" className="pagina-relatorio relatorio-container cedro-page-premium">
@@ -522,9 +428,9 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
                 {record.nomeFerramenta}
               </h1>
               {/* Status Badge */}
-              <div className={`relatorio__grupo-6 ${getStatusColor(record.statusUso)}`}>
+              <div className={`relatorio__grupo-6 ${getStatusColor()}`}>
                 <div className="relatorio-status__ponto" />
-                <span>{formatStatusUsoDisplay(record.statusUso)}</span>
+                <span>{statusGeral}</span>
               </div>
             </div>
 
@@ -542,10 +448,10 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
               </button>
             } */}
 
-            {record.statusUso === StatusUso.EM_AVALIACAO &&
+            {(statusGeral === "Em análise" || statusGeral === "Em teste") &&
             <div className="relatorio__grupo-em-aprovacao">
                 <Activity size={14} className="relatorio__icone-activity-2" />
-                <span>Em Aprovação</span>
+                <span>{statusGeral}</span>
               </div>
             }
 
@@ -557,7 +463,7 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
       </div>
 
       {/* Justificativa de Indeferimento */}
-      {(record.statusUso === StatusUso.NAO_APROVADO || deniedSteps.length > 0) &&
+      {(statusGeral === "Não aprovada" || deniedSteps.length > 0) &&
       <section className="relatorio-secao relatorio-indeferimento relatorio__relatorio-secao-estrutura">
           {/* Top highlight bar */}
           <div className="relatorio__grupo-8" />
@@ -667,21 +573,14 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
             </div>
             <div className="relatorio__grupo-setor-ativa">
               <span>Setor: {record.unidadeSetor}</span>
-              <span className="relatorio__texto-ativa">Ativa</span>
+              {statusGeral === "Aprovada" && <span className="relatorio__texto-ativa">Ativa</span>}
             </div>
           </div>
 
           {/* Card 2: Status da Avaliação */}
           <div className="relatorio__grupo-20 relatorio__cartao-relatorio">
             {/* Top decorative gradient line linked to status */}
-            <div className={`relatorio__grupo-21 ${
-            record.statusUso === StatusUso.APROVADO ? "relatorio__grupo-22" :
-            record.statusUso === StatusUso.APROVADO_COM_RESTRICOES ? "relatorio__grupo-23" :
-            record.statusUso === StatusUso.EM_AVALIACAO ? "relatorio__grupo-24" :
-            record.statusUso === StatusUso.EM_TESTE_PILOTO ? "relatorio__grupo-25" :
-            record.statusUso === StatusUso.SUSPENSO ? "relatorio__grupo-26" :
-            "relatorio__grupo-27"}`
-            } />
+            <div className={`relatorio__grupo-21 ${getStatusGradientClass(statusGeral)}`} />
 
             <div className="relatorio__grupo-status-da-avaliacao">
               <div className="relatorio__cabecalho-card relatorio__cabecalho-card--status">
@@ -691,17 +590,17 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
                 <div className="relatorio__grupo-resumo-executivo">
                   <span className="relatorio__texto-finalidade-da-ia">Status da Avaliação</span>
                   <span className="relatorio__texto-6">
-                  <span className={`relatorio__texto-7 relatorio-status__pulso relatorio-status__pulso--${getStatusMetadata(record.statusUso).variante}`} />
-                    <span className={`relatorio__texto-8 relatorio-status__ponto relatorio-status__ponto--${getStatusMetadata(record.statusUso).variante}`} />
+                  <span className={`relatorio__texto-7 relatorio-status__pulso relatorio-status__pulso--${getStatusCssVariant()}`} />
+                    <span className={`relatorio__texto-8 relatorio-status__ponto relatorio-status__ponto--${getStatusCssVariant()}`} />
                   </span>
                 </div>
               </div>
 
-              <div className={`relatorio__grupo-28 relatorio-status relatorio-status--${getStatusMetadata(record.statusUso).variante}`}>
+              <div className={`relatorio__grupo-28 relatorio-status relatorio-status--${getStatusCssVariant()}`}>
                 <div className="relatorio__grupo-15">
-                  {getStatusMetadata(record.statusUso).icon}
+                  {getStatusIcon(obterVarianteStatus(statusGeral))}
                   <span className="relatorio__texto-9">
-                    {formatStatusUsoDisplay(record.statusUso)}
+                    {statusGeral}
                   </span>
                 </div>
               </div>
@@ -1212,7 +1111,7 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
             </div>
             <div>
               <span>Status</span>
-              <strong>{formatStatusUsoDisplay(record.statusUso)}</strong>
+              <strong>{statusGeral}</strong>
             </div>
             <div>
               <span>Última atualização</span>

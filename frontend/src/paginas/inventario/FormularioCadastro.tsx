@@ -7,17 +7,17 @@ import { CHAVES_ARMAZENAMENTO_LOCAL } from "@/constantes/armazenamento-local";
 import React, { useState, useEffect } from "react";
 import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
 import {
-  Save, X, Info, AlertTriangle, ShieldCheck, Zap, Database, Share2, ClipboardCheck, Scale, FileText, ChevronRight,
+  Save, X, Info, AlertTriangle, Zap, Database, Share2, ClipboardCheck, Scale, FileText, ChevronRight,
   Check, UserRound, Clock3, Bookmark
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   StatusAuditoria,
-  IARecord, TiposIA, ObjetivosIA, EtapaProcesso, RiscoResidual,
-  Criticidade, NaturezaUso, GrauAutonomia, ClassificacaoRisco, StatusUso } from
+  IARecord, TiposIA, ObjetivosIA, EtapaProcesso, StatusUso } from
 "@/tipos";
 import { generateId, getGlobalRecords, getSectors } from "@/servicos/armazenamento";
 import { obterCargosDoSetor } from "@/servicos/setores";
+import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 
 import { useAuth } from "@/contextos/ContextoAutenticacao";
 
@@ -221,24 +221,12 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
     objetivos: [],
     etapaProcesso: EtapaProcesso.OUTRO,
     beneficiosEsperados: "",
-    usaDadosPessoais: "Não",
-    usaDadosSensiveis: "Não",
-    quaisDados: "",
-    dadosAnonimizados: "Não",
-    envioFornecedorExterno: "Não",
-    dadosTreinamentoModelo: "Não",
     integradaSistemaInterno: "Não",
     impactoResultadosLaboratoriais: "Não",
     validacaoHumana: "Sim",
-    riscosIdentificados: "Não",
-    controlesImplementados: "Não",
-    quaisControles: [],
-    riscoResidual: RiscoResidual.NAO_AVALIADO,
-    alinhadoLGPD: "Em avaliação",
     politicaInterna: "Não",
     treinamentoColaboradores: "Não",
     documentacaoTecnica: "Não se aplica",
-    contratoProtecaoDados: "Não se aplica",
     statusUso: StatusUso.EM_AVALIACAO,
     statusAuditoria: StatusAuditoria.PENDENTE,
     necessitaPlanoAcao: "Não",
@@ -247,14 +235,24 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
 
   const [activeSection, setActiveSection] = useState(0);
   const [showTypeIAPopup, setShowTypeIAPopup] = useState(false);
-  const [showDadosInfoPopup, setShowDadosInfoPopup] = useState(false);
-  const [showDadosAnonimizadosPopup, setShowDadosAnonimizadosPopup] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [sectors, setSectors] = useState<string[]>([]);
   const [cargosDisponiveis, setCargosDisponiveis] = useState<string[]>([]);
   const [outroActive, setOutroActive] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [savingStep, setSavingStep] = useState("");
+
+  useEffect(() => {
+    if (!showTypeIAPopup) return;
+
+    const fecharPopupComEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setShowTypeIAPopup(false);
+    };
+
+    window.addEventListener("keydown", fecharPopupComEscape);
+    return () => window.removeEventListener("keydown", fecharPopupComEscape);
+  }, [showTypeIAPopup]);
 
   useEffect(() => {
     const fetchSectors = async () => {
@@ -373,7 +371,7 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleArrayToggle = (field: "tipoIA" | "objetivos" | "quaisControles" | "areaAvaliadora", value: any) => {
+  const handleArrayToggle = (field: "tipoIA" | "objetivos" | "areaAvaliadora", value: any) => {
     const current = formData[field] as any[] || [];
     const newVal = current.includes(value) ?
     current.filter((v) => v !== value) :
@@ -389,49 +387,6 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
       updateField(field, newVal);
     }
   };
-
-  // Automatic Risk Classification Logic
-  useEffect(() => {
-    let suggestedRisk = ClassificacaoRisco.BAIXO;
-
-    const impactsResults = formData.impactoResultadosLaboratoriais === "Sim";
-    const sensitiveData = formData.usaDadosSensiveis === "Sim";
-    const personalData = formData.usaDadosPessoais === "Sim";
-    const noHumanValidation = formData.validacaoHumana === "Não";
-    const noLGPD = formData.alinhadoLGPD === "Não";
-    const noControls = formData.controlesImplementados === "Não";
-    const highCriticity = formData.criticidade === Criticidade.ALTA;
-
-    if (noLGPD && (personalData || sensitiveData)) {
-      suggestedRisk = ClassificacaoRisco.CRITICO;
-    } else if (impactsResults && noControls) {
-      suggestedRisk = ClassificacaoRisco.CRITICO;
-    } else if (sensitiveData && noHumanValidation) {
-      suggestedRisk = ClassificacaoRisco.CRITICO;
-    } else if (impactsResults || highCriticity) {
-      suggestedRisk = ClassificacaoRisco.ALTO;
-    } else if (sensitiveData || personalData) {
-      suggestedRisk = ClassificacaoRisco.MEDIO;
-    } else if (formData.criticidade === Criticidade.MEDIA) {
-      suggestedRisk = ClassificacaoRisco.MEDIO;
-    }
-
-    if (formData.classificacaoRiscoAutomatico !== suggestedRisk) {
-      updateField("classificacaoRiscoAutomatico", suggestedRisk);
-      // Only auto-update manual if user hasn't touched it (simplified logic)
-      if (!formData.classificacaoRiscoManual) {
-        updateField("classificacaoRiscoManual", suggestedRisk);
-      }
-    }
-  }, [
-  formData.impactoResultadosLaboratoriais,
-  formData.usaDadosSensiveis,
-  formData.usaDadosPessoais,
-  formData.validacaoHumana,
-  formData.alinhadoLGPD,
-  formData.controlesImplementados,
-  formData.criticidade]
-  );
 
   const sections = [
     { label: "Solicitante", subtitle: "Dados de quem solicita", icon: FileText },
@@ -533,9 +488,9 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
         historico: history
       } as IARecord);
       localStorage.removeItem(draftStorageKey);
-    } catch (err: any) {
-      console.error(err);
-      alert(`⚠️ Erro ao salvar: ${err.message || err}`);
+    } catch (err: unknown) {
+      console.error("Erro ao salvar solicitação de IA:", err);
+      alert(obterMensagemErroUsuario(err, "inventario"));
     } finally {
       setIsSaving(false);
     }
@@ -1114,7 +1069,7 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
               },
               {
                 title: "Algoritmo de Apoio à Decisão",
-                description: "Algoritmo de Apoio à Decisão é uma IA que ajuda uma pessoa a escolher o melhor caminho, mostrando análises, riscos ou recomendações.",
+                description: "Algoritmo de Apoio à Decisão é uma IA que ajuda uma pessoa a escolher o melhor caminho, mostrando análises, impactos ou recomendações.",
                 variante: "rose",
                 tag: "Decisão"
               },
@@ -1158,188 +1113,6 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
         </div>
       }
 
-      {/* Styled Unified Popup Informing Personal & Sensitive Data */}
-      {showDadosInfoPopup &&
-      <div className="cedro-modal-overlay cadastro__grupo-23" onClick={() => setShowDadosInfoPopup(false)}>
-          <div className="cedro-modal-painel cadastro__grupo-32" onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <div className="cedro-modal-cabecalho cadastro__grupo-25">
-              <div className="cadastro__grupo-26">
-                <div className="cadastro__grupo-27">
-                  <ShieldCheck size={18} />
-                </div>
-                <div>
-                  <h3 className="cadastro__titulo-bloco-tipos-de-inteligencia-artifici">Dados Pessoais & Sensíveis</h3>
-                </div>
-              </div>
-              <button
-              type="button"
-              onClick={() => setShowDadosInfoPopup(false)}
-              className="cadastro__botao-13">
-              
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="rolagem-personalizada cadastro__grupo-33">
-              <div className="cadastro__grupo-34">
-                
-                {/* Personal Data Column */}
-                <div className="cadastro__grupo-dados-pessoais">
-                  <div className="cadastro__grupo-dados-pessoais-2">
-                    <span className="cadastro__texto-dados-pessoais">
-                      Dados Pessoais
-                    </span>
-                  </div>
-                  <div className="cadastro__grupo-35">
-                    {[
-                  {
-                    title: "O que são?",
-                    description: "Dados pessoais são informações que ajudam a identificar uma pessoa.",
-                    variante: "cedro"
-                  },
-                  {
-                    title: "Exemplos",
-                    description: "Nome, CPF, telefone, e-mail, endereço, data de nascimento, matrícula, foto, número de prontuário ou qualquer informação que mostre quem é a pessoa.",
-                    variante: "indigo"
-                  },
-                  {
-                    title: "Em uma IA",
-                    description: "Isso acontece quando o sistema usa, lê, guarda ou analisa informações de pessoas.",
-                    variante: "teal"
-                  }].
-                  map((item, idx) =>
-                  <div key={idx} className={`cadastro__grupo-30 cadastro-info--${item.variante} cadastro__grupo-36`}>
-                        <h4 className="cadastro__titulo-item-3">{item.title}</h4>
-                        <p className="cadastro__descricao">{item.description}</p>
-                      </div>
-                  )}
-                  </div>
-                </div>
-
-                {/* Sensitive Data Column */}
-                <div className="cadastro__grupo-dados-pessoais">
-                  <div className="cadastro__grupo-dados-pessoais-2">
-                    <span className="cadastro__texto-dados-sensiveis">
-                      Dados Sensíveis
-                    </span>
-                  </div>
-                  <div className="cadastro__grupo-35">
-                    {[
-                  {
-                    title: "O que são?",
-                    description: "Dados sensíveis são dados pessoais mais delicados. São informações que precisam de mais cuidado, porque podem expor muito a vida da pessoa.",
-                    variante: "rose"
-                  },
-                  {
-                    title: "Exemplos",
-                    description: "Dados de saúde, exames, diagnósticos, biometria, religião, raça, opinião política, dados genéticos e informações sobre vida sexual.",
-                    variante: "amber"
-                  },
-                  {
-                    title: "Em uma IA",
-                    description: "Isso acontece quando o sistema usa informações mais privadas ou importantes sobre alguém.",
-                    variante: "fuchsia"
-                  }].
-                  map((item, idx) =>
-                  <div key={idx} className={`cadastro__grupo-30 cadastro-info--${item.variante} cadastro__grupo-36`}>
-                        <h4 className="cadastro__titulo-item-3">{item.title}</h4>
-                        <p className="cadastro__descricao">{item.description}</p>
-                      </div>
-                  )}
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="cadastro__grupo-entendido">
-              <button
-              type="button"
-              onClick={() => setShowDadosInfoPopup(false)}
-              className="cadastro__botao-entendido">
-              
-                Entendido
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
-      {/* Styled Popup Informing Anonimized Data */}
-      {showDadosAnonimizadosPopup &&
-      <div className="cedro-modal-overlay cadastro__grupo-23" onClick={() => setShowDadosAnonimizadosPopup(false)}>
-          <div className="cedro-modal-painel cadastro__grupo-24" onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <div className="cedro-modal-cabecalho cadastro__grupo-25">
-              <div className="cadastro__grupo-26">
-                <div className="cadastro__grupo-27">
-                  <ShieldCheck size={18} />
-                </div>
-                <div>
-                  <h3 className="cadastro__titulo-bloco-tipos-de-inteligencia-artifici">Dados Anonimizados</h3>
-                </div>
-              </div>
-              <button
-              type="button"
-              onClick={() => setShowDadosAnonimizadosPopup(false)}
-              className="cadastro__botao-13">
-              
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="rolagem-personalizada cadastro__grupo-28">
-              <div className="cadastro__grupo-29">
-                {[
-              {
-                title: "O que são dados anonimizados?",
-                description: "Dados anonimizados são informações que foram modificadas para que não seja mais possível saber de quem são.",
-                variante: "cedro",
-                tag: "Conceito"
-              },
-              {
-                title: "Analogia simples",
-                description: "É como apagar a etiqueta com o nome da pessoa.",
-                variante: "indigo",
-                tag: "Analogia"
-              },
-              {
-                title: "Exemplo prático",
-                description: "Em vez de exibir dados diretamente identificáveis (Ex: \"Maria Silva — CPF — telefone — resultado do exame\"), o sistema mostra apenas dados agregados ou desidentificados (Ex: \"Paciente 001 — idade — sexo — resultado do exame\").",
-                variante: "amber",
-                tag: "Exemplo"
-              }].
-              map((item, idx) =>
-              <div key={idx} className={`cadastro__grupo-30 cadastro-info--${item.variante} cadastro__grupo-31`}>
-                    <div className="cadastro__grupo-salvando-solicitacao">
-                      <h4 className="cadastro__titulo-item-2">{item.title}</h4>
-                      <p className="cadastro__descricao">{item.description}</p>
-                    </div>
-                    <span className="cadastro__texto-6">
-                      {item.tag}
-                    </span>
-                  </div>
-              )}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="cadastro__grupo-entendido">
-              <button
-              type="button"
-              onClick={() => setShowDadosAnonimizadosPopup(false)}
-              className="cadastro__botao-entendido-2">
-              
-                Entendido
-              </button>
-            </div>
-          </div>
-        </div>
-      }
     </div>);
 
 }

@@ -32,8 +32,10 @@ import {
   Eye,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { IARecord, StatusAuditoria, StatusUso, UserProfile, ApprovalConfig, ApprovalWorkflow, SolicitacaoInformacoesTI } from "@/tipos";
+import { IARecord, StatusAuditoria, UserProfile, ApprovalConfig, ApprovalWorkflow, SolicitacaoInformacoesTI } from "@/tipos";
 import { criarSolicitacaoInformacoesTI, listarInteracoesTI } from "@/servicos/interacoes-ti";
+import { obterStatusGeralDoRegistro } from "@/utilitarios/status-solicitacao";
+import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 
 const FIXED_STEP_NAMES = NOMES_ETAPAS_CURTOS;
 const DISPLAY_STEP_NAMES = NOMES_ETAPAS_EXIBICAO;
@@ -117,9 +119,7 @@ export default function ApprovalPage({
     objetivo: false,
     dados: false,
     integracao: false,
-    riscos: false,
     conformidade: false,
-    classificacao: false,
     observacoes: false
   });
 
@@ -235,6 +235,12 @@ export default function ApprovalPage({
   const getRecordWf = (recordId: string) => {
     return workflows.find((wf) => wf.iaRecordId === recordId);
   };
+  const getRecordStatus = (record: IARecord) =>
+    obterStatusGeralDoRegistro(record, getRecordWf(record.id));
+  const recordEstaPendente = (record: IARecord) => {
+    const status = getRecordStatus(record);
+    return status === "Em análise" || status === "Em teste";
+  };
 
   const carregarInteracoesTi = useCallback(async (recordId: string) => {
     if (interacoesTiRequestRef.current === recordId) return;
@@ -244,8 +250,9 @@ export default function ApprovalPage({
       const dados = await listarInteracoesTI(recordId);
       setInteracoesTi(dados);
       setErroInteracoesTi("");
-    } catch (error: any) {
-      setErroInteracoesTi(error?.message || "Não foi possível carregar as interações da TI.");
+    } catch (error: unknown) {
+      console.error("Erro ao carregar interações da TI:", error);
+      setErroInteracoesTi(obterMensagemErroUsuario(error, "aprovacao"));
     } finally {
       if (interacoesTiRequestRef.current === recordId) {
         interacoesTiRequestRef.current = null;
@@ -298,20 +305,24 @@ export default function ApprovalPage({
       setModalPerguntasTiAberto(false);
       setNovasPerguntasTi([""]);
       await carregarInteracoesTi(recordId);
-    } catch (error: any) {
-      setErroInteracoesTi(error?.message || "Não foi possível enviar as perguntas ao solicitante.");
+    } catch (error: unknown) {
+      console.error("Erro ao enviar perguntas ao solicitante:", error);
+      setErroInteracoesTi(obterMensagemErroUsuario(error, "aprovacao"));
     } finally {
       setEnviandoPerguntasTi(false);
     }
   };
 
   const filteredRecords = useMemo(() => {
-    let list = records.filter((r) => r.statusUso !== StatusUso.CANCELADA && r.statusUso !== StatusUso.SUSPENSO);
+    let list = records.filter((r) => {
+      const status = getRecordStatus(r);
+      return status !== "Cancelada" && status !== "Não aprovada";
+    });
 
     // Se o usuário logado pertence às etapas finais do fluxo, ele SÓ pode ver as IAs que estão aguardando estritamente a sua aprovação
     if (isFinalApprovalUser) {
       list = list.filter((r) => {
-        const isPending = (r.statusAuditoria || StatusAuditoria.PENDENTE) === StatusAuditoria.PENDENTE;
+        const isPending = recordEstaPendente(r);
         if (!isPending) return false;
 
         const wf = getRecordWf(r.id);
@@ -354,10 +365,10 @@ export default function ApprovalPage({
     // Filtros de abas somente para usuários comuns (ou não restritos das etapas finais)
     if (!isFinalApprovalUser) {
       if (queueFilter === "pending") {
-        list = list.filter((r) => (r.statusAuditoria || StatusAuditoria.PENDENTE) === StatusAuditoria.PENDENTE);
+        list = list.filter(recordEstaPendente);
       } else if (queueFilter === "my_turn") {
         list = list.filter((r) => {
-          const isPending = (r.statusAuditoria || StatusAuditoria.PENDENTE) === StatusAuditoria.PENDENTE;
+          const isPending = recordEstaPendente(r);
           if (!isPending) return false;
 
           const wf = getRecordWf(r.id);
@@ -388,11 +399,11 @@ export default function ApprovalPage({
 
   const stats = useMemo(() => {
     const total = records.length;
-    const activeRecords = records.filter((r) => r.statusUso !== StatusUso.CANCELADA && r.statusUso !== StatusUso.SUSPENSO);
+    const activeRecords = records.filter(recordEstaPendente);
 
     // IAs sob responsabilidade direta do logado
     const myTurnCount = activeRecords.filter((r) => {
-      const isPending = (r.statusAuditoria || StatusAuditoria.PENDENTE) === StatusAuditoria.PENDENTE;
+      const isPending = recordEstaPendente(r);
       if (!isPending) return false;
       const wf = workflows.find((w) => w.iaRecordId === r.id);
       const isWfFinished = wf && (wf.finalStatus === "aprovado" || wf.finalStatus === "negado" || wf.finalStatus === "cancelado");
@@ -417,7 +428,7 @@ export default function ApprovalPage({
 
     const totalPending = isFinalApprovalUser ?
     myTurnCount :
-    activeRecords.filter((r) => (r.statusAuditoria || StatusAuditoria.PENDENTE) === StatusAuditoria.PENDENTE).length;
+    activeRecords.length;
 
     return { total, myTurnCount, totalPending };
   }, [records, workflows, currentSteps, currentUserId, profiles, isAdmin, isFinalApprovalUser]);
@@ -508,8 +519,9 @@ export default function ApprovalPage({
 
               const isStepUnassigned = !stepUserId;
               const isAssignedToMe = stepUserId === currentUserId;
-              const isWfFinished = wf && (wf.finalStatus === "aprovado" || wf.finalStatus === "negado" || wf.finalStatus === "cancelado") || record.statusUso === StatusUso.CANCELADA || record.statusUso === StatusUso.SUSPENSO;
-              const isMyTurn = !isWfFinished && isAssignedToMe && record.statusAuditoria === StatusAuditoria.PENDENTE;
+              const statusGeral = getRecordStatus(record);
+              const isWfFinished = statusGeral === "Aprovada" || statusGeral === "Não aprovada" || statusGeral === "Cancelada";
+              const isMyTurn = !isWfFinished && isAssignedToMe && recordEstaPendente(record);
 
               const dateStr = record.createdAt ? record.createdAt.slice(0, 10) : "";
               const formattedDate = dateStr ?
@@ -527,13 +539,13 @@ export default function ApprovalPage({
                         {record.id}
                       </span>
                       <span className={`aprovacoes__texto-3 ${
-                    record.statusAuditoria === StatusAuditoria.APROVADO ?
+                    statusGeral === "Aprovada" ?
                     "aprovacoes__texto-4" :
-                    record.statusAuditoria === StatusAuditoria.NEGADO ?
+                    statusGeral === "Não aprovada" || statusGeral === "Cancelada" ?
                     "aprovacoes__texto-5" :
                     "aprovacoes__texto-6"}`
                     }>
-                        {record.statusAuditoria || "Pendente"}
+                        {statusGeral}
                       </span>
                     </div>
 
@@ -768,17 +780,15 @@ export default function ApprovalPage({
 
                         const isStepUnassigned = !stepUserId;
                         const isAssignedToMe = stepUserId === currentUserId;
+                        const statusGeral = getRecordStatus(record);
                         const isWfFinished =
-                        wf && (
-                        wf.finalStatus === "aprovado" ||
-                        wf.finalStatus === "negado" ||
-                        wf.finalStatus === "cancelado") ||
-                        record.statusUso === StatusUso.CANCELADA ||
-                        record.statusUso === StatusUso.SUSPENSO;
+                        statusGeral === "Aprovada" ||
+                        statusGeral === "Não aprovada" ||
+                        statusGeral === "Cancelada";
                         const isMyTurn =
                         !isWfFinished &&
                         isAssignedToMe &&
-                        record.statusAuditoria === StatusAuditoria.PENDENTE;
+                        recordEstaPendente(record);
 
                         return (
                           <div
@@ -798,16 +808,14 @@ export default function ApprovalPage({
                                 </span>
                                 <span
                                 className={`aprovacoes__texto-10 ${
-                                record.statusAuditoria ===
-                                StatusAuditoria.APROVADO ?
+                                statusGeral === "Aprovada" ?
                                 "aprovacoes__texto-11" :
-                                record.statusAuditoria ===
-                                StatusAuditoria.NEGADO ?
+                                statusGeral === "Não aprovada" || statusGeral === "Cancelada" ?
                                 "aprovacoes__texto-12" :
                                 "aprovacoes__texto-13"}`
                                 }>
                                 
-                                  {record.statusAuditoria || "Pendente"}
+                                  {statusGeral}
                                 </span>
                               </div>
 
@@ -887,17 +895,15 @@ export default function ApprovalPage({
 
                       const isStepUnassigned = !stepUserId;
                       const isAssignedToMe = stepUserId === currentUserId;
+                      const statusGeral = getRecordStatus(record);
                       const isWfFinished =
-                      wf && (
-                      wf.finalStatus === "aprovado" ||
-                      wf.finalStatus === "negado" ||
-                      wf.finalStatus === "cancelado") ||
-                      record.statusUso === StatusUso.CANCELADA ||
-                      record.statusUso === StatusUso.SUSPENSO;
+                      statusGeral === "Aprovada" ||
+                      statusGeral === "Não aprovada" ||
+                      statusGeral === "Cancelada";
                       const isMyTurn =
                       !isWfFinished &&
                       isAssignedToMe &&
-                      record.statusAuditoria === StatusAuditoria.PENDENTE;
+                      recordEstaPendente(record);
 
                       const latestDecision = record.historico?.find(
                         (h) =>
@@ -966,10 +972,7 @@ export default function ApprovalPage({
                                   className="aprovacoes__icone-clock" />
                                 
                                     <span>
-                                      {record.statusAuditoria ===
-                                  StatusAuditoria.PENDENTE ?
-                                  "Pendente" :
-                                  "Finalizado"}
+                                      {statusGeral}
                                     </span>
                                   </div>
                               }
@@ -1016,7 +1019,7 @@ export default function ApprovalPage({
                                   Status
                                 </p>
                                 <p className="aprovacoes__descricao-7">
-                                  {record.criticidade || "Mapeamento pendente"}
+                                  {getRecordStatus(record)}
                                 </p>
                               </div>
                             </div>
@@ -1377,10 +1380,8 @@ export default function ApprovalPage({
                       setWorkflowSaved(true);
                       setTimeout(() => setWorkflowSaved(false), 4000);
                     } catch (error) {
-                      const message = error instanceof Error
-                        ? error.message
-                        : "Não foi possível salvar os responsáveis do fluxo.";
-                      setWorkflowSaveError(message);
+                      console.error("Erro ao salvar responsáveis do fluxo:", error);
+                      setWorkflowSaveError(obterMensagemErroUsuario(error, "aprovacao"));
                     }
                   }}
                   className={`aprovacoes__botao-7 ${

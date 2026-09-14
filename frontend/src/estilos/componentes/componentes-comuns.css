@@ -244,28 +244,25 @@
 .cartao-tabela__coluna-acoes { text-align: right !important; }
 .cartao-tabela__analisar { padding: 6px 9px; color: #fff; background: var(--cedro-cor-verde-900); border: 0; border-radius: 8px; font-size: 9px; font-weight: 850; cursor: pointer; }
 
-/* ---------- Status e risco ---------- */
+/* ---------- Status ---------- */
 .indicador-status,
-.indicador-risco,
 .status-badge { display: inline-flex; align-items: center; width: max-content; max-width: 100%; padding: 4px 8px; border: 1px solid #d7e0d9; border-radius: 999px; color: #5d6c62; background: #f2f5f3; font-size: 9px; font-weight: 800; line-height: 1.1; white-space: nowrap; }
 .indicador-status { gap: 6px; }
 .indicador-status__ponto { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: currentColor; }
 .indicador-status--aprovado,
+.indicador-status--aprovada,
 .status-badge--approved { color: #08631c; background: #e7f6ea; border-color: #bfe0c5; }
 .indicador-status--restricoes { color: #0a6a62; background: #e9f8f5; border-color: #bee1dc; }
 .indicador-status--avaliacao,
+.indicador-status--analise,
 .status-badge--pending { color: #96600d; background: #fff5df; border-color: #efd39a; }
 .indicador-status--teste,
 .status-badge--in_review { color: #4d54a8; background: #f0f0ff; border-color: #cfd1f5; }
 .indicador-status--negado,
+.indicador-status--negada,
 .indicador-status--suspenso,
 .status-badge--rejected { color: #a42a22; background: #fff0ef; border-color: #edc6c3; }
-.indicador-risco--baixo { color: #08631c; background: #e7f6ea; border-color: #c5e5cb; }
-.indicador-risco--medio { color: #93600f; background: #fff5df; border-color: #efd9ab; }
-.indicador-risco--alto { color: #aa3429; background: #fff1ef; border-color: #efc9c4; font-weight: 900; }
-.indicador-risco--critico { color: #7e1511; background: #fee3e0; border-color: #e9aaa4; font-weight: 900; }
-.indicador-risco--nao-avaliado { color: #657169; background: #eef2ef; border-color: #d9e0da; }
-
+.indicador-status--cancelada { color: #9a560a; background: #fff2e3; border-color: #efca99; }
 /* ---------- Notificações flutuantes ---------- */
 .notificacoes-flutuantes { position: fixed; right: 22px; bottom: 22px; z-index: 80; display: flex; width: min(390px, calc(100vw - 32px)); flex-direction: column; gap: 10px; pointer-events: none; }
 .notificacao-toast { --notificacao-cor: #4d6253; --notificacao-suave: #eef3ef; position: relative; display: flex; gap: 11px; padding: 14px 40px 14px 14px; color: #243b2a; background: #fff; border: 1px solid #d8e2da; border-left: 4px solid var(--notificacao-cor); border-radius: 14px; box-shadow: 0 16px 38px rgba(2,43,13,.13); pointer-events: auto; }

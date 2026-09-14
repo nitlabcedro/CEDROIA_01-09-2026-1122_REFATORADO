@@ -26,12 +26,16 @@ import {
 "recharts";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
-import { IARecord, StatusUso } from "@/tipos";
+import { IARecord } from "@/tipos";
 import {
   KPICard,
   TableCard,
   ActionCard } from
 "@/componentes/painel/ComponentesPainel";
+import {
+  obterStatusGeralDoRegistro,
+  type StatusGeral,
+} from "@/utilitarios/status-solicitacao";
 
 interface DashboardProps {
   records: IARecord[];
@@ -55,39 +59,39 @@ export default function Dashboard({
 
   const [period, setPeriod] = useState<string>("30-days");
 
+  const obterStatus = (record: IARecord): StatusGeral => {
+    const workflow = workflows.find((wf) => wf.iaRecordId === record.id);
+    return obterStatusGeralDoRegistro(record, workflow);
+  };
+
   const stats = useMemo(() => {
     const total = records.length;
-    const aprovadas = records.filter((r) => r.statusUso === StatusUso.APROVADO || r.statusUso === StatusUso.APROVADO_COM_RESTRICOES).length;
-    const emAvaliacao = records.filter((r) => r.statusUso === StatusUso.EM_AVALIACAO || r.statusUso === StatusUso.EM_TESTE_PILOTO).length;
-    const negadas = records.filter((r) => r.statusUso === StatusUso.NAO_APROVADO || r.statusUso === StatusUso.SUSPENSO).length;
+    const contagem: Record<StatusGeral, number> = {
+      "Em análise": 0,
+      "Em teste": 0,
+      Aprovada: 0,
+      "Não aprovada": 0,
+      Cancelada: 0,
+    };
 
-    const canceladas = records.filter((r) => {
-      if (!r.statusUso) return false;
-      const normalized = String(r.statusUso).
-      normalize("NFD").
-      replace(/[\u0300-\u036f]/g, "").
-      toLowerCase().
-      trim();
-      return (
-        normalized === "cancelada" ||
-        normalized === "cancelado" ||
-        normalized === "cancelada pelo solicitante" ||
-        normalized.includes("cancelada") ||
-        normalized.includes("cancelado"));
-
-    }).length;
-
-    const dadosSensiveis = records.filter((r) => r.usaDadosSensiveis === "Sim").length;
+    records.forEach((record) => {
+      const status = obterStatusGeralDoRegistro(
+        record,
+        workflows.find((wf) => wf.iaRecordId === record.id),
+      );
+      contagem[status] += 1;
+    });
 
     return {
       total,
-      aprovadas,
-      emAvaliacao,
-      negadas,
-      canceladas,
-      dadosSensiveis
+      emAnalise: contagem["Em análise"],
+      emTeste: contagem["Em teste"],
+      aprovadas: contagem.Aprovada,
+      naoAprovadas: contagem["Não aprovada"],
+      canceladas: contagem.Cancelada,
+      emAndamento: contagem["Em análise"] + contagem["Em teste"],
     };
-  }, [records]);
+  }, [records, workflows]);
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
@@ -96,7 +100,7 @@ export default function Dashboard({
     const bgBrandGreen = "075618";
     const whiteText = "FFFFFF";
 
-    worksheet.mergeCells("A1:F1");
+    worksheet.mergeCells("A1:E1");
     const titleCell = worksheet.getRow(1).getCell(1);
     titleCell.value = "MAPEAMENTO DE IA - LABORATÓRIO CEDRO";
     titleCell.font = { size: 14, bold: true, color: { argb: whiteText } };
@@ -104,7 +108,7 @@ export default function Dashboard({
     titleCell.alignment = { vertical: "middle", horizontal: "center" };
     worksheet.getRow(1).height = 40;
 
-    worksheet.mergeCells("A2:F2");
+    worksheet.mergeCells("A2:E2");
     const subtitleCell = worksheet.getRow(2).getCell(1);
     subtitleCell.value = `Relatório gerado em: ${new Date().toLocaleString("pt-BR")} | Total de Sistemas: ${records.length}`;
     subtitleCell.font = { italic: true, color: { argb: "555555" }, size: 10 };
@@ -118,7 +122,6 @@ export default function Dashboard({
     { header: "NOME DA FERRAMENTA", key: "nome", width: 32 },
     { header: "UNIDADE / SETOR", key: "setor", width: 22 },
     { header: "STATUS", key: "status", width: 22 },
-    { header: "RISCO RELEVADO", key: "risco", width: 22 },
     { header: "DATA DE CADASTRO", key: "data", width: 18 }];
 
 
@@ -141,12 +144,12 @@ export default function Dashboard({
     });
 
     records.forEach((r) => {
+      const statusGeral = obterStatus(r);
       const row = worksheet.addRow([
       r.id,
       r.nomeFerramenta,
       r.unidadeSetor,
-      r.statusUso,
-      r.criticidade ? r.criticidade.split(":")[0] : "Não avaliada",
+      statusGeral,
       r.dataRegistro || r.createdAt?.slice(0, 10) || ""]
       );
 
@@ -160,9 +163,9 @@ export default function Dashboard({
         };
 
         if (colNum === 4) {
-          if (r.statusUso === StatusUso.APROVADO) {
+          if (statusGeral === "Aprovada") {
             cell.font = { color: { argb: "10B981" }, bold: true };
-          } else if (r.statusUso === StatusUso.NAO_APROVADO) {
+          } else if (statusGeral === "Não aprovada" || statusGeral === "Cancelada") {
             cell.font = { color: { argb: "EF4444" }, bold: true };
           } else {
             cell.font = { color: { argb: "F59E0B" }, bold: true };
@@ -218,26 +221,26 @@ export default function Dashboard({
 
   const donutData = useMemo(() => {
     return [
-    { name: "Aprovadas", value: stats.aprovadas, color: "#10B981" },
-    { name: "Em avaliação", value: stats.emAvaliacao, color: "#F59E0B" },
-    { name: "Negadas", value: stats.negadas, color: "#EF4444" },
-    { name: "Canceladas", value: stats.canceladas, color: "#F29222" }].
-    filter((item) => item.value >= 0);
+    { name: "Em análise", value: stats.emAnalise, color: "#F59E0B" },
+    { name: "Em teste", value: stats.emTeste, color: "#3B82F6" },
+    { name: "Aprovada", value: stats.aprovadas, color: "#10B981" },
+    { name: "Não aprovada", value: stats.naoAprovadas, color: "#EF4444" },
+    { name: "Cancelada", value: stats.canceladas, color: "#F29222" }].
+    filter((item) => item.value > 0);
   }, [stats]);
 
   const priorityPedings = useMemo(() => {
     return [...records].
     sort((a, b) => {
-      const aEval = a.statusUso === StatusUso.EM_AVALIACAO ? 2 : 0;
-      const bEval = b.statusUso === StatusUso.EM_AVALIACAO ? 2 : 0;
+      const statusA = obterStatusGeralDoRegistro(a, workflows.find((wf) => wf.iaRecordId === a.id));
+      const statusB = obterStatusGeralDoRegistro(b, workflows.find((wf) => wf.iaRecordId === b.id));
+      const aEval = statusA === "Em análise" || statusA === "Em teste" ? 2 : 0;
+      const bEval = statusB === "Em análise" || statusB === "Em teste" ? 2 : 0;
 
-      const aCrit = a.criticidade?.includes("ALTA") ? 1 : 0;
-      const bCrit = b.criticidade?.includes("ALTA") ? 1 : 0;
-
-      return bEval + bCrit - (aEval + aCrit);
+      return bEval - aEval;
     }).
     slice(0, 5);
-  }, [records]);
+  }, [records, workflows]);
 
   const nextActions = useMemo(() => {
     const arr: any[] = [];
@@ -245,7 +248,10 @@ export default function Dashboard({
     workflows.forEach((wf) => {
       if (wf.finalStatus === "pendente") {
         const correspondingRecord = records.find((r) => r.id === wf.iaRecordId);
-        if (correspondingRecord) {
+        if (
+          correspondingRecord &&
+          ["Em análise", "Em teste"].includes(obterStatusGeralDoRegistro(correspondingRecord, wf))
+        ) {
           const currentStepItem = wf.steps?.find((s: any) => s.stepNumber === wf.currentStep);
           const roleAssigned = currentStepItem?.roleName || "Avaliador";
 
@@ -302,22 +308,22 @@ export default function Dashboard({
           accentColor="slate" />
         
         <KPICard
-          label="Em avaliação"
-          value={stats.emAvaliacao}
-          comparison="Pendentes de parecer"
+          label="Em andamento"
+          value={stats.emAndamento}
+          comparison="Aguardando parecer"
           icon={<Clock size={16} />}
           accentColor="orange" />
         
         <KPICard
-          label="Aprovadas"
+          label="Aprovada"
           value={stats.aprovadas}
           comparison="Acesso autorizado"
           icon={<CheckCircle2 size={16} />}
           accentColor="green" />
         
         <KPICard
-          label="Negadas"
-          value={stats.negadas}
+          label="Não aprovada"
+          value={stats.naoAprovadas}
           comparison="Uso restrito"
           icon={<XCircle size={16} />}
           accentColor="red" />
@@ -451,6 +457,7 @@ export default function Dashboard({
           <TableCard
             title="Catalogo"
             records={priorityPedings}
+            workflows={workflows}
             onNavigate={onNavigate}
             onViewRecord={(rec) => {
               onViewRecord(rec);

@@ -1,6 +1,6 @@
 import { ROTAS_API } from "@/constantes/api";
 import { usuarioEhAdmin, usuarioEhModerador, usuarioEhPrivilegiado } from "@/utilitarios/permissoes";
-import { normalizarAbaAplicacao, type AbaAplicacao } from "@/constantes/navegacao";
+import { ABAS_APLICACAO, ROTA_REDEFINIR_SENHA, type AbaAplicacao } from "@/constantes/navegacao";
 import { RELACOES_SUPABASE, TABELAS_SUPABASE } from "@/constantes/supabase";
 import { ETAPAS_APROVACAO_OFICIAIS, NOMES_ETAPAS_CURTOS, criarConfiguracaoAprovacaoPadrao, NOME_ETAPA_FINANCEIRA } from "@/constantes/fluxo-aprovacao";
 import { CHAVES_ARMAZENAMENTO_LOCAL, EVENTOS_APLICACAO } from "@/constantes/armazenamento-local";
@@ -18,6 +18,7 @@ import {
   updateRecord,
   updateUserProfile,
 } from "@/servicos/armazenamento";
+import { persistirCancelamentoCoerente } from "@/servicos/cancelamento-solicitacao";
 import { supabase } from "@/servicos/supabase";
 import {
   ApprovalConfig,
@@ -28,24 +29,205 @@ import {
   UserProfile,
 } from "@/tipos";
 import { generateSystemAlerts } from "@/utilitarios/alertas";
+import {
+  criarUrlNavegacao,
+  interpretarUrlNavegacao,
+  urlsNavegacaoIguais,
+  type ResultadoUrlNavegacao,
+} from "@/utilitarios/navegacao";
+import {
+  criarEstadoHistoricoCedroIA,
+  ehEstadoHistoricoCedroIA,
+  entradaPrivadaDeSessaoEncerrada,
+  obterDirecaoHistorico,
+  obterOuCriarIdSessaoNavegacao,
+  podeContinuarSaltandoHistorico,
+  rotaPrivadaBloqueada,
+} from "@/utilitarios/historico-navegacao";
+import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 import { useNotifications } from "./useNotificacoes";
 
+export interface OpcoesNavegarPara {
+  registro?: IARecord | null;
+  registroId?: string | null;
+  substituir?: boolean;
+}
+
+export type NavegarPara = (destino: AbaAplicacao, opcoes?: OpcoesNavegarPara) => void;
+
+const ABAS_SOMENTE_ADMIN = new Set<AbaAplicacao>(["sectors", "sectors_mgr"]);
+const ABAS_PRIVILEGIADAS = new Set<AbaAplicacao>(["approval_queue", "admin"]);
+
+function abaAplicacaoValida(valor: string | null): valor is AbaAplicacao {
+  return Boolean(valor && (ABAS_APLICACAO as readonly string[]).includes(valor));
+}
+
+function abaPermitida(
+  aba: AbaAplicacao,
+  isAdmin: boolean,
+  isPrivileged: boolean,
+): boolean {
+  if (ABAS_SOMENTE_ADMIN.has(aba)) return isAdmin;
+  if (ABAS_PRIVILEGIADAS.has(aba)) return isPrivileged;
+  return true;
+}
+
 export function useAplicacao() {
-  const { user, profile, loading: authLoading, refreshProfile, signOut } = useAuth();
+  const {
+    user: usuarioSessao,
+    profile: perfilSessao,
+    loading: authLoading,
+    recuperacaoSenhaEmAndamento,
+    refreshProfile,
+    signOut,
+  } = useAuth();
+  const user = recuperacaoSenhaEmAndamento ? null : usuarioSessao;
+  const profile = recuperacaoSenhaEmAndamento ? null : perfilSessao;
   const isCurrentUserAdmin = usuarioEhAdmin(profile);
   const isCurrentUserModerator = usuarioEhModerador(profile);
   const isCurrentUserPrivileged = usuarioEhPrivilegiado(profile);
-  const [activeTab, setActiveTab] = useState<AbaAplicacao>(() =>
-    normalizarAbaAplicacao(localStorage.getItem(CHAVES_ARMAZENAMENTO_LOCAL.ABA_ATIVA)),
-  ); // inicia no perfil ou aba salva
+  const rotaInicialRef = React.useRef<ResultadoUrlNavegacao | null>(null);
+  if (!rotaInicialRef.current) {
+    rotaInicialRef.current = interpretarUrlNavegacao(
+      window.location.pathname,
+      window.location.search,
+    );
+  }
+  const rotaInicial = rotaInicialRef.current;
+  const abaSalva = localStorage.getItem(CHAVES_ARMAZENAMENTO_LOCAL.ABA_ATIVA);
+  const abaInicial = rotaInicial.tipo === "aba"
+    ? rotaInicial.aba
+    : rotaInicial.tipo === "raiz" && abaAplicacaoValida(abaSalva)
+      ? abaSalva
+      : "dashboard";
+  const registroIdInicial = rotaInicial.tipo === "aba" && rotaInicial.registroId
+    ? rotaInicial.registroId
+    : rotaInicial.tipo === "raiz" && (abaInicial === "report" || abaInicial === "new")
+      ? localStorage.getItem(CHAVES_ARMAZENAMENTO_LOCAL.REGISTRO_SELECIONADO)
+      : null;
+
+  const [activeTab, setActiveTabInterna] = useState<AbaAplicacao>(abaInicial);
   const [records, setRecords] = useState<IARecord[]>([]);
+  const [recordsCarregados, setRecordsCarregados] = useState(false);
   const [workflows, setWorkflows] = useState<ApprovalWorkflow[]>([]);
   const [approvalConfig, setApprovalConfig] = useState<ApprovalConfig>(() => criarConfiguracaoAprovacaoPadrao());
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [supabaseStatus, setSupabaseStatus] = useState<"online" | "offline" | "checking">("checking");
   const [selectedRecord, setSelectedRecord] = useState<IARecord | null>(null);
+  const [registroIdNavegacao, setRegistroIdNavegacao] = useState<string | null>(registroIdInicial);
+  const [originTab, setOriginTab] = useState<AbaAplicacao | null>("inventory");
+  const activeTabRef = React.useRef(activeTab);
+  const recordsRef = React.useRef(records);
+  const userRef = React.useRef(user);
+  const recuperacaoSenhaRef = React.useRef(recuperacaoSenhaEmAndamento);
+  const sessionNavigationIdRef = React.useRef<string | null>(null);
+  const navigationIndexRef = React.useRef(
+    ehEstadoHistoricoCedroIA(window.history.state)
+      ? window.history.state.navigationIndex
+      : 0,
+  );
+  const permissoesRef = React.useRef({
+    isAdmin: isCurrentUserAdmin,
+    isPrivileged: isCurrentUserPrivileged,
+  });
 
-  // Efeitos para persistência de estado (evita perder foco em reconstruções do código / live reload)
+  activeTabRef.current = activeTab;
+  recordsRef.current = records;
+  userRef.current = user;
+  recuperacaoSenhaRef.current = recuperacaoSenhaEmAndamento;
+  permissoesRef.current = {
+    isAdmin: isCurrentUserAdmin,
+    isPrivileged: isCurrentUserPrivileged,
+  };
+
+  const aplicarAbaSemHistorico = React.useCallback((
+    aba: AbaAplicacao,
+    registroId?: string | null,
+  ) => {
+    activeTabRef.current = aba;
+    setActiveTabInterna(aba);
+    localStorage.setItem(CHAVES_ARMAZENAMENTO_LOCAL.ABA_ATIVA, aba);
+
+    const usaRegistro = aba === "report" || aba === "new";
+    const idNormalizado = usaRegistro ? registroId?.trim() || null : null;
+    setRegistroIdNavegacao(idNormalizado);
+
+    if (idNormalizado) {
+      localStorage.setItem(CHAVES_ARMAZENAMENTO_LOCAL.REGISTRO_SELECIONADO, idNormalizado);
+      setSelectedRecord(recordsRef.current.find((record) => record.id === idNormalizado) ?? null);
+    } else if (!usaRegistro) {
+      localStorage.removeItem(CHAVES_ARMAZENAMENTO_LOCAL.REGISTRO_SELECIONADO);
+      setSelectedRecord(null);
+    } else {
+      setSelectedRecord(null);
+    }
+  }, []);
+
+  const navegarPara = React.useCallback<NavegarPara>((
+    destino,
+    opcoes: OpcoesNavegarPara = {},
+  ) => {
+    if (recuperacaoSenhaRef.current) return;
+
+    const permitido = abaPermitida(
+      destino,
+      permissoesRef.current.isAdmin,
+      permissoesRef.current.isPrivileged,
+    );
+    const abaFinal = permitido ? destino : "dashboard";
+    const registro = permitido ? opcoes.registro : null;
+    const registroId = registro?.id ?? (permitido ? opcoes.registroId : null);
+    const urlDestino = criarUrlNavegacao(abaFinal, { registroId });
+    const urlAtual = `${window.location.pathname}${window.location.search}`;
+
+    if (abaFinal === "report") {
+      setOriginTab(activeTabRef.current === "report" ? "inventory" : activeTabRef.current);
+    }
+
+    if (registro !== undefined) {
+      setSelectedRecord(registro);
+    }
+    aplicarAbaSemHistorico(abaFinal, registroId);
+
+    const protegida = Boolean(userRef.current);
+    const sessionNavigationId = protegida
+      ? sessionNavigationIdRef.current ?? obterOuCriarIdSessaoNavegacao()
+      : null;
+    if (protegida) sessionNavigationIdRef.current = sessionNavigationId;
+
+    if (!urlsNavegacaoIguais(urlAtual, urlDestino)) {
+      const navigationIndex = opcoes.substituir || !permitido
+        ? navigationIndexRef.current
+        : navigationIndexRef.current + 1;
+      const estado = criarEstadoHistoricoCedroIA({
+        protegida,
+        sessionNavigationId,
+        navigationIndex,
+        aba: abaFinal,
+        registroId,
+      });
+      if (opcoes.substituir || !permitido) {
+        window.history.replaceState(estado, "", urlDestino);
+      } else {
+        window.history.pushState(estado, "", urlDestino);
+      }
+      navigationIndexRef.current = navigationIndex;
+    } else if (opcoes.substituir) {
+      window.history.replaceState(
+        criarEstadoHistoricoCedroIA({
+          protegida,
+          sessionNavigationId,
+          navigationIndex: navigationIndexRef.current,
+          aba: abaFinal,
+          registroId,
+        }),
+        "",
+        urlDestino,
+      );
+    }
+  }, [aplicarAbaSemHistorico]);
+
+  // Persistência reativa também cobre alterações originadas por popstate.
   useEffect(() => {
     localStorage.setItem(CHAVES_ARMAZENAMENTO_LOCAL.ABA_ATIVA, activeTab);
   }, [activeTab]);
@@ -53,28 +235,282 @@ export function useAplicacao() {
   useEffect(() => {
     if (selectedRecord) {
       localStorage.setItem(CHAVES_ARMAZENAMENTO_LOCAL.REGISTRO_SELECIONADO, selectedRecord.id);
-    } else {
+    } else if (!registroIdNavegacao) {
       localStorage.removeItem(CHAVES_ARMAZENAMENTO_LOCAL.REGISTRO_SELECIONADO);
     }
-  }, [selectedRecord]);
+  }, [selectedRecord, registroIdNavegacao]);
+
+  const [, setVersaoLocalizacao] = useState(0);
+  const saltosHistoricoRef = React.useRef(0);
+  const guardaSaltoHistoricoRef = React.useRef<number | null>(null);
 
   useEffect(() => {
-    if (records.length > 0 && !selectedRecord) {
-      const savedId = localStorage.getItem(CHAVES_ARMAZENAMENTO_LOCAL.REGISTRO_SELECIONADO);
-      if (savedId) {
-        const found = records.find(r => r.id === savedId);
-        if (found) {
-          setSelectedRecord(found);
-        }
+    const limparGuardaSalto = () => {
+      if (guardaSaltoHistoricoRef.current !== null) {
+        window.clearTimeout(guardaSaltoHistoricoRef.current);
+        guardaSaltoHistoricoRef.current = null;
       }
-    } else if (selectedRecord && records.length > 0) {
-      const found = records.find(r => r.id === selectedRecord.id);
-      if (found && JSON.stringify(found) !== JSON.stringify(selectedRecord)) {
-        setSelectedRecord(found);
+    };
+
+    const normalizarComoPublica = () => {
+      limparGuardaSalto();
+      saltosHistoricoRef.current = 0;
+      aplicarAbaSemHistorico("dashboard");
+      window.history.replaceState(
+        criarEstadoHistoricoCedroIA({
+          protegida: false,
+          navigationIndex: navigationIndexRef.current,
+        }),
+        "",
+        "/",
+      );
+    };
+
+    const normalizarComoRecuperacao = () => {
+      limparGuardaSalto();
+      saltosHistoricoRef.current = 0;
+      aplicarAbaSemHistorico("dashboard");
+      window.history.replaceState(
+        criarEstadoHistoricoCedroIA({
+          protegida: false,
+          navigationIndex: navigationIndexRef.current,
+        }),
+        "",
+        ROTA_REDEFINIR_SENHA,
+      );
+    };
+
+    const tratarPopstate = (evento: PopStateEvent) => {
+      limparGuardaSalto();
+      const resultado = interpretarUrlNavegacao(
+        window.location.pathname,
+        window.location.search,
+      );
+      setVersaoLocalizacao((versao) => versao + 1);
+
+      const estado = evento.state;
+      const indiceAnterior = navigationIndexRef.current;
+      const direcao = obterDirecaoHistorico(indiceAnterior, estado);
+      if (ehEstadoHistoricoCedroIA(estado)) {
+        navigationIndexRef.current = estado.navigationIndex;
+      }
+
+      if (recuperacaoSenhaRef.current) {
+        if (resultado.tipo !== "reset-password") {
+          normalizarComoRecuperacao();
+        }
+        return;
+      }
+
+      if (
+        resultado.tipo === "aba"
+        && entradaPrivadaDeSessaoEncerrada(estado, Boolean(userRef.current))
+      ) {
+        if (direcao !== 0 && podeContinuarSaltandoHistorico(saltosHistoricoRef.current)) {
+          saltosHistoricoRef.current += 1;
+          const urlAntesDoSalto = window.location.href;
+          const indiceAntesDoSalto = navigationIndexRef.current;
+          window.history.go(direcao);
+          guardaSaltoHistoricoRef.current = window.setTimeout(() => {
+            const estadoAtual = window.history.state;
+            if (
+              window.location.href === urlAntesDoSalto
+              && ehEstadoHistoricoCedroIA(estadoAtual)
+              && estadoAtual.navigationIndex === indiceAntesDoSalto
+            ) {
+              normalizarComoPublica();
+            }
+          }, 350);
+          return;
+        }
+
+        normalizarComoPublica();
+        return;
+      }
+
+      // Uma URL privada nunca é restaurada sem autenticação, mesmo quando o
+      // history.state está ausente, é legado ou foi adulterado.
+      if (rotaPrivadaBloqueada(
+        Boolean(userRef.current),
+        resultado.tipo === "aba",
+        recuperacaoSenhaRef.current,
+      )) {
+        normalizarComoPublica();
+        return;
+      }
+
+      saltosHistoricoRef.current = 0;
+
+      if (resultado.tipo === "reset-password") return;
+
+      if (resultado.tipo === "aba") {
+        if (
+          !abaPermitida(
+            resultado.aba,
+            permissoesRef.current.isAdmin,
+            permissoesRef.current.isPrivileged,
+          )
+        ) {
+          navegarPara("dashboard", { substituir: true });
+          return;
+        }
+        aplicarAbaSemHistorico(resultado.aba, resultado.registroId);
+        return;
+      }
+
+      aplicarAbaSemHistorico("dashboard");
+    };
+
+    window.addEventListener("popstate", tratarPopstate);
+    return () => {
+      limparGuardaSalto();
+      window.removeEventListener("popstate", tratarPopstate);
+    };
+  }, [aplicarAbaSemHistorico, navegarPara]);
+
+  const teveUsuarioAutenticadoRef = React.useRef(false);
+  const teveRecuperacaoSenhaRef = React.useRef(recuperacaoSenhaEmAndamento);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    const resultado = interpretarUrlNavegacao(
+      window.location.pathname,
+      window.location.search,
+    );
+
+    if (recuperacaoSenhaEmAndamento) {
+      teveRecuperacaoSenhaRef.current = true;
+      sessionNavigationIdRef.current = null;
+      teveUsuarioAutenticadoRef.current = false;
+      setRecordsCarregados(false);
+      aplicarAbaSemHistorico("dashboard");
+      if (resultado.tipo !== "reset-password") {
+        window.history.replaceState(
+          criarEstadoHistoricoCedroIA({
+            protegida: false,
+            navigationIndex: navigationIndexRef.current,
+          }),
+          "",
+          ROTA_REDEFINIR_SENHA,
+        );
+      }
+      return;
+    }
+
+    if (resultado.tipo === "reset-password") {
+      if (!user && teveRecuperacaoSenhaRef.current) {
+        teveRecuperacaoSenhaRef.current = false;
+        window.history.replaceState(
+          criarEstadoHistoricoCedroIA({
+            protegida: false,
+            navigationIndex: navigationIndexRef.current,
+          }),
+          "",
+          "/",
+        );
+        setVersaoLocalizacao((versao) => versao + 1);
+      }
+      return;
+    }
+
+    if (!user) {
+      sessionNavigationIdRef.current = null;
+      if (teveUsuarioAutenticadoRef.current) {
+        teveUsuarioAutenticadoRef.current = false;
+        setRecordsCarregados(false);
+        aplicarAbaSemHistorico("dashboard");
+        window.history.replaceState(
+          criarEstadoHistoricoCedroIA({
+            protegida: false,
+            navigationIndex: navigationIndexRef.current,
+          }),
+          "",
+          "/",
+        );
+      } else if (resultado.tipo === "invalida") {
+        window.history.replaceState(
+          criarEstadoHistoricoCedroIA({
+            protegida: false,
+            navigationIndex: navigationIndexRef.current,
+          }),
+          "",
+          "/",
+        );
+      }
+      return;
+    }
+
+    teveUsuarioAutenticadoRef.current = true;
+    sessionNavigationIdRef.current = obterOuCriarIdSessaoNavegacao();
+
+    if (resultado.tipo === "invalida") {
+      navegarPara("dashboard", { substituir: true });
+      return;
+    }
+
+    const abaDesejada = resultado.tipo === "aba" ? resultado.aba : activeTabRef.current;
+    const rotaProtegida = ABAS_SOMENTE_ADMIN.has(abaDesejada) || ABAS_PRIVILEGIADAS.has(abaDesejada);
+    if (rotaProtegida && !profile) return;
+
+    if (!abaPermitida(abaDesejada, isCurrentUserAdmin, isCurrentUserPrivileged)) {
+      navegarPara("dashboard", { substituir: true });
+      return;
+    }
+
+    const registroId = resultado.tipo === "aba"
+      ? resultado.registroId
+      : registroIdNavegacao;
+    navegarPara(abaDesejada, { registroId, substituir: true });
+  }, [
+    activeTab,
+    aplicarAbaSemHistorico,
+    authLoading,
+    isCurrentUserAdmin,
+    isCurrentUserPrivileged,
+    navegarPara,
+    profile,
+    recuperacaoSenhaEmAndamento,
+    registroIdNavegacao,
+    user,
+  ]);
+
+  useEffect(() => {
+    if (registroIdNavegacao) {
+      const encontrado = records.find((record) => record.id === registroIdNavegacao);
+      if (encontrado) {
+        if (selectedRecord?.id !== encontrado.id || selectedRecord !== encontrado) {
+          setSelectedRecord(encontrado);
+        }
+        return;
+      }
+
+      if (recordsCarregados && (activeTab === "report" || activeTab === "new")) {
+        navegarPara("inventory", { substituir: true });
+      }
+      return;
+    }
+
+    if (activeTab === "report" && recordsCarregados) {
+      navegarPara("inventory", { substituir: true });
+      return;
+    }
+
+    if (selectedRecord && records.length > 0) {
+      const encontrado = records.find((record) => record.id === selectedRecord.id);
+      if (encontrado && encontrado !== selectedRecord) {
+        setSelectedRecord(encontrado);
       }
     }
-  }, [records, selectedRecord]);
-  const [originTab, setOriginTab] = useState<AbaAplicacao | null>("inventory");
+  }, [
+    activeTab,
+    navegarPara,
+    records,
+    recordsCarregados,
+    registroIdNavegacao,
+    selectedRecord,
+  ]);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const isDarkMode = false; // Modo escuro removido - apenas modo claro
@@ -288,6 +724,7 @@ export function useAplicacao() {
       } catch (error) {
         console.error("Erro ao atualizar registros:", error);
       } finally {
+        setRecordsCarregados(true);
         setIsSyncing(false);
       }
     })();
@@ -299,7 +736,10 @@ export function useAplicacao() {
   };
 
   useEffect(() => {
-    if (user?.id && profile) refreshRecords();
+    if (user?.id && profile) {
+      setRecordsCarregados(false);
+      refreshRecords();
+    }
   }, [user?.id, profile?.role, profile?.setor]);
 
   useEffect(() => {
@@ -341,13 +781,8 @@ export function useAplicacao() {
   }, []);
 
   // Refs to always keep current values inside real-time event listeners
-  const activeTabRef = React.useRef(activeTab);
   const profileRef = React.useRef(profile);
   const profilesRef = React.useRef(profiles);
-
-  useEffect(() => {
-    activeTabRef.current = activeTab;
-  }, [activeTab]);
 
   useEffect(() => {
     profileRef.current = profile;
@@ -427,7 +862,7 @@ export function useAplicacao() {
                 actionLabel: "Ver Mensagem",
                 onAction: () => {
                   sessionStorage.setItem(CHAVES_ARMAZENAMENTO_LOCAL.CHAT_ALVO_NOTIFICACAO, msg.sender_id);
-                  setActiveTab("chat");
+                  navegarPara("chat");
                   window.setTimeout(() => {
                     window.dispatchEvent(new CustomEvent(EVENTOS_APLICACAO.CHAT_ABRIR_CONVERSA, {
                       detail: { userId: msg.sender_id },
@@ -489,8 +924,7 @@ export function useAplicacao() {
                       type: updatedRec.statusAuditoria === StatusAuditoria.APROVADO ? "success" : "info",
                       actionLabel: "Analisar",
                       onAction: () => {
-                        setSelectedRecord(updatedRec);
-                        setActiveTab("report");
+                        navegarPara("report", { registro: updatedRec });
                       }
                     });
                   }, 50);
@@ -512,7 +946,11 @@ export function useAplicacao() {
 
   const handleSync = async () => {
     if (supabaseStatus !== "online") {
-      alert("Supabase está offline. Verifique suas chaves de API.");
+      addToast({
+        title: "Serviço indisponível",
+        message: "O serviço está temporariamente indisponível. Tente novamente em alguns instantes.",
+        type: "error",
+      });
       return;
     }
     
@@ -522,24 +960,21 @@ export function useAplicacao() {
       const isAdmin = isCurrentUserAdmin;
       await saveRecordsToSupabase(records, user?.id, isAdmin);
       await refreshRecords();
-      alert("✅ Sincronização concluída com sucesso!");
-    } catch (error: any) {
+      addToast({ title: "Sincronização concluída", message: "Os dados foram sincronizados com sucesso.", type: "success" });
+    } catch (error: unknown) {
       console.error("Erro na sincronização manual:", error);
-      alert(`❌ Erro na sincronização: ${error.message || "Erro desconhecido"}. Verifique o SQL do Supabase.`);
+      addToast({ title: "Erro na sincronização", message: obterMensagemErroUsuario(error), type: "error" });
     } finally {
       setIsSyncing(false);
     }
   };
 
   const handleEdit = (record: IARecord) => {
-    setSelectedRecord(record);
-    setActiveTab("new");
+    navegarPara("new", { registro: record });
   };
 
   const handleView = (record: IARecord) => {
-    setOriginTab(activeTab);
-    setSelectedRecord(record);
-    setActiveTab("report");
+    navegarPara("report", { registro: record });
   };
 
   const handleDelete = async (id: string) => {
@@ -556,7 +991,7 @@ export function useAplicacao() {
     } catch (error) {
       console.error("Erro ao excluir:", error);
       setRecords(previousRecords);
-      alert("Houve um erro ao excluir o registro. Por favor, tente novamente.");
+      addToast({ title: "Não foi possível excluir", message: obterMensagemErroUsuario(error, "inventario"), type: "error" });
     }
   };
 
@@ -564,7 +999,7 @@ export function useAplicacao() {
     try {
       const record = records.find(r => r.id === recordId);
       if (!record) {
-        alert("Registro não encontrado.");
+        addToast({ title: "Registro não encontrado", message: "Atualize os dados e tente novamente.", type: "warning" });
         return;
       }
 
@@ -578,44 +1013,89 @@ export function useAplicacao() {
           ...(record.historico || []),
           {
             date: now,
-            action: "Solicitação cancelada pelo solicitante",
+            action: "Solicitação cancelada",
             user: profile?.full_name || user?.email || "Solicitante",
-            message: "A solicitação foi cancelada diretamente pelo solicitante através do inventário."
+            message: "Esta solicitação foi cancelada e não seguirá para aprovação."
           }
         ]
       };
 
-      const { error: recordError } = await supabase
-        .from(TABELAS_SUPABASE.REGISTROS_IA)
-        .update({
-          data: updatedRecord,
-          status_uso: StatusUso.CANCELADA,
-          updated_at: now
-        })
-        .eq("id", recordId);
-
-      if (recordError) {
-        throw recordError;
-      }
-
-      const { error: workflowError } = await supabase
+      const { data: workflowAnterior, error: workflowQueryError } = await supabase
         .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-        .update({
-          final_status: "cancelado",
-          completed_at: now
-        })
-        .eq("ia_record_id", recordId);
+        .select("id, current_step, final_status, completed_at")
+        .eq("ia_record_id", recordId)
+        .maybeSingle();
 
-      if (workflowError) {
-        console.warn("Aviso ao atualizar workflow cancelado:", workflowError);
+      if (workflowQueryError) throw workflowQueryError;
+      if (!workflowAnterior) {
+        throw new Error("Workflow correspondente não encontrado.");
       }
 
+      await persistirCancelamentoCoerente({
+        persistirWorkflowCancelado: async () => {
+          const { data: workflowPersistido, error: workflowError } = await supabase
+            .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
+            .update({
+              final_status: "cancelado",
+              completed_at: now
+            })
+            .eq("id", workflowAnterior.id)
+            .select("current_step, final_status")
+            .single();
+
+          if (workflowError) throw workflowError;
+          if (
+            workflowPersistido.final_status !== "cancelado"
+            || workflowPersistido.current_step !== workflowAnterior.current_step
+          ) {
+            throw new Error("Workflow não foi persistido de forma coerente.");
+          }
+        },
+        persistirRegistroCancelado: async () => {
+          const { data: registroPersistido, error: recordError } = await supabase
+            .from(TABELAS_SUPABASE.REGISTROS_IA)
+            .update({
+              data: updatedRecord,
+              status_uso: StatusUso.CANCELADA,
+              updated_at: now
+            })
+            .eq("id", recordId)
+            .select("id, status_uso")
+            .single();
+
+          if (recordError) throw recordError;
+          if (registroPersistido.status_uso !== StatusUso.CANCELADA) {
+            throw new Error("Registro não foi persistido como cancelado.");
+          }
+        },
+        restaurarWorkflow: async () => {
+          const { error: restoreError } = await supabase
+            .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
+            .update({
+              final_status: workflowAnterior.final_status,
+              completed_at: workflowAnterior.completed_at,
+            })
+            .eq("id", workflowAnterior.id);
+          if (restoreError) throw restoreError;
+        },
+      });
+
+      setRecords((atuais) =>
+        atuais.map((item) => item.id === recordId ? updatedRecord : item),
+      );
+      setWorkflows((atuais) =>
+        atuais.map((workflow) =>
+          workflow.iaRecordId === recordId
+            ? { ...workflow, finalStatus: "cancelado", completedAt: now }
+            : workflow,
+        ),
+      );
       await refreshRecords();
 
-      alert("Solicitação cancelada com sucesso.");
+      addToast({ title: "Solicitação cancelada", message: "A solicitação foi cancelada com sucesso.", type: "success" });
     } catch (error) {
       console.error("Erro ao cancelar solicitação:", error);
-      alert("Houve um erro ao cancelar a solicitação. Por favor, tente novamente.");
+      addToast({ title: "Não foi possível cancelar", message: obterMensagemErroUsuario(error, "inventario"), type: "error" });
     }
   };
 
@@ -767,11 +1247,10 @@ export function useAplicacao() {
         await updateRecord(record, user?.id, isAdmin);
       }
       await refreshRecords();
-      setActiveTab("inventory");
-      setSelectedRecord(null);
-    } catch (error: any) {
+      navegarPara("inventory");
+    } catch (error: unknown) {
       console.error("Erro ao salvar registro:", error);
-      alert(`⚠️ Erro ao salvar: ${error.message || "Erro desconhecido"}. Verifique o console ou a estrutura do banco.`);
+      addToast({ title: "Não foi possível salvar", message: obterMensagemErroUsuario(error, "inventario"), type: "error" });
     }
   };
 
@@ -866,7 +1345,11 @@ export function useAplicacao() {
           const errRes = await response.json().catch(() => ({}));
           console.warn("O servidor retornou erro na decisão:", errRes);
           if (errRes.error) {
-            alert(`⚠️ ${errRes.error}`);
+            addToast({
+              title: "Não foi possível registrar a decisão",
+              message: obterMensagemErroUsuario(errRes.error, "aprovacao"),
+              type: "error",
+            });
             return;
           }
         }
@@ -1107,9 +1590,9 @@ export function useAplicacao() {
       }
 
       await refreshRecords();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erro ao atualizar status:", error);
-      alert(`⚠️ Erro ao atualizar status: ${error.message || "Erro de conexão com o servidor"}`);
+      addToast({ title: "Não foi possível atualizar", message: obterMensagemErroUsuario(error, "aprovacao"), type: "error" });
       await refreshRecords();
     }
   };
@@ -1303,9 +1786,9 @@ export function useAplicacao() {
       });
 
       await refreshRecords();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erro ao redefinir status:", error);
-      alert(`Erro: ${error.message || "Erro desconhecido ao redefinir status"}`);
+      addToast({ title: "Não foi possível redefinir", message: obterMensagemErroUsuario(error, "administracao"), type: "error" });
     }
   };
 
@@ -1373,12 +1856,12 @@ export function useAplicacao() {
       }
       await refreshRecords();
       const roleLabel = newRole === "admin" ? "ADMINISTRADOR" : newRole === "moderator" ? "MODERADOR" : "USUÁRIO COMUM";
-      alert(`✅ Sucesso! O usuário agora tem acesso de ${roleLabel}.`);
-    } catch (error: any) {
+      addToast({ title: "Permissão atualizada", message: `O usuário agora tem acesso de ${roleLabel}.`, type: "success" });
+    } catch (error: unknown) {
       console.error("❌ Erro fatal ao atualizar role do usuário:", error);
       // Rollback
       setProfiles(previousProfiles);
-      alert(`Erro: ${error.message || "Erro desconhecido ao atualizar permissões"}`);
+      addToast({ title: "Não foi possível atualizar", message: obterMensagemErroUsuario(error, "administracao"), type: "error" });
     }
   };
 
@@ -1412,20 +1895,21 @@ export function useAplicacao() {
       }
 
       setProfiles(prev => prev.filter(p => p.id !== userId));
-      alert("✅ Usuário apagado com sucesso.");
-    } catch (error: any) {
+      addToast({ title: "Usuário excluído", message: "O usuário foi excluído com sucesso.", type: "success" });
+    } catch (error: unknown) {
       console.error("Erro ao apagar usuário:", error);
-      alert(`⚠️ Erro ao apagar: ${error.message}`);
+      addToast({ title: "Não foi possível excluir", message: obterMensagemErroUsuario(error, "administracao"), type: "error" });
     }
   };
   return {
     user,
     profile,
     authLoading,
+    recuperacaoSenhaEmAndamento,
     isCurrentUserAdmin,
     isCurrentUserPrivileged,
     activeTab,
-    setActiveTab,
+    navegarPara,
     records,
     workflows,
     approvalConfig,

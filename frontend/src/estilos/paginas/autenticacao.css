@@ -123,7 +123,8 @@
 }
 
 .autenticacao-card--signup { width: min(100%, 590px); padding-top: 30px; }
-.autenticacao-card--forgot { padding-bottom: 38px; }
+.autenticacao-card--forgot,
+.autenticacao-card--sucesso { padding-bottom: 38px; }
 .autenticacao-card::-webkit-scrollbar { width: 5px; }
 .autenticacao-card::-webkit-scrollbar-track { background: transparent; }
 .autenticacao-card::-webkit-scrollbar-thumb { background: rgba(117, 192, 67, 0.35); border-radius: 999px; }
@@ -165,6 +166,14 @@
 .autenticacao-campo__visibilidade { position: absolute; right: 11px; display: inline-flex; width: 36px; height: 36px; align-items: center; justify-content: center; color: #71877c; background: transparent; border: 0; border-radius: 8px; cursor: pointer; }
 .autenticacao-campo__visibilidade:hover { color: #57982f; background: rgba(117, 192, 67, 0.09); }
 .autenticacao-formulario__ajuda { margin: -8px 4px 0; color: #708078; font-size: 10.5px; }
+.autenticacao-campo-grupo .autenticacao-formulario__ajuda { margin-top: 0; }
+.autenticacao-campo--erro { border-color: rgba(190, 70, 70, 0.55); }
+.autenticacao-campo--erro:hover { border-color: rgba(190, 70, 70, 0.68); }
+.autenticacao-campo--erro:focus-within {
+  border-color: rgba(180, 60, 60, 0.78);
+  box-shadow: 0 0 0 3px rgba(190, 70, 70, 0.12), 0 5px 14px rgba(28, 71, 46, 0.06);
+}
+.autenticacao-campo__erro { margin: 0 2px; color: #9b2c2c; font-size: 11px; line-height: 1.4; }
 
 .autenticacao-signup__atribuicao { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 14px; background: rgba(246, 250, 247, 0.88); border: 1px solid rgba(52, 102, 72, 0.14); border-radius: 13px; }
 .autenticacao-signup__remover { align-self: flex-end; padding: 4px 8px; color: #ffb0b0; background: rgba(133, 31, 31, 0.16); border: 1px solid rgba(255, 130, 130, 0.22); border-radius: 7px; font-size: 9px; font-weight: 750; cursor: pointer; }
@@ -286,7 +295,7 @@
 .autenticacao-link, .autenticacao-card__trocar { padding: 0; color: #57982f; background: transparent; border: 0; font-size: 12px; font-weight: 650; text-decoration: none; cursor: pointer; }
 .autenticacao-link:hover, .autenticacao-card__trocar:hover { color: #3f7e20; }
 
-.autenticacao-submit { display: flex; width: 100%; min-height: 56px; align-items: center; justify-content: center; padding: 0 22px; color: #fff; background: #075618; border: 0; border-radius: 10px; box-shadow: 0 12px 28px rgba(75, 150, 37, 0.17), inset 0 1px rgba(255, 255, 255, 0.18); font-size: 15px; font-weight: 750; cursor: pointer; transition: transform 0.15s ease, filter 0.18s ease, box-shadow 0.18s ease; }
+.autenticacao-submit { display: flex; width: 100%; min-height: 56px; align-items: center; justify-content: center; gap: 10px; padding: 0 22px; color: #fff; background: #075618; border: 0; border-radius: 10px; box-shadow: 0 12px 28px rgba(75, 150, 37, 0.17), inset 0 1px rgba(255, 255, 255, 0.18); font-size: 15px; font-weight: 750; cursor: pointer; transition: transform 0.15s ease, filter 0.18s ease, box-shadow 0.18s ease; }
 .autenticacao-submit:not(:disabled):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 14px 30px rgba(75, 150, 37, 0.24); }
 .autenticacao-submit:disabled { opacity: 0.6; cursor: not-allowed; }
 .autenticacao-submit__loader { animation: autenticacao-girar 0.9s linear infinite; }
@@ -297,9 +306,15 @@
 .autenticacao-card__rodape { display: flex; justify-content: center; margin: 28px -46px 0; padding: 24px 30px 27px; border-top: 1px solid rgba(50, 91, 68, 0.11); }
 .autenticacao-card__trocar { font-size: 12px; }
 .autenticacao-card__trocar span { margin-right: 7px; color: #687970; font-weight: 450; }
-.autenticacao-mensagem { padding: 11px 13px; border: 1px solid; border-radius: 10px; font-size: 11px; line-height: 1.45; }
-.autenticacao-mensagem--success { color: #000000; background: rgba(27, 121, 55, 0.14); border-color: rgba(80, 190, 108, 0.28); }
-.autenticacao-mensagem--error { color: #ffc2c2; background: rgba(155, 37, 37, 0.14); border-color: rgba(231, 105, 105, 0.27); }
+.autenticacao-mensagem { display: flex; align-items: flex-start; gap: 9px; padding: 12px 14px; border: 1px solid; border-radius: 10px; font-size: 13px; line-height: 1.55; }
+.autenticacao-mensagem__icone { display: inline-flex; margin-top: 1px; flex: 0 0 auto; }
+.autenticacao-mensagem--success { color: #14532d; background: #edf8f0; border-color: #a9d8b5; }
+.autenticacao-mensagem--error { color: #8f1d1d; background: #fff1f1; border-color: #e8b4b4; }
+.pagina-autenticacao--reset .autenticacao-mensagem--error {
+  color: #8f1d1d;
+  background: #fff1f1;
+  border-color: #e8b4b4;
+}
 
 @media (max-width: 1100px) {
   .pagina-autenticacao { grid-template-columns: 53% 47%; }
@@ -340,12 +355,14 @@
     padding: 24px max(18px, env(safe-area-inset-right, 0px)) max(48px, calc(env(safe-area-inset-bottom, 0px) + 24px)) max(18px, env(safe-area-inset-left, 0px));
     overflow: visible;
   }
-  .autenticacao-card, .autenticacao-card--signup, .autenticacao-card--forgot { width: min(100%, 560px); max-height: none; padding: 32px 28px 0; overflow: visible; border-radius: 21px; }
-  .autenticacao-card--forgot { padding-bottom: 30px; }
+  .autenticacao-card, .autenticacao-card--signup, .autenticacao-card--forgot, .autenticacao-card--reset { width: min(100%, 560px); max-height: none; padding: 32px 28px 0; overflow: visible; border-radius: 21px; }
+  .autenticacao-card--forgot,
+  .autenticacao-card--sucesso { padding-bottom: 30px; }
   .autenticacao-card__rodape { margin-inline: -28px; }
 
   .pagina-autenticacao--login,
-  .pagina-autenticacao--forgot {
+  .pagina-autenticacao--forgot,
+  .pagina-autenticacao--reset {
     height: 100vh;
     height: 100svh;
     height: 100dvh;
@@ -355,20 +372,23 @@
   }
 
   .pagina-autenticacao--login .pagina-autenticacao__visual,
-  .pagina-autenticacao--forgot .pagina-autenticacao__visual {
+  .pagina-autenticacao--forgot .pagina-autenticacao__visual,
+  .pagina-autenticacao--reset .pagina-autenticacao__visual {
     flex: 0 0 clamp(138px, 20dvh, 178px);
     min-height: 0;
   }
 
   .pagina-autenticacao--login .pagina-autenticacao__conteudo,
-  .pagina-autenticacao--forgot .pagina-autenticacao__conteudo {
+  .pagina-autenticacao--forgot .pagina-autenticacao__conteudo,
+  .pagina-autenticacao--reset .pagina-autenticacao__conteudo {
     min-height: 0;
     padding-block: clamp(12px, 2.5vh, 24px);
     overflow: visible;
   }
 
   .pagina-autenticacao--login .autenticacao-card,
-  .pagina-autenticacao--forgot .autenticacao-card {
+  .pagina-autenticacao--forgot .autenticacao-card,
+  .pagina-autenticacao--reset .autenticacao-card {
     max-height: none;
     overflow: visible;
   }
@@ -384,8 +404,9 @@
     padding: 15px max(12px, env(safe-area-inset-right, 0px)) max(48px, calc(env(safe-area-inset-bottom, 0px) + 24px)) max(12px, env(safe-area-inset-left, 0px));
     align-items: flex-start;
   }
-  .autenticacao-card, .autenticacao-card--signup, .autenticacao-card--forgot { padding: 27px 20px 0; border-radius: 18px; }
-  .autenticacao-card--forgot { padding-bottom: 25px; }
+  .autenticacao-card, .autenticacao-card--signup, .autenticacao-card--forgot, .autenticacao-card--reset { padding: 27px 20px 0; border-radius: 18px; }
+  .autenticacao-card--forgot,
+  .autenticacao-card--sucesso { padding-bottom: 25px; }
   .autenticacao-card__icone { width: 50px; height: 50px; margin-bottom: 14px; }
   .autenticacao-card__titulo { font-size: 31px; }
   .autenticacao-card__descricao { font-size: 12px; }
@@ -396,18 +417,21 @@
   .autenticacao-card__rodape { margin: 24px -20px 0; padding-inline: 16px; }
 
   .pagina-autenticacao--login .pagina-autenticacao__visual,
-  .pagina-autenticacao--forgot .pagina-autenticacao__visual {
+  .pagina-autenticacao--forgot .pagina-autenticacao__visual,
+  .pagina-autenticacao--reset .pagina-autenticacao__visual {
     flex-basis: clamp(118px, 18dvh, 150px);
     min-height: 0;
   }
 
   .pagina-autenticacao--login .autenticacao-card,
-  .pagina-autenticacao--forgot .autenticacao-card {
+  .pagina-autenticacao--forgot .autenticacao-card,
+  .pagina-autenticacao--reset .autenticacao-card {
     padding-top: clamp(20px, 3.5vh, 27px);
   }
 
   .pagina-autenticacao--login .autenticacao-card__cabecalho,
-  .pagina-autenticacao--forgot .autenticacao-card__cabecalho {
+  .pagina-autenticacao--forgot .autenticacao-card__cabecalho,
+  .pagina-autenticacao--reset .autenticacao-card__cabecalho {
     margin-bottom: clamp(16px, 3vh, 24px);
   }
 }
@@ -415,14 +439,16 @@
 /* Alturas reduzidas: compacta a imagem e mantem todo o formulario rolavel. */
 @media (max-width: 820px) and (max-height: 760px) {
   .pagina-autenticacao--login .pagina-autenticacao__visual,
-  .pagina-autenticacao--forgot .pagina-autenticacao__visual {
+  .pagina-autenticacao--forgot .pagina-autenticacao__visual,
+  .pagina-autenticacao--reset .pagina-autenticacao__visual {
     display: block;
     min-height: 0;
     flex-basis: clamp(100px, 16dvh, 128px);
   }
 
   .pagina-autenticacao--login,
-  .pagina-autenticacao--forgot {
+  .pagina-autenticacao--forgot,
+  .pagina-autenticacao--reset {
     display: flex;
     height: 100vh;
     height: 100svh;
@@ -433,7 +459,8 @@
   }
 
   .pagina-autenticacao--login .pagina-autenticacao__conteudo,
-  .pagina-autenticacao--forgot .pagina-autenticacao__conteudo {
+  .pagina-autenticacao--forgot .pagina-autenticacao__conteudo,
+  .pagina-autenticacao--reset .pagina-autenticacao__conteudo {
     height: auto;
     min-height: 100vh;
     min-height: 100svh;
@@ -444,30 +471,35 @@
   }
 
   .pagina-autenticacao--login .autenticacao-card,
-  .pagina-autenticacao--forgot .autenticacao-card {
+  .pagina-autenticacao--forgot .autenticacao-card,
+  .pagina-autenticacao--reset .autenticacao-card {
     max-height: none;
     padding-top: 24px;
     overflow: visible;
   }
 
   .pagina-autenticacao--login .autenticacao-card__icone,
-  .pagina-autenticacao--forgot .autenticacao-card__icone {
+  .pagina-autenticacao--forgot .autenticacao-card__icone,
+  .pagina-autenticacao--reset .autenticacao-card__icone {
     width: 48px;
     height: 48px;
     margin-bottom: 12px;
   }
 
   .pagina-autenticacao--login .autenticacao-card__cabecalho,
-  .pagina-autenticacao--forgot .autenticacao-card__cabecalho {
+  .pagina-autenticacao--forgot .autenticacao-card__cabecalho,
+  .pagina-autenticacao--reset .autenticacao-card__cabecalho {
     margin-bottom: 18px;
   }
 
   .pagina-autenticacao--login .autenticacao-formulario,
-  .pagina-autenticacao--forgot .autenticacao-formulario {
+  .pagina-autenticacao--forgot .autenticacao-formulario,
+  .pagina-autenticacao--reset .autenticacao-formulario {
     gap: 14px;
   }
 
-  .pagina-autenticacao--login .autenticacao-card__rodape {
+  .pagina-autenticacao--login .autenticacao-card__rodape,
+  .pagina-autenticacao--reset .autenticacao-card__rodape {
     margin-top: 20px;
     padding-block: 18px 20px;
   }
@@ -500,12 +532,14 @@
 
 @media (max-height: 570px) and (min-width: 821px) {
   .pagina-autenticacao--login .autenticacao-card__icone,
-  .pagina-autenticacao--forgot .autenticacao-card__icone {
+  .pagina-autenticacao--forgot .autenticacao-card__icone,
+  .pagina-autenticacao--reset .autenticacao-card__icone {
     display: none;
   }
 
   .pagina-autenticacao--login .autenticacao-card__descricao,
-  .pagina-autenticacao--forgot .autenticacao-card__descricao {
+  .pagina-autenticacao--forgot .autenticacao-card__descricao,
+  .pagina-autenticacao--reset .autenticacao-card__descricao {
     margin-top: 5px;
   }
 }

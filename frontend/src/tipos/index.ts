@@ -42,13 +42,6 @@ export enum EtapaProcesso {
   OUTRO = "Outro"
 }
 
-export enum RiscoResidual {
-  BAIXO = "Baixo",
-  MEDIO = "Médio",
-  ALTO = "Alto",
-  NAO_AVALIADO = "Não avaliado"
-}
-
 export enum Criticidade {
   BAIXA = "Baixa: apoio administrativo",
   MEDIA = "Média: apoio técnico sem impacto direto em resultados",
@@ -68,13 +61,6 @@ export enum GrauAutonomia {
   BAIXO = "Baixo: apenas apoio ou sugestão",
   MEDIO = "Médio: recomenda ação, mas exige validação humana",
   ALTO = "Alto: executa ou decide automaticamente"
-}
-
-export enum ClassificacaoRisco {
-  BAIXO = "Baixo risco",
-  MEDIO = "Médio risco",
-  ALTO = "Alto risco",
-  CRITICO = "Risco crítico"
 }
 
 export enum StatusUso {
@@ -130,14 +116,14 @@ export interface IARecord {
   etapaOutro?: string;
   beneficiosEsperados: string;
 
-  // 4. DADOS
-  usaDadosPessoais: "Sim" | "Não";
-  usaDadosSensiveis: "Sim" | "Não";
-  quaisDados: string;
-  dadosAnonimizados: "Sim" | "Não" | "Parcial";
-  envioFornecedorExterno: "Sim" | "Não" | "Não sei";
-  dadosTreinamentoModelo: "Sim" | "Não" | "Não sei";
-  obsProtecaoDados: string;
+  // Campos legados de privacidade mantidos somente para desserializar registros antigos.
+  usaDadosPessoais?: "Sim" | "Não";
+  usaDadosSensiveis?: "Sim" | "Não";
+  quaisDados?: string;
+  dadosAnonimizados?: "Sim" | "Não" | "Parcial";
+  envioFornecedorExterno?: "Sim" | "Não" | "Não sei";
+  dadosTreinamentoModelo?: "Sim" | "Não" | "Não sei";
+  obsProtecaoDados?: string;
 
   // 5. PROCESSO E INTEGRAÇÃO
   integradaSistemaInterno: "Sim" | "Não";
@@ -149,23 +135,23 @@ export interface IARecord {
   ambienteHomologacao: "Sim" | "Não" | "Não sei";
   obsIntegracao: string;
 
-  // 6. RISCOS E CONTROLES
-  riscosIdentificados: "Sim" | "Não";
-  quaisRiscos: string;
-  controlesImplementados: "Sim" | "Não";
-  quaisControles: string[];
+  // Campos legados mantidos apenas para desserializar registros antigos.
+  riscosIdentificados?: string;
+  quaisRiscos?: string;
+  controlesImplementados?: string;
+  quaisControles?: string[];
   controleOutro?: string;
-  riscoResidual: RiscoResidual;
-  responsavelRisco: string;
-  frequenciaReavaliacao: string;
-  obsRiscosControles: string;
+  riscoResidual?: string;
+  responsavelRisco?: string;
+  frequenciaReavaliacao?: string;
+  obsRiscosControles?: string;
 
   // 7. CONFORMIDADE E SEGURANÇA
-  alinhadoLGPD: "Sim" | "Não" | "Em avaliação";
+  alinhadoLGPD?: "Sim" | "Não" | "Em avaliação";
   politicaInterna: "Sim" | "Não";
   treinamentoColaboradores: "Sim" | "Não";
   documentacaoTecnica: "Sim" | "Não" | "Não se aplica";
-  contratoProtecaoDados: "Sim" | "Não" | "Em avaliação" | "Não se aplica";
+  contratoProtecaoDados?: "Sim" | "Não" | "Em avaliação" | "Não se aplica";
   controleAcessoPerfil: "Sim" | "Não" | "Não sei";
   trilhaAuditoria: "Sim" | "Não" | "Não sei";
   procedimentoIncidente: "Sim" | "Não";
@@ -175,8 +161,8 @@ export interface IARecord {
   criticidade: Criticidade;
   naturezaUso: NaturezaUso;
   grauAutonomia: GrauAutonomia;
-  classificacaoRiscoAutomatico: ClassificacaoRisco;
-  classificacaoRiscoManual: ClassificacaoRisco;
+  classificacaoRiscoAutomatico?: string;
+  classificacaoRiscoManual?: string;
   justificativaAlteracaoRisco?: string;
 
   // 9. APROVAÇÃO

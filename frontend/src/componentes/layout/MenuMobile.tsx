@@ -18,14 +18,14 @@ import type { LucideIcon } from "lucide-react";
 
 import type { UserProfile } from "@/tipos";
 import MarcaCedroIA from "@/componentes/layout/MarcaCedroIA";
+import type { NavegarPara } from "@/hooks/useAplicacao";
 
 interface MenuMobileProps {
   activeTab: AbaAplicacao;
-  setActiveTab: (tab: AbaAplicacao) => void;
+  navegarPara: NavegarPara;
   profile?: UserProfile | null;
   isCurrentUserAdmin: boolean;
   isCurrentUserPrivileged: boolean;
-  onNewSolicitation: () => void;
   unreadChatCount?: number;
 }
 
@@ -72,11 +72,10 @@ const grupos: GrupoMenuMobile[] = [
 
 export default function MenuMobile({
   activeTab,
-  setActiveTab,
+  navegarPara,
   profile,
   isCurrentUserAdmin,
   isCurrentUserPrivileged,
-  onNewSolicitation,
   unreadChatCount = 0
 }: MenuMobileProps) {
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
@@ -100,8 +99,7 @@ export default function MenuMobile({
   }, [menuMobileAberto]);
 
   const navegar = (tab: AbaAplicacao) => {
-    if (tab === "new") onNewSolicitation();
-    setActiveTab(tab);
+    navegarPara(tab);
     setMenuMobileAberto(false);
   };
 
