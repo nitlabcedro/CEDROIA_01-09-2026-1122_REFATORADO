@@ -277,33 +277,20 @@
   box-shadow: 0 0 0 3px rgba(13, 111, 40, .08);
 }
 
-#administracao-conteudo .administracao-toolbar__chips {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(82px, 1fr));
-  gap: 8px;
-  width: auto;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
+#administracao-conteudo .administracao-toolbar__status {
+  width: 210px;
+  min-width: 190px;
 }
 
-#administracao-conteudo .administracao-toolbar__chips .administracao__botao-4 {
+#administracao-conteudo .administracao-toolbar__status-gatilho {
   min-height: 36px;
-  padding: 7px 14px;
   color: #59665e;
   background: #ffffff;
   border: 1px solid #dce4de;
   border-radius: 9px;
   font-size: 11px;
   font-weight: 650;
-}
-
-#administracao-conteudo .administracao-toolbar__chips .administracao__botao-5 {
-  color: #ffffff;
-  background: #07631f;
-  border-color: #07631f;
-  box-shadow: 0 3px 8px rgba(7,99,31,.13);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
 }
 
 /* LISTA DE IAs */
@@ -381,8 +368,7 @@
   font-size: 11px;
 }
 
-#administracao-conteudo .administracao-ia-card__metadados .administracao__grupo-18,
-#administracao-conteudo .administracao-ia-card__metadados .administracao__grupo-privacidade {
+#administracao-conteudo .administracao-ia-card__metadados .administracao__grupo-18 {
   gap: 5px;
   min-width: max-content;
 }
@@ -391,8 +377,7 @@
   color: #87958c;
 }
 
-#administracao-conteudo .administracao-ia-card__metadados .administracao__texto-setor,
-#administracao-conteudo .administracao-ia-card__metadados .administracao__texto-privacidade {
+#administracao-conteudo .administracao-ia-card__metadados .administracao__texto-setor {
   color: #425148;
   font-weight: 650;
 }
@@ -672,8 +657,8 @@
     width: 100%;
   }
 
-  #administracao-conteudo .administracao-toolbar__chips {
-    grid-template-columns: repeat(2, 1fr);
+  #administracao-conteudo .administracao-toolbar__status {
+    width: 100%;
   }
 
   #administracao-conteudo .administracao-ia-card {

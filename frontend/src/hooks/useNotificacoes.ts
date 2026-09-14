@@ -9,12 +9,12 @@ export interface NotificationToast {
   id: string;
   title: string;
   message: string;
-  type: "success" | "info" | "warning" | "chat";
+  type: "success" | "error" | "info" | "warning" | "chat";
   actionLabel?: string;
   onAction?: () => void;
 }
 
-function playNotificationSound(type: "chat" | "success" | "info" | "warning") {
+function playNotificationSound(type: "chat" | "success" | "error" | "info" | "warning") {
   try {
     const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContext) return;

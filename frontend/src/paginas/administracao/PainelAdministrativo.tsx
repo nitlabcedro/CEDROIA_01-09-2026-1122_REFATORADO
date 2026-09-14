@@ -9,7 +9,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
 import {
   CheckCircle2, XCircle, Users, LayoutGrid, Search,
-  Filter, MoreHorizontal, ShieldCheck, ShieldAlert, ShieldX,
+  Filter, MoreHorizontal, ShieldCheck, ShieldX,
   Database, ArrowUpRight, AlertTriangle, Activity,
   ChevronLeft, ChevronRight, Calendar, ArrowRight,
   User, Check, X, Shield, RefreshCw, FolderLock, Trash2, SlidersHorizontal, Edit,
@@ -29,6 +29,11 @@ import { obterUltimoParecerLimpo as getCleanLastOpinion } from "@/utilitarios/pa
 import SystemControls from "./ControlesSistema";
 import SectorsManager from "./GerenciadorSetores";
 import { AdminDropdownPortal } from "./AdminDropdownPortal";
+import {
+  obterStatusGeralDoRegistro,
+  STATUS_GERAIS_OFICIAIS,
+  type StatusGeral,
+} from "@/utilitarios/status-solicitacao";
 import "@/estilos/paginas/administracao-referencia.css";
 import "@/estilos/paginas/administracao-usuarios-referencia.css";
 import "@/estilos/paginas/administracao-historico-usuario-referencia.css";
@@ -43,6 +48,22 @@ function IconeIAHistoricoUsuario({ nome }: { nome?: string }) {
   if (marca === "claude") return <Asterisk size={27} strokeWidth={2.1} />;
   if (marca === "grok") return <Orbit size={27} strokeWidth={2} />;
   return <Bot size={26} strokeWidth={2} />;
+}
+
+const STATUS_REDEFINICAO_ADMIN: StatusUso[] = [
+  StatusUso.EM_AVALIACAO,
+  StatusUso.APROVADO,
+  StatusUso.NAO_APROVADO,
+];
+
+function mapearStatusParaRedefinicaoAdmin(
+  record: IARecord,
+  workflow?: ApprovalWorkflow | null,
+): StatusUso {
+  const statusGeral = obterStatusGeralDoRegistro(record, workflow);
+  if (statusGeral === "Aprovada") return StatusUso.APROVADO;
+  if (statusGeral === "Não aprovada") return StatusUso.NAO_APROVADO;
+  return StatusUso.EM_AVALIACAO;
 }
 
 interface AdminPanelProps {
@@ -96,7 +117,7 @@ export default function AdminPanel({
       setActiveTab("approvals");
     }
   }, [activeTab]);
-  const [approvalFilter, setApprovalFilter] = useState<StatusAuditoria | "all">(StatusAuditoria.PENDENTE);
+  const [approvalFilter, setApprovalFilter] = useState<StatusGeral | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [userSectorFilter, setUserSectorFilter] = useState("all");
   const [userStatusFilter, setUserStatusFilter] = useState<"all" | "conforme" | "pendente">("all");
@@ -120,10 +141,22 @@ export default function AdminPanel({
 
   useEffect(() => {
     if (resetStatusRecord) {
-      setSelectedNewStatus(resetStatusRecord.statusUso || StatusUso.EM_AVALIACAO);
+      const workflow = workflows.find((wf) => wf.iaRecordId === resetStatusRecord.id);
+      setSelectedNewStatus(mapearStatusParaRedefinicaoAdmin(resetStatusRecord, workflow));
       setResetReason("");
     }
-  }, [resetStatusRecord]);
+  }, [resetStatusRecord, workflows]);
+
+  useEffect(() => {
+    if (!viewFlowRecord && !resetStatusRecord) return;
+    const fecharComEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || isResetting) return;
+      setViewFlowRecord(null);
+      setResetStatusRecord(null);
+    };
+    window.addEventListener("keydown", fecharComEscape);
+    return () => window.removeEventListener("keydown", fecharComEscape);
+  }, [viewFlowRecord, resetStatusRecord, isResetting]);
 
   // Load and memoize the active workflow and merged steps for the visual workflow flow tracker
   const activeFlowWf = useMemo(() => {
@@ -164,6 +197,17 @@ export default function AdminPanel({
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const extraFiltersButtonRef = useRef<HTMLButtonElement | null>(null);
+  const extraFiltersPanelRef = useRef<HTMLDivElement | null>(null);
+  const obterStatusDoRegistro = (record: IARecord) =>
+    obterStatusGeralDoRegistro(
+      record,
+      workflows.find((workflow) => workflow.iaRecordId === record.id),
+    );
+  const estaEmAndamento = (record: IARecord) => {
+    const status = obterStatusDoRegistro(record);
+    return status === "Em análise" || status === "Em teste";
+  };
 
   // Close custom context menu on outside click
   useEffect(() => {
@@ -199,6 +243,49 @@ export default function AdminPanel({
     };
   }, [showDeleteConfirm]);
 
+  useEffect(() => {
+    if (!deleteRecordConfirmId) return;
+
+    const fecharConfirmacao = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (target?.closest(`[data-delete-record-menu="${deleteRecordConfirmId}"]`)) return;
+      setDeleteRecordConfirmId(null);
+    };
+    const fecharComEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDeleteRecordConfirmId(null);
+    };
+
+    document.addEventListener("mousedown", fecharConfirmacao);
+    document.addEventListener("keydown", fecharComEscape);
+    return () => {
+      document.removeEventListener("mousedown", fecharConfirmacao);
+      document.removeEventListener("keydown", fecharComEscape);
+    };
+  }, [deleteRecordConfirmId]);
+
+  useEffect(() => {
+    if (!showUserExtraFilters) return;
+
+    const fecharFiltros = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        extraFiltersButtonRef.current?.contains(target) ||
+        extraFiltersPanelRef.current?.contains(target)
+      ) return;
+      setShowUserExtraFilters(false);
+    };
+    const fecharComEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowUserExtraFilters(false);
+    };
+
+    document.addEventListener("mousedown", fecharFiltros);
+    document.addEventListener("keydown", fecharComEscape);
+    return () => {
+      document.removeEventListener("mousedown", fecharFiltros);
+      document.removeEventListener("keydown", fecharComEscape);
+    };
+  }, [showUserExtraFilters]);
+
   // Fetch real registered sectors to show counts accurately
   useEffect(() => {
     getSectors().
@@ -218,9 +305,9 @@ export default function AdminPanel({
   // Statistics for the Administrative Header
   const stats = useMemo(() => {
     const totalCount = records.length;
-    const pendingCount = records.filter((r) => (r.statusAuditoria || StatusAuditoria.PENDENTE) === StatusAuditoria.PENDENTE).length;
-    const approvedCount = records.filter((r) => r.statusAuditoria === StatusAuditoria.APROVADO).length;
-    const deniedCount = records.filter((r) => r.statusAuditoria === StatusAuditoria.NEGADO).length;
+    const pendingCount = records.filter(estaEmAndamento).length;
+    const approvedCount = records.filter((r) => obterStatusDoRegistro(r) === "Aprovada").length;
+    const deniedCount = records.filter((r) => obterStatusDoRegistro(r) === "Não aprovada").length;
     const uniqueUsersCount = profiles.length > 0 ? profiles.length : new Set(records.map((r) => r.responsavelPreenchimento)).size;
     const sectorsCount = registeredSectorsList.length > 0 ? registeredSectorsList.length : new Set(records.map((r) => r.unidadeSetor)).size;
 
@@ -232,7 +319,7 @@ export default function AdminPanel({
       uniqueUsers: uniqueUsersCount,
       sectors: sectorsCount
     };
-  }, [records, profiles, registeredSectorsList]);
+  }, [records, profiles, registeredSectorsList, workflows]);
 
   // Custom 5 workflow steps config
   const workflowSteps = useMemo(() => {
@@ -251,7 +338,7 @@ export default function AdminPanel({
   // Approvals filtering
   const filteredRecords = useMemo(() => {
     return records.filter((r) => {
-      const recordStatus = r.statusAuditoria || StatusAuditoria.PENDENTE;
+      const recordStatus = obterStatusDoRegistro(r);
       const matchesStatus = approvalFilter === "all" || recordStatus === approvalFilter;
 
       const valSearch = searchTerm.toLowerCase();
@@ -263,7 +350,7 @@ export default function AdminPanel({
 
       return matchesStatus && matchesSearch;
     });
-  }, [records, approvalFilter, searchTerm]);
+  }, [records, approvalFilter, searchTerm, workflows]);
 
   // Sector stats maps
   const sectorData = useMemo(() => {
@@ -283,18 +370,19 @@ export default function AdminPanel({
           sectors[r.unidadeSetor] = { total: 0, pending: 0, approved: 0, denied: 0 };
         }
         sectors[r.unidadeSetor].total++;
-        if ((r.statusAuditoria || StatusAuditoria.PENDENTE) === StatusAuditoria.PENDENTE) {
+        const status = obterStatusDoRegistro(r);
+        if (status === "Em análise" || status === "Em teste") {
           sectors[r.unidadeSetor].pending++;
-        } else if (r.statusAuditoria === StatusAuditoria.APROVADO) {
+        } else if (status === "Aprovada") {
           sectors[r.unidadeSetor].approved++;
-        } else if (r.statusAuditoria === StatusAuditoria.NEGADO) {
+        } else if (status === "Não aprovada") {
           sectors[r.unidadeSetor].denied++;
         }
       }
     });
 
     return Object.entries(sectors).sort((a, b) => b[1].total - a[1].total);
-  }, [records, registeredSectorsList]);
+  }, [records, registeredSectorsList, workflows]);
 
   // Selected Sector stats
   const selectedSectorInfo = useMemo(() => {
@@ -307,12 +395,12 @@ export default function AdminPanel({
       users: sectorUsers,
       stats: {
         total: sectorIAs.length,
-        approved: sectorIAs.filter((r) => r.statusAuditoria === StatusAuditoria.APROVADO).length,
-        pending: sectorIAs.filter((r) => (r.statusAuditoria || StatusAuditoria.PENDENTE) === StatusAuditoria.PENDENTE).length,
-        denied: sectorIAs.filter((r) => r.statusAuditoria === StatusAuditoria.NEGADO).length
+        approved: sectorIAs.filter((r) => obterStatusDoRegistro(r) === "Aprovada").length,
+        pending: sectorIAs.filter(estaEmAndamento).length,
+        denied: sectorIAs.filter((r) => obterStatusDoRegistro(r) === "Não aprovada").length
       }
     };
-  }, [selectedSector, records]);
+  }, [selectedSector, records, workflows]);
 
   // Chosen User History/Details
   const selectedUserInfo = useMemo(() => {
@@ -332,12 +420,12 @@ export default function AdminPanel({
       sector: profile?.setor || userIAs[0]?.unidadeSetor || "Não Informado",
       stats: {
         total: userIAs.length,
-        approved: userIAs.filter((r) => r.statusAuditoria === StatusAuditoria.APROVADO).length,
-        pending: userIAs.filter((r) => (r.statusAuditoria || StatusAuditoria.PENDENTE) === StatusAuditoria.PENDENTE).length,
-        denied: userIAs.filter((r) => r.statusAuditoria === StatusAuditoria.NEGADO).length
+        approved: userIAs.filter((r) => obterStatusDoRegistro(r) === "Aprovada").length,
+        pending: userIAs.filter(estaEmAndamento).length,
+        denied: userIAs.filter((r) => obterStatusDoRegistro(r) === "Não aprovada").length
       }
     };
-  }, [selectedUser, records, profiles]);
+  }, [selectedUser, records, profiles, workflows]);
 
   // Preparation of users list metrics
   const usersWithStats = useMemo(() => {
@@ -352,7 +440,7 @@ export default function AdminPanel({
       const userName = isProfile ? (userItem as UserProfile).full_name : (userItem as any).full_name;
 
       const userIAs = records.filter((r) => r.responsavelPreenchimento === userName);
-      const hasPending = userIAs.some((r) => (r.statusAuditoria || StatusAuditoria.PENDENTE) === StatusAuditoria.PENDENTE);
+      const hasPending = userIAs.some(estaEmAndamento);
       const userId = userProfile?.id || userName;
 
       return {
@@ -390,7 +478,7 @@ export default function AdminPanel({
       if (record.unidadeSetor?.trim()) setores.add(record.unidadeSetor.trim());
     });
     return Array.from(setores).sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [profiles, records]);
+  }, [profiles, records, workflows]);
 
   // Paginated Slices
   const paginatedApprovals = useMemo(() => {
@@ -440,9 +528,9 @@ export default function AdminPanel({
       <section className="administracao-indicadores administracao__administracao-indicadores-estrutura">
         {[
         {
-          title: "Solicitações pendentes",
+          title: "Em andamento",
           val: stats.pending,
-          support: "Aguardando análise",
+          support: "Em análise ou teste",
           icon: Activity,
           variante: "pendente"
         },
@@ -454,9 +542,9 @@ export default function AdminPanel({
           variante: "aprovado"
         },
         {
-          title: "IAs negadas",
+          title: "Não aprovadas",
           val: stats.denied,
-          support: "Total negadas",
+          support: "Total não aprovadas",
           icon: ShieldX,
           variante: "negado"
         },
@@ -532,25 +620,18 @@ export default function AdminPanel({
               className="administracao__campo-buscar-ia-id-ou-setor" />
             </div>
 
-            <div className="administracao__grupo-7 administracao-toolbar__chips">
-              {[
-            { label: "Todos", val: "all" },
-            { label: "Pendentes", val: StatusAuditoria.PENDENTE },
-            { label: "Aprovados", val: StatusAuditoria.APROVADO },
-            { label: "Negados", val: StatusAuditoria.NEGADO }].
-            map((opt) =>
-            <button
-              key={opt.val}
-              onClick={() => setApprovalFilter(opt.val as any)}
-              className={`administracao__botao-4 ${
-              approvalFilter === opt.val ?
-              "administracao__botao-5" :
-              "administracao__botao-6"}`}
-              >
-                  {opt.label}
-                </button>
-            )}
-            </div>
+            <CustomDropdown
+              value={approvalFilter}
+              options={[
+                { label: "Todos", value: "all" },
+                ...STATUS_GERAIS_OFICIAIS.map((status) => ({ label: status, value: status })),
+              ]}
+              onChange={(value) => setApprovalFilter(value as StatusGeral | "all")}
+              icon={<Filter size={15} />}
+              className="administracao-toolbar__status"
+              triggerClassName="administracao-toolbar__status-gatilho"
+              size="sm"
+            />
           </div>
         }
 
@@ -587,6 +668,7 @@ export default function AdminPanel({
           </select>
 
           <button
+            ref={extraFiltersButtonRef}
             type="button"
             className={`administracao-usuarios-toolbar__mais ${showUserExtraFilters ? "administracao-usuarios-toolbar__mais--ativo" : ""}`}
             onClick={() => setShowUserExtraFilters((value) => !value)}>
@@ -599,6 +681,7 @@ export default function AdminPanel({
 
       {activeTab === "users" && !selectedUser && showUserExtraFilters &&
         <motion.div
+          ref={extraFiltersPanelRef}
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           className="administracao-usuarios-filtros-extras">
@@ -633,6 +716,7 @@ export default function AdminPanel({
           paginatedApprovals.map((record) => {
             const recordWorkflow = workflows.find((wf) => wf.iaRecordId === record.id);
             const currentStepNum = recordWorkflow ? recordWorkflow.currentStep : 1;
+            const recordStatusGeral = obterStatusDoRegistro(record);
 
             // Compute last comment/decision from history
             const lastParecer = record.historico?.find(
@@ -690,18 +774,6 @@ export default function AdminPanel({
                                 <span className="administracao__texto-setor">Criado em:</span> 
                                 <span>{new Date(record.createdAt).toLocaleDateString()}</span>
                               </div>
-                              <div className="administracao__grupo-privacidade">
-                                <span className="administracao__texto-privacidade">Privacidade:</span>
-                                {record.usaDadosSensiveis === "Sim" ?
-                          <span className="administracao__texto-dados-sensiveis">
-                                    <ShieldAlert size={10} /> Dados sensíveis
-                                  </span> :
-
-                          <span className="administracao__texto-dados-comuns">
-                                    <ShieldCheck size={10} /> Dados comuns
-                                  </span>
-                          }
-                              </div>
                             </div>
                           </div>
                         </div>
@@ -719,13 +791,13 @@ export default function AdminPanel({
                             const sNum = step.stepNumber;
                             const wfStep = recordWorkflow?.steps?.find((s) => s.stepNumber === sNum);
 
-                            const isFailed = wfStep?.status === "negado" || record.statusAuditoria === StatusAuditoria.NEGADO && sNum === currentStepNum;
+                            const isFailed = wfStep?.status === "negado" || recordStatusGeral === "Não aprovada" && sNum === currentStepNum;
                             const isPassed = !isFailed && (
                             wfStep?.status === "aprovado" ||
                             wfStep?.status === "opiniao" ||
-                            !wfStep && (sNum < currentStepNum || record.statusAuditoria === StatusAuditoria.APROVADO));
+                            !wfStep && (sNum < currentStepNum || recordStatusGeral === "Aprovada"));
 
-                            const isCurrent = sNum === currentStepNum && (record.statusAuditoria || StatusAuditoria.PENDENTE) === StatusAuditoria.PENDENTE && (!wfStep || wfStep.status === "aguardando");
+                            const isCurrent = sNum === currentStepNum && (recordStatusGeral === "Em análise" || recordStatusGeral === "Em teste") && (!wfStep || wfStep.status === "aguardando");
 
                             const circleStyle = isFailed
                               ? "administracao__etapa-status--negada"
@@ -749,23 +821,22 @@ export default function AdminPanel({
 
                               {/* Status Badge */}
                               <div className="administracao__grupo-23">
-                                {record.statusAuditoria === StatusAuditoria.APROVADO ?
-                          <span className="administracao__texto-aprovado">
-                                    <CheckCircle2 size={12} className="administracao__icone-checkcircle2" /> Aprovado
-                                  </span> :
-                          record.statusAuditoria === StatusAuditoria.NEGADO ?
-                          <span className="administracao__texto-negado">
-                                    <XCircle size={12} className="administracao__icone-xcircle" /> Negado
-                                  </span> :
-                          recordWorkflow && currentStepNum > 1 ?
-                          <span className="administracao__texto-em-avaliacao">
-                                    <Activity size={12} className="administracao__icone-activity" /> Em avaliação
-                                  </span> :
-
-                          <span className="administracao__texto-pendente">
-                                    <AlertTriangle size={12} className="administracao__icone-alerttriangle" /> Pendente
-                                  </span>
-                          }
+                                {(() => {
+                                  const status = recordStatusGeral;
+                                  const finalAprovada = status === "Aprovada";
+                                  const finalEncerrada = status === "Não aprovada" || status === "Cancelada";
+                                  const className = finalAprovada
+                                    ? "administracao__texto-aprovado"
+                                    : finalEncerrada
+                                      ? "administracao__texto-negado"
+                                      : "administracao__texto-em-avaliacao";
+                                  const Icon = finalAprovada ? CheckCircle2 : finalEncerrada ? XCircle : Activity;
+                                  return (
+                                    <span className={className}>
+                                      <Icon size={12} /> {status}
+                                    </span>
+                                  );
+                                })()}
                               </div>
                             </div>
                           </div>
@@ -798,7 +869,7 @@ export default function AdminPanel({
                       }
 
                             {/* Excluir button with confirmation */}
-                            <div className="administracao__grupo-25">
+                            <div className="administracao__grupo-25" data-delete-record-menu={record.id}>
                               <AnimatePresence>
                                 {deleteRecordConfirmId === record.id &&
                           <motion.div
@@ -886,11 +957,11 @@ export default function AdminPanel({
                       {/* Discretely integrated latest comment/parecer banner if exists */}
                       {lastParecer &&
                 <div className={`administracao__grupo-26 administracao-ia-card__parecer ${
-                record.statusAuditoria === StatusAuditoria.NEGADO ?
+                recordStatusGeral === "Não aprovada" ?
                 "administracao__grupo-27" :
                 "administracao__grupo-28"}`
                 }>
-                          {record.statusAuditoria === StatusAuditoria.NEGADO ?
+                          {recordStatusGeral === "Não aprovada" ?
                   <XCircle size={14} className="administracao__icone-xcircle-2" /> :
 
                   <CheckCircle2 size={14} className="administracao__icone-checkcircle2-2" />
@@ -1016,7 +1087,7 @@ export default function AdminPanel({
                               <div className="administracao__grupo-34">
                                 <LayoutGrid size={20} />
                               </div>
-                              <div className="administracao__grupo-privacidade">
+                              <div className="administracao__grupo-resumo-setor">
                                 {secStats.pending > 0 &&
                           <span className="administracao__texto-pend">
                                     {secStats.pending} Pend.
@@ -1088,9 +1159,9 @@ export default function AdminPanel({
                         <div className="administracao__grupo-45">
                           {[
                     { label: "Total cadastrado", val: selectedSectorInfo.stats.total, variante: "total" },
-                    { label: "Aprovados", val: selectedSectorInfo.stats.approved, variante: "aprovado" },
-                    { label: "Pendentes", val: selectedSectorInfo.stats.pending, variante: "pendente" },
-                    { label: "Negados", val: selectedSectorInfo.stats.denied, variante: "negado" }].
+                    { label: "Aprovadas", val: selectedSectorInfo.stats.approved, variante: "aprovado" },
+                    { label: "Em andamento", val: selectedSectorInfo.stats.pending, variante: "pendente" },
+                    { label: "Não aprovadas", val: selectedSectorInfo.stats.denied, variante: "negado" }].
                     map((secMetric, idx) =>
                     <div key={idx} className="administracao__grupo-46">
                               <span className="administracao__texto-9">
@@ -1140,8 +1211,8 @@ export default function AdminPanel({
                   className="administracao__grupo-51">
                   
                           <div className={`administracao__grupo-52 ${
-                  record.statusAuditoria === StatusAuditoria.APROVADO ? "administracao__grupo-53" :
-                  record.statusAuditoria === StatusAuditoria.NEGADO ? "administracao__grupo-54" :
+                  obterStatusDoRegistro(record) === "Aprovada" ? "administracao__grupo-53" :
+                  obterStatusDoRegistro(record) === "Não aprovada" || obterStatusDoRegistro(record) === "Cancelada" ? "administracao__grupo-54" :
                   "administracao__grupo-55"}`
                   }></div>
 
@@ -1161,17 +1232,17 @@ export default function AdminPanel({
 
                           <div className="administracao__grupo-57">
                             {/* Static status badge */}
-                            {record.statusAuditoria === StatusAuditoria.APROVADO ?
+                            {obterStatusDoRegistro(record) === "Aprovada" ?
                     <span className="administracao__texto-homologado">
-                                <Check size={10} /> Homologado
+                                <Check size={10} /> Aprovada
                               </span> :
-                    record.statusAuditoria === StatusAuditoria.NEGADO ?
+                    obterStatusDoRegistro(record) === "Não aprovada" || obterStatusDoRegistro(record) === "Cancelada" ?
                     <span className="administracao__texto-recusado">
-                                <X size={10} /> Recusado
+                                <X size={10} /> {obterStatusDoRegistro(record)}
                               </span> :
 
                     <span className="administracao__texto-em-avaliacao-2">
-                                <Activity size={10} className="administracao__icone-activity-2" /> Em avaliação
+                                <Activity size={10} className="administracao__icone-activity-2" /> {obterStatusDoRegistro(record)}
                               </span>
                     }
 
@@ -1564,11 +1635,11 @@ export default function AdminPanel({
                     <strong>{selectedUserInfo.records.length}</strong>
                   </div>
                   <div>
-                    <span>Aprovados</span>
+                    <span>Aprovadas</span>
                     <strong className="administracao-historico-usuario__numero--aprovado">{selectedUserInfo.stats.approved}</strong>
                   </div>
                   <div>
-                    <span>Pendentes</span>
+                    <span>Em andamento</span>
                     <strong className="administracao-historico-usuario__numero--pendente">{selectedUserInfo.stats.pending}</strong>
                   </div>
                 </div>
@@ -1582,10 +1653,12 @@ export default function AdminPanel({
 
                 <div className="administracao-historico-usuario__lista">
                   {selectedUserInfo.records.map((record, index) => {
-                    const aprovado = record.statusAuditoria === StatusAuditoria.APROVADO;
-                    const negado = record.statusAuditoria === StatusAuditoria.NEGADO;
-                    const statusClass = aprovado ? "aprovado" : negado ? "negado" : "analise";
-                    const statusLabel = aprovado ? "Ativo / Homologado" : negado ? "Indeferido" : "Em Análise";
+                    const statusLabel = obterStatusDoRegistro(record);
+                    const statusClass = statusLabel === "Aprovada"
+                      ? "aprovado"
+                      : statusLabel === "Não aprovada" || statusLabel === "Cancelada"
+                        ? "negado"
+                        : "analise";
 
                     return (
                       <motion.article
@@ -1695,7 +1768,7 @@ export default function AdminPanel({
                     <div>
                       <p className="administracao__descricao-setor-solicitante">Status Auditoria</p>
                       <p className="administracao__descricao-10">
-                        {viewFlowRecord.statusAuditoria === "Aprovado" ? "HOMOLOGADO" : viewFlowRecord.statusAuditoria === "Negado" ? "RECUSADO" : "PENDENTE / EM AVALIAÇÃO"}
+                        {obterStatusDoRegistro(viewFlowRecord).toUpperCase()}
                       </p>
                     </div>
                   </div>
@@ -1845,7 +1918,18 @@ export default function AdminPanel({
                   </div>
                   <div>
                     <span className="administracao__texto-nome-da-ia">Status atual</span>
-                    <span className="administracao__texto-27" title={resetStatusRecord.statusUso || "Não informado"}>{resetStatusRecord.statusUso || "Não informado"}</span>
+                    <span
+                      className="administracao__texto-27"
+                      title={obterStatusGeralDoRegistro(
+                        resetStatusRecord,
+                        workflows.find((wf) => wf.iaRecordId === resetStatusRecord.id),
+                      )}
+                    >
+                      {obterStatusGeralDoRegistro(
+                        resetStatusRecord,
+                        workflows.find((wf) => wf.iaRecordId === resetStatusRecord.id),
+                      )}
+                    </span>
                   </div>
                 </div>
 
@@ -1858,15 +1942,13 @@ export default function AdminPanel({
                   value={selectedNewStatus}
                   onChange={(val) => setSelectedNewStatus(val as StatusUso)}
                   disabled={isResetting}
-                  options={[
-                  { value: StatusUso.EM_AVALIACAO, label: "Em análise" },
-                  { value: StatusUso.EM_TESTE_PILOTO, label: "Em homologação" },
-                  { value: StatusUso.APROVADO, label: "Aprovado" },
-                  { value: StatusUso.APROVADO_COM_RESTRICOES, label: "Aprovado com restrições" },
-                  { value: StatusUso.NAO_APROVADO, label: "Não aprovado" },
-                  { value: StatusUso.SUSPENSO, label: "Negado" },
-                  { value: StatusUso.CANCELADA, label: "Cancelada pelo solicitante" }]
-                  }
+                  options={STATUS_REDEFINICAO_ADMIN.map((value) => ({
+                    value,
+                    label:
+                      value === StatusUso.EM_AVALIACAO ? "Em análise" :
+                      value === StatusUso.APROVADO ? "Aprovada" :
+                      "Não aprovada",
+                  }))}
                   size="md" />
                 
                 </div>

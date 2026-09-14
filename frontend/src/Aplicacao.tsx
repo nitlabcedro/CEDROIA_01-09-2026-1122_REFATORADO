@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
   CheckCircle2,
+  CircleAlert,
   Info,
   MessageSquare,
   X } from
@@ -26,23 +27,27 @@ import { Chat } from "@/paginas/chat/Chat";
 import PaginaAprovacao from "@/paginas/aprovacoes/PaginaAprovacao";
 import RedefinirSenha from "@/paginas/autenticacao/RedefinirSenha";
 import NotificacaoPerguntasTI from "@/componentes/aprovacoes/NotificacaoPerguntasTI";
+import {
+  atualizarMensagemTransitoriaLogin,
+  decidirTelaAplicacao,
+} from "@/utilitarios/recuperacao-senha";
 
 export default function Aplicacao() {
   const {
     user,
     profile,
     authLoading,
+    recuperacaoSenhaEmAndamento,
     isCurrentUserAdmin,
     isCurrentUserPrivileged,
     activeTab,
-    setActiveTab,
+    navegarPara,
     records,
     workflows,
     approvalConfig,
     profiles,
     supabaseStatus,
     selectedRecord,
-    setSelectedRecord,
     originTab,
     isSidebarOpen,
     setIsSidebarOpen,
@@ -73,7 +78,14 @@ export default function Aplicacao() {
   const [isDesktopViewport, setIsDesktopViewport] = useState(() =>
   window.matchMedia("(min-width: 1024px)").matches
   );
-  const isResetPasswordPage = window.location.pathname === "/reset-password";
+  const [mensagemLogin, setMensagemLogin] = useState<string | null>(null);
+  const [, forcarRenderAutenticacao] = useState(0);
+  const telaAplicacao = decidirTelaAplicacao({
+    carregando: authLoading,
+    temUsuario: Boolean(user),
+    recuperacaoAtiva: recuperacaoSenhaEmAndamento,
+    pathname: window.location.pathname,
+  });
   const mobileContentRef = useRef<HTMLElement | null>(null);
   const desktopContentRef = useRef<HTMLDivElement | null>(null);
 
@@ -100,15 +112,26 @@ export default function Aplicacao() {
     return () => window.cancelAnimationFrame(frame);
   }, [activeTab]);
 
-  if (isResetPasswordPage) {
+  if (
+    telaAplicacao === "redefinir-senha"
+    || telaAplicacao === "redefinir-senha-invalida"
+  ) {
     return (
       <div className={isDarkMode ? "dark" : ""}>
-        <RedefinirSenha />
+        <RedefinirSenha
+          onConcluida={(mensagem) => setMensagemLogin((atual) =>
+            atualizarMensagemTransitoriaLogin(atual, {
+              tipo: "redefinicao-concluida",
+              mensagem,
+            })
+          )}
+          onRetornarLogin={() => forcarRenderAutenticacao((versao) => versao + 1)}
+        />
       </div>);
 
   }
 
-  if (authLoading) {
+  if (telaAplicacao === "carregando") {
     return (
       <div className="aplicacao__grupo">
         <div className="aplicacao__grupo-2"></div>
@@ -116,10 +139,17 @@ export default function Aplicacao() {
 
   }
 
-  if (!user) {
+  if (telaAplicacao === "login") {
     return (
       <div className={isDarkMode ? "dark" : ""}>
-        <Autenticacao />
+        <Autenticacao
+          mensagemInicial={mensagemLogin}
+          onAuthSuccess={() => setMensagemLogin((atual) =>
+            atualizarMensagemTransitoriaLogin(atual, {
+              tipo: "login-normal-concluido",
+            })
+          )}
+        />
       </div>);
 
   }
@@ -127,7 +157,7 @@ export default function Aplicacao() {
   const renderConteudoAtivo = () =>
   <>
       {activeTab === "dashboard" &&
-    <Painel records={records} onNavigate={(tab) => setActiveTab(tab)} onView={handleView} isAdmin={isCurrentUserAdmin} workflows={workflows} approvalConfig={approvalConfig} currentUserId={user.id} />
+    <Painel records={records} onNavigate={navegarPara} onView={handleView} isAdmin={isCurrentUserAdmin} workflows={workflows} approvalConfig={approvalConfig} currentUserId={user.id} />
     }
       {activeTab === "inventory" &&
     <Inventario
@@ -136,8 +166,7 @@ export default function Aplicacao() {
       onView={handleView}
       onDelete={handleDelete}
       onAdd={() => {
-        setSelectedRecord(null);
-        setActiveTab("new");
+        navegarPara("new");
       }}
       onRefresh={refreshRecords}
       approvalConfig={approvalConfig}
@@ -150,7 +179,7 @@ export default function Aplicacao() {
 
     }
       {activeTab === "sectors" && isCurrentUserAdmin &&
-    <MapaSetores records={records} profiles={profiles} />
+    <MapaSetores records={records} profiles={profiles} workflows={workflows} />
     }
       {activeTab === "sectors_mgr" && isCurrentUserAdmin &&
     <GerenciadorSetores records={records} profiles={profiles} onRefresh={refreshRecords} approvalConfig={approvalConfig} onSaveApprovalConfig={handleSaveApprovalConfig} />
@@ -186,14 +215,14 @@ export default function Aplicacao() {
       isSyncing={isSyncing}
       onSync={handleSync}
       onResetStatus={handleResetStatus}
-      onNavigate={(tab) => setActiveTab(tab)} />
+      onNavigate={navegarPara} />
 
     }
       {activeTab === "new" &&
     <FormularioCadastro
       initialData={selectedRecord}
       onSave={handleSave}
-      onCancel={() => setActiveTab("inventory")}
+      onCancel={() => navegarPara("inventory")}
       isAdmin={isCurrentUserAdmin} />
 
     }
@@ -202,11 +231,10 @@ export default function Aplicacao() {
     <VisualizacaoRelatorio
       record={selectedRecord}
       onBack={() => {
-        setSelectedRecord(null);
         if (originTab && originTab !== "report") {
-          setActiveTab(originTab);
+          navegarPara(originTab);
         } else {
-          setActiveTab("inventory");
+          navegarPara("inventory");
         }
       }}
       onEdit={handleEdit}
@@ -221,8 +249,7 @@ export default function Aplicacao() {
       onView={handleView}
       onDelete={handleDelete}
       onAdd={() => {
-        setSelectedRecord(null);
-        setActiveTab("new");
+        navegarPara("new");
       }}
       onRefresh={refreshRecords}
       approvalConfig={approvalConfig}
@@ -249,11 +276,10 @@ export default function Aplicacao() {
       <div id="cedro-estrutura-mobile" className="aplicacao__estrutura-mobile">
         <MenuMobile
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          navegarPara={navegarPara}
           profile={profile}
           isCurrentUserAdmin={isCurrentUserAdmin}
           isCurrentUserPrivileged={isCurrentUserPrivileged}
-          onNewSolicitation={() => setSelectedRecord(null)}
           unreadChatCount={unreadChatCount} />
         
 
@@ -291,11 +317,10 @@ export default function Aplicacao() {
           isSidebarCollapsed={isSidebarCollapsed}
           setIsSidebarCollapsed={setIsSidebarCollapsed}
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          navegarPara={navegarPara}
           profile={profile}
           isCurrentUserAdmin={isCurrentUserAdmin}
           isCurrentUserPrivileged={isCurrentUserPrivileged}
-          onNewSolicitation={() => setSelectedRecord(null)}
           unreadChatCount={unreadChatCount} />
         
 
@@ -305,11 +330,10 @@ export default function Aplicacao() {
             profile={profile}
             isCurrentUserAdmin={isCurrentUserAdmin}
             activeUnreadAlertsCount={activeUnreadAlertsCount}
-            setActiveTab={setActiveTab}
+            navegarPara={navegarPara}
             systemAlerts={systemAlerts}
             triggerAlertsRefresh={triggerAlertsRefresh}
             records={records}
-            setSelectedRecord={setSelectedRecord}
             signOut={signOut} />
           
 
@@ -347,6 +371,8 @@ export default function Aplicacao() {
           {toasts.map((toast) => {
             const configuracao = toast.type === "success"
               ? { icone: CheckCircle2, rotulo: "Sucesso", variante: "sucesso" }
+              : toast.type === "error"
+                ? { icone: CircleAlert, rotulo: "Erro", variante: "erro" }
               : toast.type === "warning"
                 ? { icone: AlertTriangle, rotulo: "Aviso / Alerta", variante: "aviso" }
                 : toast.type === "chat"
@@ -362,6 +388,8 @@ export default function Aplicacao() {
                 exit={{ scale: 0.96, opacity: 0, x: 36 }}
                 transition={{ type: "spring", stiffness: 330, damping: 30 }}
                 className={`aplicacao-toast aplicacao-toast--${configuracao.variante}`}
+                role={toast.type === "error" ? "alert" : "status"}
+                aria-live={toast.type === "error" ? "assertive" : "polite"}
               >
                 <span className="aplicacao-toast__acento" />
                 <span className="aplicacao-toast__icone"><IconComponent size={20} /></span>
@@ -377,6 +405,7 @@ export default function Aplicacao() {
                       onClick={() => removeToast(toast.id)}
                       className="aplicacao-toast__fechar"
                       title="Fechar"
+                      aria-label="Fechar notificação"
                     >
                       <X size={14} />
                     </button>

@@ -202,6 +202,25 @@
   padding-inline: 10px 32px !important;
 }
 
+/* Preserva espaço do ícone à esquerda sem afetar dropdowns sem ícone. */
+.menu-suspenso--com-icone .menu-suspenso__gatilho {
+  padding-left: 36px !important;
+}
+
+.menu-suspenso--sm.menu-suspenso--com-icone .menu-suspenso__gatilho {
+  padding-inline: 34px 32px !important;
+}
+
+.menu-suspenso--lg.menu-suspenso--com-icone .menu-suspenso__gatilho {
+  padding-inline: 48px 38px !important;
+}
+
+/* Campos de busca com ícone absoluto na Administração IA. */
+#administracao-conteudo .administracao-toolbar__busca .administracao__campo-buscar-ia-id-ou-setor,
+#administracao-conteudo .administracao-usuarios-toolbar__busca .administracao__campo-buscar-ia-id-ou-setor {
+  padding: 8px 11px 8px 42px !important;
+}
+
 .menu-suspenso--lg .menu-suspenso__gatilho {
   min-height: 42px !important;
   padding-inline: 12px 38px !important;

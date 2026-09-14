@@ -3,22 +3,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { AbaAplicacao } from "@/constantes/navegacao";
 import React, { useState } from "react";
 import { Bell, UserCircle, ChevronDown, X, CheckCircle2, Eye, LogOut, ArrowRight } from "lucide-react";
 
 import { UserProfile, IARecord } from "@/tipos";
 import { SystemAlert, saveAlertInteraction } from "@/utilitarios/alertas";
+import type { NavegarPara } from "@/hooks/useAplicacao";
 
 interface TopbarProps {
   profile: UserProfile | null;
   isCurrentUserAdmin: boolean;
   activeUnreadAlertsCount: number;
-  setActiveTab: (tab: AbaAplicacao) => void;
+  navegarPara: NavegarPara;
   systemAlerts: SystemAlert[];
   triggerAlertsRefresh: () => void;
   records: IARecord[];
-  setSelectedRecord: (record: IARecord | null) => void;
   signOut: () => Promise<void>;
 }
 
@@ -26,11 +25,10 @@ export const Topbar: React.FC<TopbarProps> = ({
   profile,
   isCurrentUserAdmin,
   activeUnreadAlertsCount,
-  setActiveTab,
+  navegarPara,
   systemAlerts,
   triggerAlertsRefresh,
   records,
-  setSelectedRecord,
   signOut
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -148,8 +146,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                     onClick={() => {
                       const matched = records.find((record) => record.id === alert.relatedRecordId);
                       if (!matched) return;
-                      setSelectedRecord(matched);
-                      setActiveTab("report");
+                      navegarPara("report", { registro: matched });
                       setIsOpen(false);
                     }}
                     className="barra-superior__alerta-acao">
@@ -162,7 +159,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      setActiveTab("profile");
+                      navegarPara("profile");
                       setIsOpen(false);
                     }}
                     className="barra-superior__alerta-acao">
@@ -246,7 +243,7 @@ export const Topbar: React.FC<TopbarProps> = ({
               type="button"
               className="barra-superior__perfil-popover-perfil"
               onClick={() => {
-                setActiveTab("profile");
+                navegarPara("profile");
                 setPerfilAberto(false);
               }}>
               <span>Ver perfil</span>

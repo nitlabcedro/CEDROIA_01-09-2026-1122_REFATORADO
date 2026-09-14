@@ -32,6 +32,7 @@ import {
 import { getSectors } from "@/servicos/armazenamento";
 import { obterCargosDoSetor } from "@/servicos/setores";
 import { usuarioEhAdmin } from "@/utilitarios/permissoes";
+import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 
 export const UserProfileView: React.FC = () => {
   const { user, profile, refreshProfile, signOut } = useAuth();
@@ -222,9 +223,9 @@ export const UserProfileView: React.FC = () => {
       });
 
       setMessage({ type: "success", text: "Foto atualizada com sucesso." });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Erro ao atualizar foto:", err);
-      setMessage({ type: "error", text: err.message || "Não foi possível atualizar a foto." });
+      setMessage({ type: "error", text: obterMensagemErroUsuario(err, "perfil") });
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -274,8 +275,9 @@ export const UserProfileView: React.FC = () => {
       await refreshProfile(updatedFormData);
       setMessage({ type: "success", text: "Perfil atualizado com sucesso!" });
       setTimeout(() => setMessage(null), 5000);
-    } catch (error: any) {
-      setMessage({ type: "error", text: error.message || "Erro ao atualizar perfil" });
+    } catch (error: unknown) {
+      console.error("Erro ao atualizar perfil:", error);
+      setMessage({ type: "error", text: obterMensagemErroUsuario(error, "perfil") });
     } finally {
       setLoading(false);
     }
@@ -308,8 +310,9 @@ export const UserProfileView: React.FC = () => {
         setIsPasswordModalOpen(false);
         setPasswordMessage(null);
       }, 2500);
-    } catch (err: any) {
-      setPasswordMessage({ type: "error", text: err.message || "Erro ao atualizar senha." });
+    } catch (err: unknown) {
+      console.error("Erro ao atualizar senha pelo perfil:", err);
+      setPasswordMessage({ type: "error", text: obterMensagemErroUsuario(err, "redefinicao-senha") });
     } finally {
       setPasswordLoading(false);
     }

@@ -4,17 +4,19 @@ import { TABELAS_SUPABASE } from "@/constantes/supabase";
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/servicos/supabase";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, User, Loader2, Building, Briefcase, Eye, EyeOff, KeyRound } from "lucide-react";
+import { AlertCircle, Mail, Lock, User, Loader2, Building, Briefcase, Eye, EyeOff, KeyRound, CheckCircle2 } from "lucide-react";
 import { getSectors } from "@/servicos/armazenamento";
 import { obterCargosDoSetor } from "@/servicos/setores";
 import { useAuth } from "@/contextos/ContextoAutenticacao";
 import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
+import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 
 interface AuthProps {
   onAuthSuccess?: () => void;
+  mensagemInicial?: string | null;
 }
 
-export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
+export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) => {
   const { refreshProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -26,7 +28,9 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const [cargosPorSetor, setCargosPorSetor] = useState<Record<string, string[]>>({});
   const [sectors, setSectors] = useState<string[]>([]);
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
-  const [message, setMessage] = useState<{type: "success" | "error";text: string;} | null>(null);
+  const [message, setMessage] = useState<{type: "success" | "error";text: string;} | null>(
+    mensagemInicial ? { type: "success", text: mensagemInicial } : null,
+  );
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const paginaAutenticacaoRef = useRef<HTMLDivElement | null>(null);
@@ -76,12 +80,13 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
     try {
       if (mode === "forgot") {
         const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-          redirectTo: "https://ia.labcedro.app/reset-password"
+          redirectTo: `${window.location.origin}/reset-password`,
         });
         if (error) {
+          console.error("Erro ao enviar link de recuperação:", error);
           setMessage({
             type: "error",
-            text: "Não foi possível enviar o link de recuperação. Verifique o e-mail informado ou tente novamente."
+            text: obterMensagemErroUsuario(error, "recuperacao-senha")
           });
         } else {
           setMessage({
@@ -218,8 +223,12 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
         setMessage({ type: "success", text: "Cadastro realizado! Faça login para continuar." });
         setMode("login");
       }
-    } catch (error: any) {
-      setMessage({ type: "error", text: error.message || "Erro ao processar solicitação" });
+    } catch (error: unknown) {
+      console.error(`Erro no fluxo de ${mode === "login" ? "login" : "cadastro"}:`, error);
+      setMessage({
+        type: "error",
+        text: obterMensagemErroUsuario(error, mode === "login" ? "login" : "cadastro"),
+      });
     } finally {
       setLoading(false);
     }
@@ -450,9 +459,13 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
                 <motion.div
                   variants={fieldVariants}
                   className={`autenticacao-mensagem autenticacao-mensagem--${message.type}`}
-                  role="status"
+                  role={message.type === "error" ? "alert" : "status"}
+                  aria-live={message.type === "error" ? "assertive" : "polite"}
                 >
-                  {message.text}
+                  <span className="autenticacao-mensagem__icone" aria-hidden="true">
+                    {message.type === "error" ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
+                  </span>
+                  <span>{message.text}</span>
                 </motion.div>
               )}
 

@@ -1,4 +1,5 @@
 import { IARecord, ApprovalWorkflow, UserProfile, StatusUso, StatusAuditoria } from "@/tipos";
+import { obterStatusGeralDoRegistro } from "./status-solicitacao";
 
 export interface SystemAlert {
   id: string;
@@ -90,49 +91,6 @@ export const generateSystemAlerts = (
   records.forEach(record => {
     if (record.id.startsWith("METADATA")) return;
 
-    // Critical/High Risk
-    const criticidadeUpper = (record.criticidade || "").toUpperCase();
-    const isCriticalRisk = 
-      criticidadeUpper.includes("ALTA") || 
-      criticidadeUpper.includes("CRÍTICA") ||
-      record.classificacaoRiscoAutomatico?.toUpperCase().includes("CRITICO") ||
-      record.classificacaoRiscoAutomatico?.toUpperCase().includes("ALTO") ||
-      record.classificacaoRiscoManual?.toUpperCase().includes("CRITICO") ||
-      record.classificacaoRiscoManual?.toUpperCase().includes("ALTO");
-
-    if (isCriticalRisk) {
-      const alertId = `${record.id}-critical-risk`;
-      const saved = savedStates[alertId];
-      alerts.push({
-        id: alertId,
-        title: "Modelagem de Risco Crítico / Alto",
-        desc: `A ferramenta de IA "${record.nomeFerramenta}" cadastrada sob setor "${record.unidadeSetor}" opera com risco elevado. Demanda validação contínua.`,
-        level: "CRÍTICO",
-        source: "Governança",
-        createdAt: record.createdAt || new Date().toISOString(),
-        status: saved ? saved.status : "Ativo",
-        relatedRecordId: record.id,
-        actionType: "open-ia"
-      });
-    }
-
-    // Sensitive Data
-    if (record.usaDadosSensiveis === "Sim") {
-      const alertId = `${record.id}-sensitive-data`;
-      const saved = savedStates[alertId];
-      alerts.push({
-        id: alertId,
-        title: "Processamento de Dados Sensíveis (LGPD)",
-        desc: `A tecnologia "${record.nomeFerramenta}" realiza tráfego, armazenamento ou processamento de dados confidenciais ou sensíveis de pacientes/usuários.`,
-        level: "ATENÇÃO",
-        source: "Riscos",
-        createdAt: record.createdAt || new Date().toISOString(),
-        status: saved ? saved.status : "Ativo",
-        relatedRecordId: record.id,
-        actionType: "open-ia"
-      });
-    }
-
     // Blocked/Rejected
     const isSuspiciousStatus = 
       record.statusUso === StatusUso.NAO_APROVADO || 
@@ -156,8 +114,9 @@ export const generateSystemAlerts = (
     }
 
     // Pending Governance
-    if (record.statusAuditoria === StatusAuditoria.PENDENTE) {
-      const relatedWf = workflows.find(wf => wf.iaRecordId === record.id);
+    const relatedWf = workflows.find(wf => wf.iaRecordId === record.id);
+    const statusGeral = obterStatusGeralDoRegistro(record, relatedWf);
+    if (statusGeral === "Em análise" || statusGeral === "Em teste") {
       const daysSinceCreation = Math.floor(
         (Date.now() - new Date(record.createdAt || Date.now()).getTime()) / (1000 * 60 * 60 * 24)
       );

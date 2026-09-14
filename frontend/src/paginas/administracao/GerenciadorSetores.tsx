@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
+import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 import {
   Building2,
   Plus,
@@ -294,6 +295,17 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
     return () => window.removeEventListener("click", handleOutsideClick);
   }, []);
 
+  useEffect(() => {
+    if (!isModalOpen && !activeMenuSector) return;
+    const fecharComEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setIsModalOpen(false);
+      setActiveMenuSector(null);
+    };
+    window.addEventListener("keydown", fecharComEscape);
+    return () => window.removeEventListener("keydown", fecharComEscape);
+  }, [isModalOpen, activeMenuSector]);
+
   // Form Handlers
   const handleOpenCreateModal = () => {
     setModalMode("create");
@@ -392,9 +404,9 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
         setSectors(previousSectors);
         setSectorDetails(previousDetails);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Erro inesperado na exclusão do setor:", e);
-      setErrorMsg(`Erro inesperado ao excluir: ${e.message || e}`);
+      setErrorMsg(obterMensagemErroUsuario(e, "administracao"));
       setSectors(previousSectors);
       setSectorDetails(previousDetails);
     }

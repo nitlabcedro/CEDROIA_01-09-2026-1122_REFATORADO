@@ -56,24 +56,37 @@ function setTextHex(doc: jsPDF, hex: string) {
   doc.setTextColor(r, g, b);
 }
 
-function statusCor(status: string) {
-  const normalizado = status.toLowerCase();
+function normalizarStatusParaCor(status: string) {
+  return status
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function ehStatusNegativo(normalizado: string) {
+  return normalizado.includes("nao aprovad")
+    || normalizado.includes("neg")
+    || normalizado.includes("indefer");
+}
+
+export function statusCor(status: string) {
+  const normalizado = normalizarStatusParaCor(status);
+  if (ehStatusNegativo(normalizado)) {
+    return { fundo: "#FDEBEC", texto: CORES.vermelho };
+  }
   if (normalizado.includes("aprov")) {
     return { fundo: "#E7F5EA", texto: CORES.verde };
-  }
-  if (normalizado.includes("neg") || normalizado.includes("indefer")) {
-    return { fundo: "#FDEBEC", texto: CORES.vermelho };
   }
   return { fundo: "#FFF1DF", texto: CORES.laranja };
 }
 
-function statusCorEtapa(status: string) {
-  const normalizado = status.toLowerCase();
+export function statusCorEtapa(status: string) {
+  const normalizado = normalizarStatusParaCor(status);
+  if (ehStatusNegativo(normalizado)) {
+    return { fundo: "#FDEBEC", texto: CORES.vermelho, linha: CORES.vermelho };
+  }
   if (normalizado.includes("aprov")) {
     return { fundo: "#E7F5EA", texto: CORES.verde, linha: CORES.verde };
-  }
-  if (normalizado.includes("neg") || normalizado.includes("indefer")) {
-    return { fundo: "#FDEBEC", texto: CORES.vermelho, linha: CORES.vermelho };
   }
   if (normalizado.includes("pend") || normalizado.includes("aguard")) {
     return { fundo: "#F3F4F6", texto: "#6B7280", linha: "#CBD5E1" };
@@ -475,13 +488,19 @@ class DocumentoRelatorioCedroUmaPagina {
   }
 
   private desenharFluxoAprovacao(caixa: Caixa) {
+    const assinaturasPorEtapa = new Map(
+      (this.dados.assinaturas || []).map((assinatura) => [assinatura.stepNumber, assinatura]),
+    );
     const etapas = [
-      { nome: "NIT", status: this.dados.assinaturas?.[0]?.status || "Pendente" },
-      { nome: "TI", status: this.dados.assinaturas?.[1]?.status || "Pendente" },
-      { nome: "PERÍODO DE TESTE", status: this.dados.assinaturas?.[2]?.status || "Pendente" },
-      { nome: "PRESIDÊNCIA", status: this.dados.assinaturas?.[3]?.status || "Pendente" },
-      { nome: "FINANCEIRO", status: this.dados.assinaturas?.[4]?.status || "Pendente" },
-    ];
+      { stepNumber: 1, nome: "NIT" },
+      { stepNumber: 2, nome: "TI" },
+      { stepNumber: 3, nome: "PERÍODO DE TESTE" },
+      { stepNumber: 4, nome: "PRESIDÊNCIA" },
+      { stepNumber: 5, nome: "FINANCEIRO" },
+    ].map((etapa) => ({
+      ...etapa,
+      status: assinaturasPorEtapa.get(etapa.stepNumber)?.status || "Não iniciada",
+    }));
 
     // O fluxo inteiro vive dentro de uma única caixa pai.
     // Todos os cinco itens são derivados dessa caixa, garantindo alinhamento perfeito.
@@ -518,7 +537,10 @@ class DocumentoRelatorioCedroUmaPagina {
       setTextHex(this.doc, CORES.branco);
       this.doc.setFont(FONTE, "bold");
       this.doc.setFontSize(6.8);
-      this.doc.text(String(indice + 1), centroX, linhaY + 1.7, { align: "center" });
+      this.doc.text(String(etapa.stepNumber), centroX, linhaY, {
+        align: "center",
+        baseline: "middle",
+      });
 
       const caixaNome = caixaFilha(celula, 1, 12, celula.largura - 2, 8.5);
       const nomeAjustado = ajustarTextoNaCaixa(
