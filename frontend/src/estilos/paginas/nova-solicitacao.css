@@ -1688,7 +1688,8 @@
   padding: 34px 32px 48px;
   overflow: visible;
   color: #17211b;
-  background: transparent;
+  background: linear-gradient(180deg, #f3f8f4 0%, #f8faf9 42%, #fff 100%);
+  border-radius: 16px;
 }
 
 .nova-solicitacao__cabecalho {
@@ -1879,9 +1880,9 @@
   min-width: 0;
   overflow: visible;
   background: #fff;
-  border: 1px solid #dfe5e1;
+  border: 1px solid #b8cfc0;
   border-radius: 14px;
-  box-shadow: 0 8px 26px rgba(20, 54, 30, .05);
+  box-shadow: 0 4px 18px rgba(15, 52, 28, .05);
 }
 
 .nova-solicitacao__conteudo {
@@ -2237,7 +2238,59 @@
 .nova-solicitacao__fase--objetivo {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 22px;
+}
+
+.nova-solicitacao__alerta-perfil--global {
+  margin: 0 22px 12px;
+}
+
+.nova-solicitacao__campo-bloco {
+  padding: 16px 18px;
+  background: #f1f7f3;
+  border: 1px solid #b9cfc2;
+  border-radius: 12px;
+}
+
+.nova-solicitacao__campo-ajuda {
+  margin: 0 0 10px;
+  color: #5a6b62;
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 500;
+}
+
+.nova-solicitacao__textarea-wrap--destaque {
+  background: #fff;
+  border: 1px solid #aec4b6;
+  border-radius: 10px;
+  padding: 2px;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.nova-solicitacao__textarea-wrap--destaque:hover {
+  border-color: #8fb39c;
+  background: #fcfffd;
+}
+
+.nova-solicitacao__textarea-wrap--destaque:focus-within {
+  border-color: #3d8f55;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(11, 110, 32, .14);
+}
+
+.nova-solicitacao__textarea-wrap--destaque .nova-solicitacao__textarea {
+  border: 0;
+  box-shadow: none;
+}
+
+.nova-solicitacao__campo-bloco > label {
+  display: block;
+  margin-bottom: 4px;
+  color: #1a2a22;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -.01em;
 }
 
 .nova-solicitacao__campo-textarea > label,
@@ -2265,27 +2318,43 @@
 }
 
 .nova-solicitacao__chip {
-  min-height: 36px;
+  min-height: 38px;
   padding: 0 18px;
-  color: #26313d;
-  background: #fff;
-  border: 1px solid #d9e0dc;
-  border-radius: 8px;
+  color: #1f3d28;
+  background: #eef6f0;
+  border: 1px solid #9fbfaa;
+  border-radius: 999px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: 150ms ease;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .65) inset;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease, transform 120ms ease, box-shadow 150ms ease;
 }
 
 .nova-solicitacao__chip:hover {
-  color: #0b6820;
-  border-color: #8fbd99;
+  color: #064d18;
+  border-color: #5fa872;
+  background: #e3f2e7;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(8, 80, 28, .1);
+}
+
+.nova-solicitacao__chip:focus-visible {
+  outline: 2px solid #075618;
+  outline-offset: 2px;
 }
 
 .nova-solicitacao__chip--selecionado {
   color: #fff;
-  background: #08651d;
-  border-color: #08651d;
+  background: linear-gradient(135deg, #03440c 0%, #08651d 100%);
+  border-color: #03440c;
+  box-shadow: 0 3px 8px rgba(8, 101, 29, .24);
+}
+
+.nova-solicitacao__chip--selecionado:hover {
+  color: #fff;
+  background: linear-gradient(135deg, #03350d 0%, #075618 100%);
+  border-color: #03350d;
 }
 
 .nova-solicitacao__acoes {

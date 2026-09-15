@@ -16,10 +16,23 @@ import {
 
 const STORAGE_KEY = CHAVES_ARMAZENAMENTO_LOCAL.INVENTARIO_LEGADO;
 
-const PROFILES_CACHE_MS = 5000;
+const PROFILES_CACHE_MS = 60000;
 let profilesCache: UserProfile[] | null = null;
 let profilesCacheEm = 0;
 let profilesRequest: Promise<UserProfile[]> | null = null;
+
+/** Reutiliza perfis já carregados pelo hook global (evita nova ida ao Supabase). */
+export const seedProfilesCache = (profiles: UserProfile[]) => {
+  profilesCache = profiles;
+  profilesCacheEm = Date.now();
+};
+
+const patchProfilesCacheEntry = (profileId: string, updates: Partial<UserProfile>) => {
+  if (!profilesCache) return;
+  profilesCache = profilesCache.map((item) =>
+    item.id === profileId ? { ...item, ...updates } : item,
+  );
+};
 
 export const getProfiles = async (): Promise<UserProfile[]> => {
   if (profilesRequest) return profilesRequest;
@@ -49,49 +62,75 @@ export const getProfiles = async (): Promise<UserProfile[]> => {
   return profilesRequest;
 };
 
+const GLOBAL_RECORDS_CACHE_MS = 60000;
+let globalRecordsCache: IARecord[] | null = null;
+let globalRecordsCacheEm = 0;
+let globalRecordsRequest: Promise<IARecord[]> | null = null;
+
+const mapRegistrosIaRows = (data: any[]): IARecord[] => {
+  if (!data || data.length === 0) return [];
+  return data
+    .filter((item) => item.id !== "METADATA-SECTORS")
+    .map((item) => {
+      let record: IARecord;
+      if (item.data) {
+        record = item.data as IARecord;
+        record.id = item.id;
+        record.unidadeSetor = item.unidade_setor || record.unidadeSetor || "";
+        record.ownerId = item.owner_id || record.ownerId || "";
+      } else {
+        record = {
+          id: item.id,
+          unidadeSetor: item.unidade_setor || "",
+          ownerId: item.owner_id || "",
+          nomeFerramenta: item.nome_ferramenta || "",
+        } as any as IARecord;
+      }
+
+      if (item.status) {
+        record.statusAuditoria = item.status as StatusAuditoria;
+      }
+      if (item.status_uso) {
+        record.statusUso = item.status_uso === "Negado" ? StatusUso.NAO_APROVADO : (item.status_uso as StatusUso);
+      }
+      return record;
+    });
+};
+
+/** Reutiliza registros já carregados pelo useAplicacao (ex.: Nova Solicitação). */
+export const seedGlobalRecordsCache = (records: IARecord[]) => {
+  globalRecordsCache = records;
+  globalRecordsCacheEm = Date.now();
+};
+
 export const getGlobalRecords = async (): Promise<IARecord[]> => {
-  try {
-    console.log('🌐 Buscando todos os registros públicos no Supabase (ID de Protocolo Global)...');
-    const { data, error } = await supabase
-      .from(TABELAS_SUPABASE.REGISTROS_IA)
-      .select('*')
-      .order('id', { ascending: true });
-
-    if (error) throw error;
-    
-    if (data && data.length > 0) {
-      return data
-        .filter(item => item.id !== 'METADATA-SECTORS')
-        .map(item => {
-          let record: IARecord;
-          if (item.data) {
-            record = item.data as IARecord;
-            record.id = item.id;
-            record.unidadeSetor = item.unidade_setor || record.unidadeSetor || '';
-            record.ownerId = item.owner_id || record.ownerId || '';
-          } else {
-            record = {
-              id: item.id,
-              unidadeSetor: item.unidade_setor || '',
-              ownerId: item.owner_id || '',
-              nomeFerramenta: item.nome_ferramenta || '',
-            } as any as IARecord;
-          }
-
-          if (item.status) {
-            record.statusAuditoria = item.status as StatusAuditoria;
-          }
-          if (item.status_uso) {
-            record.statusUso = item.status_uso === "Negado" ? StatusUso.NAO_APROVADO : (item.status_uso as StatusUso);
-          }
-          return record;
-        });
-    }
-    return [];
-  } catch (error) {
-    console.error('💥 Erro ao buscar registros globais:', error);
-    return [];
+  if (globalRecordsRequest) return globalRecordsRequest;
+  if (globalRecordsCache && Date.now() - globalRecordsCacheEm < GLOBAL_RECORDS_CACHE_MS) {
+    return [...globalRecordsCache];
   }
+
+  globalRecordsRequest = (async () => {
+    try {
+      const { data, error } = await supabase
+        .from(TABELAS_SUPABASE.REGISTROS_IA)
+        .select("*")
+        .order("id", { ascending: true });
+
+      if (error) throw error;
+
+      const mapped = mapRegistrosIaRows(data || []);
+      globalRecordsCache = mapped;
+      globalRecordsCacheEm = Date.now();
+      return [...mapped];
+    } catch (error) {
+      console.error("Erro ao buscar registros globais:", error);
+      return globalRecordsCache ? [...globalRecordsCache] : [];
+    } finally {
+      globalRecordsRequest = null;
+    }
+  })();
+
+  return globalRecordsRequest;
 };
 
 export const getRecords = async (userId?: string, isAdmin?: boolean, userSector?: string, knownRole?: string): Promise<IARecord[]> => {
@@ -574,8 +613,10 @@ export const updateUserProfile = async (profileId: string, updates: Partial<User
       return null;
     }
 
-    console.log('✅ Perfil atualizado com sucesso:', data[0]);
-    return data[0] as UserProfile;
+    const atualizado = data[0] as UserProfile;
+    patchProfilesCacheEntry(profileId, atualizado);
+    console.log('✅ Perfil atualizado com sucesso:', atualizado);
+    return atualizado;
   } catch (error: any) {
     const isPresenceOnly = Object.keys(updates).length === 1 && updates.hasOwnProperty('last_seen');
     if (isPresenceOnly) {

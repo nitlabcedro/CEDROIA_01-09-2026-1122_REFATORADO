@@ -53,7 +53,7 @@ export const AlertCard: React.FC<AlertCardProps> = ({ title, alerts, onNavigate 
     </div>
 
     <button type="button" onClick={() => onNavigate("inventory")} className="cartao-alerta__acao">
-      Auditar Inventário <ArrowRight size={14} />
+      Ver Minhas IAs <ArrowRight size={14} />
     </button>
   </article>
 );

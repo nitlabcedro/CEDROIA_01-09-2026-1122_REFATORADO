@@ -865,6 +865,160 @@ body,
 }
 
 /* ------------------------------------------------------------
+   Aprovações — abas compactas e ações clicáveis (refino UX)
+   ------------------------------------------------------------ */
+
+.pagina-aprovacoes .aprovacao-abas-barra {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 4px;
+}
+
+.pagina-aprovacoes .aprovacao-abas-barra .cedro-abas.aprovacao-abas {
+  cursor: default;
+}
+
+.pagina-aprovacoes .aprovacao-abas .cedro-aba {
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+}
+
+.pagina-aprovacoes .aprovacao-abas .cedro-aba:focus-visible {
+  outline: 2px solid #075618;
+  outline-offset: 2px;
+}
+
+.pagina-aprovacoes .aprovacoes__botao-6 {
+  animation: none;
+}
+
+.pagina-aprovacoes .aprovacoes__botao-6:focus-visible,
+.pagina-aprovacoes .aprovacoes__botao-ver-ficha:focus-visible {
+  outline: 2px solid #075618;
+  outline-offset: 2px;
+}
+
+.pagina-aprovacoes .aprovacoes__botao-ver-ficha {
+  color: #0f3d1c;
+  background: #fff;
+  border: 1px solid #b8cfc0;
+  box-shadow: 0 1px 2px rgba(2, 43, 13, .06);
+  font-weight: 700;
+}
+
+.pagina-aprovacoes .aprovacoes__botao-ver-ficha:hover {
+  color: #075618;
+  background: #f4faf5;
+  border-color: #7fb38e;
+  transform: translateY(-1px);
+}
+
+@media (min-width: 1024px) {
+  .pagina-aprovacoes .aprovacoes__grupo-aprovacao-de-sistemas-3 {
+    padding-top: 16px;
+  }
+
+  .pagina-aprovacoes .aprovacoes__grupo-fila-de-aprovacao-2.aprovacao-abas-barra {
+    margin-bottom: 10px;
+    padding: 4px;
+    background: #e7eee9;
+    border: 1px solid #cbd8ce;
+    border-radius: 14px;
+    box-shadow: inset 0 1px 2px rgba(2, 43, 13, .04);
+  }
+
+  .pagina-aprovacoes .aprovacoes__grupo-fila-de-aprovacao-2.aprovacao-abas-barra:first-of-type {
+    border-bottom: 0;
+  }
+
+  .pagina-aprovacoes .aprovacao-abas.cedro-abas {
+    gap: 4px;
+    width: auto;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .pagina-aprovacoes .cedro-aba.aprovacoes__botao-fila-de-aprovacao-2 {
+    min-height: 36px;
+    padding: 8px 16px !important;
+    color: #526459 !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: 10px !important;
+    border-bottom: 1px solid transparent !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+  }
+
+  .pagina-aprovacoes .cedro-aba.aprovacoes__botao-fila-de-aprovacao-2:hover {
+    color: #03440c !important;
+    background: rgba(255, 255, 255, .78) !important;
+  }
+
+  .pagina-aprovacoes .cedro-aba--ativa.aprovacoes__botao-fila-de-aprovacao-2 {
+    color: #fff !important;
+    background: linear-gradient(135deg, #03350d 0%, #075618 72%, #0a641d 100%) !important;
+    border-color: rgba(1, 26, 7, .18) !important;
+    border-bottom-color: rgba(1, 26, 7, .18) !important;
+    box-shadow: 0 4px 12px rgba(2, 43, 13, .16) !important;
+  }
+}
+
+/* Filtros da fila — aparência de botão (inativo / hover / ativo) */
+.pagina-aprovacoes .aprovacoes__botao-4,
+.pagina-aprovacoes .aprovacoes__botao-fila-de-aprovacao-4 {
+  cursor: pointer;
+  color: #3d5245;
+  background: #f4faf6;
+  border: 1px solid #b5cfc0;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(2, 43, 13, .05);
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 120ms ease;
+}
+
+.pagina-aprovacoes .aprovacoes__botao-4:hover,
+.pagina-aprovacoes .aprovacoes__botao-fila-de-aprovacao-4:hover {
+  color: #064d18;
+  background: #e5f3e9;
+  border-color: #6aab7c;
+  transform: translateY(-1px);
+}
+
+.pagina-aprovacoes .aprovacoes__botao-4:focus-visible,
+.pagina-aprovacoes .aprovacoes__botao-fila-de-aprovacao-4:focus-visible {
+  outline: 2px solid #075618;
+  outline-offset: 2px;
+}
+
+.pagina-aprovacoes .aprovacoes__botao-5,
+.pagina-aprovacoes .aprovacoes__botao-fila-de-aprovacao-3.aprovacoes__botao-4 {
+  color: #fff !important;
+  background: linear-gradient(135deg, #03350d 0%, #075618 72%, #0a641d 100%) !important;
+  border: 1px solid #03350d !important;
+  box-shadow: 0 3px 10px rgba(2, 43, 13, .18) !important;
+}
+
+.pagina-aprovacoes .cedro-aba.aprovacoes__botao-fila-de-aprovacao-2:not(.cedro-aba--ativa) {
+  color: #3d5245 !important;
+  background: #f4faf6 !important;
+  border: 1px solid #b5cfc0 !important;
+  box-shadow: 0 1px 2px rgba(2, 43, 13, .05) !important;
+}
+
+.pagina-aprovacoes .cedro-aba.aprovacoes__botao-fila-de-aprovacao-2:not(.cedro-aba--ativa):hover {
+  color: #064d18 !important;
+  background: #e5f3e9 !important;
+  border-color: #6aab7c !important;
+}
+
+/* ------------------------------------------------------------
    12. BREAKPOINTS DE SEGURANÇA
    ------------------------------------------------------------ */
 

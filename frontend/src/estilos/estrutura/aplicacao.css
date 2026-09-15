@@ -156,6 +156,16 @@
   border-color: #06b6d4;
 }
 
+.aplicacao__carregamento-pagina {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 12rem;
+  width: 100%;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+}
+
 .aplicacao__grupo-3 {
   position: fixed;
   bottom: 6rem;

@@ -23,6 +23,8 @@ import { useAuth } from "@/contextos/ContextoAutenticacao";
 
 interface RegistrationFormProps {
   initialData?: IARecord | null;
+  /** Registros já carregados pelo app — evita nova consulta a registros_ia só para gerar protocolo. */
+  existingRecords?: IARecord[];
   onSave: (record: IARecord) => Promise<void> | void;
   onCancel: () => void;
   isAdmin?: boolean;
@@ -204,7 +206,7 @@ const TextArea = ({
 
 };
 
-export default function RegistrationForm({ initialData, onSave, onCancel, isAdmin }: RegistrationFormProps) {
+export default function RegistrationForm({ initialData, existingRecords = [], onSave, onCancel, isAdmin }: RegistrationFormProps) {
   const { profile } = useAuth();
   const [formData, setFormData] = useState<Partial<IARecord>>({
     id: "",
@@ -286,7 +288,7 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
       }
     } else if (!isInitialized && profile) {
       const fetchAndSetId = async () => {
-        const records = await getGlobalRecords();
+        const records = existingRecords.length > 0 ? existingRecords : await getGlobalRecords();
 
         try {
           const savedDraft = localStorage.getItem(`${CHAVES_ARMAZENAMENTO_LOCAL.RASCUNHO_SOLICITACAO_PREFIXO}${profile.id}`);
@@ -306,7 +308,8 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
                 dataRegistro: restored.dataRegistro || new Date().toISOString().split("T")[0]
               }));
               setOutroActive(Boolean(restoredName && !presets.includes(restoredName)));
-              setActiveSection(Math.max(0, Math.min(2, Number(parsed.activeSection) || 0)));
+              const legacySection = Number(parsed.activeSection) || 0;
+              setActiveSection(legacySection >= 2 ? 1 : 0);
               setIsInitialized(true);
               return;
             }
@@ -333,6 +336,23 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
       };
       fetchAndSetId();
     }
+  }, [initialData, profile, isInitialized, existingRecords]);
+
+  useEffect(() => {
+    if (initialData || !profile || !isInitialized) return;
+
+    const sList = (profile.setor || "").split(";").map((s) => s.trim()).filter(Boolean);
+    const cList = (profile.cargo || "").split(";").map((c) => c.trim()).filter(Boolean);
+    const defaultSetor = sList[0] || "";
+    const defaultCargo = cList[0] || "";
+
+    setFormData((prev) => ({
+      ...prev,
+      unidadeSetor: prev.unidadeSetor || defaultSetor,
+      responsavelPreenchimento: profile.full_name || prev.responsavelPreenchimento || "",
+      cargo: prev.cargo || defaultCargo,
+      dataRegistro: prev.dataRegistro || new Date().toISOString().split("T")[0]
+    }));
   }, [initialData, profile, isInitialized]);
 
   const isProfileIncompleteForStep1 = (() => {
@@ -389,17 +409,11 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
   };
 
   const sections = [
-    { label: "Solicitante", subtitle: "Dados de quem solicita", icon: FileText },
     { label: "Solução", subtitle: "Detalhes da solução de IA", icon: Zap },
     { label: "Objetivo", subtitle: "Propósito e benefícios", icon: Info }
   ];
 
   const phaseMeta = [
-    {
-      title: "Dados do solicitante",
-      description: "Informe os dados de quem está registrando esta solicitação.",
-      icon: FileText
-    },
     {
       title: "Escolha da IA",
       description: "Selecione a inteligência artificial corporativa desejada.",
@@ -407,7 +421,7 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
     },
     {
       title: "Objetivo da solicitação",
-      description: "Informe o propósito e os benefícios esperados com a utilização da solução de IA.",
+      description: "Descreva o uso da IA, selecione as utilizações e informe os benefícios esperados.",
       icon: Info
     }
   ];
@@ -434,24 +448,22 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
     // Rule 5: Não permitir salvar a solicitação se a Etapa 1 estiver incompleta
     if (isStep1Incomplete || isProfileIncompleteForStep1) {
       alert("Complete seu perfil para continuar. Informe seu cargo/função antes de abrir uma solicitação de IA.");
-      setActiveSection(0);
       return;
     }
 
     const cleanSector = (formData.unidadeSetor || "").trim();
     if (!cleanSector || cleanSector.toLowerCase() === "não definido" || cleanSector.toLowerCase() === "nao definido") {
-      alert("Por favor, preencha o campo obrigatório 'Setor' na primeira seção. Ele não pode ser vazio ou 'Não definido'.");
-      setActiveSection(0);
+      alert("Seu perfil precisa de um setor válido. Atualize em Meu Perfil antes de enviar a solicitação.");
       return;
     }
     if (isStep2Incomplete) {
-      alert("Por favor, selecione ou informe o nome da IA (Fase 2).");
-      setActiveSection(1);
+      alert("Por favor, selecione ou informe o nome da IA (etapa Solução).");
+      setActiveSection(0);
       return;
     }
     if (isStep3Incomplete) {
-      alert("Por favor, preencha todos os campos obrigatórios da Fase 3 — Objetivo.");
-      setActiveSection(2);
+      alert("Por favor, preencha todos os campos obrigatórios da etapa Objetivo.");
+      setActiveSection(1);
       return;
     }
 
@@ -524,12 +536,12 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
   };
 
   const handleStepNavigation = (targetIndex: number) => {
-    if (targetIndex > 0 && (isStep1Incomplete || isProfileIncompleteForStep1)) {
+    if (isStep1Incomplete || isProfileIncompleteForStep1) {
       alert("Complete seu perfil para continuar. Informe seu cargo/função antes de abrir uma solicitação de IA.");
       return;
     }
-    if (targetIndex > 1 && isStep2Incomplete) {
-      alert("Por favor, selecione ou informe o nome da IA (Fase 2) antes de avançar.");
+    if (targetIndex > 0 && isStep2Incomplete) {
+      alert("Por favor, selecione ou informe o nome da IA (etapa Solução) antes de avançar.");
       return;
     }
     setActiveSection(targetIndex);
@@ -598,13 +610,22 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
         })}
       </nav>
 
+      {(isProfileIncompleteForStep1 || isStep1Incomplete) && (
+        <div className="nova-solicitacao__alerta-perfil nova-solicitacao__alerta-perfil--global" role="alert">
+          <AlertTriangle size={18} aria-hidden="true" />
+          <span>
+            Os dados do solicitante serão preenchidos automaticamente com sua conta. Complete seu perfil (nome, setor e cargo) em Meu Perfil para continuar.
+          </span>
+        </div>
+      )}
+
       <form
         id="formCadastroIA"
         onSubmit={handleSubmit}
         onKeyDown={handleKeyDown}
         className="nova-solicitacao__formulario"
       >
-        <div className={`nova-solicitacao__conteudo ${activeSection === 0 ? "nova-solicitacao__conteudo--com-resumo" : ""}`}>
+        <div className="nova-solicitacao__conteudo">
           <div className="nova-solicitacao__principal">
             <header className="nova-solicitacao__secao-cabecalho">
               <span className="nova-solicitacao__secao-icone" aria-hidden="true">
@@ -617,135 +638,6 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
             </header>
 
             {activeSection === 0 && (
-              <div className="nova-solicitacao__fase nova-solicitacao__fase--solicitante">
-                {isProfileIncompleteForStep1 && (
-                  <div className="nova-solicitacao__alerta-perfil">
-                    <AlertTriangle size={18} aria-hidden="true" />
-                    <span>Complete seu perfil para continuar. Informe seu cargo/função antes de abrir uma solicitação de IA.</span>
-                  </div>
-                )}
-
-                <div className="nova-solicitacao__grade-campos">
-                  <InputGroup label="Setor" required badge={!isAdmin ? <BadgePerfil /> : null}>
-                    {!isAdmin ? (
-                      (() => {
-                        const sList = (profile?.setor || "").split(";").map((item) => item.trim()).filter(Boolean);
-                        if (sList.length > 1) {
-                          return (
-                            <CustomDropdown
-                              placeholder="Selecione o setor"
-                              value={formData.unidadeSetor || ""}
-                              options={sList}
-                              onChange={(selectedSector) => {
-                                const sListAll = (profile?.setor || "").split(";").map((item) => item.trim()).filter(Boolean);
-                                const cListAll = (profile?.cargo || "").split(";").map((item) => item.trim()).filter(Boolean);
-                                const matchedIdx = sListAll.indexOf(selectedSector);
-                                const matchedCargo = matchedIdx !== -1 ? cListAll[matchedIdx] : "";
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  unidadeSetor: selectedSector,
-                                  cargo: matchedCargo || prev.cargo
-                                }));
-                              }}
-                              size="lg"
-                            />
-                          );
-                        }
-                        return (
-                          <input
-                            className={getInputClass(formData.unidadeSetor, true)}
-                            value={formData.unidadeSetor || ""}
-                            disabled
-                            required
-                          />
-                        );
-                      })()
-                    ) : (
-                      <>
-                        <input
-                          className={getInputClass(formData.unidadeSetor)}
-                          value={formData.unidadeSetor || ""}
-                          onChange={(event) => updateField("unidadeSetor", event.target.value)}
-                          placeholder="Selecione o setor"
-                          required
-                          list="listaSetores"
-                        />
-                        <datalist id="listaSetores">
-                          {sectors.map((sector) => <option key={sector} value={sector} />)}
-                        </datalist>
-                      </>
-                    )}
-                  </InputGroup>
-
-                  <InputGroup label="Responsável pelo preenchimento" required>
-                    <input
-                      className={getInputClass(formData.responsavelPreenchimento)}
-                      value={formData.responsavelPreenchimento || ""}
-                      onChange={(event) => updateField("responsavelPreenchimento", event.target.value)}
-                      placeholder="Nome completo"
-                      required
-                    />
-                  </InputGroup>
-
-                  <InputGroup label="Cargo" required badge={!isAdmin ? <BadgePerfil /> : null}>
-                    {!isAdmin ? (
-                      (() => {
-                        const sListAll = (profile?.setor || "").split(";").map((item) => item.trim()).filter(Boolean);
-                        const cListAll = (profile?.cargo || "").split(";").map((item) => item.trim()).filter(Boolean);
-                        const currentSector = formData.unidadeSetor;
-                        const validCargos = sListAll
-                          .map((sector, idx) => sector === currentSector ? cListAll[idx] : null)
-                          .filter(Boolean) as string[];
-
-                        if (validCargos.length > 1) {
-                          return (
-                            <CustomDropdown
-                              placeholder="Informe o cargo"
-                              value={formData.cargo || ""}
-                              options={validCargos}
-                              onChange={(value) => updateField("cargo", value)}
-                              size="lg"
-                            />
-                          );
-                        }
-
-                        const assignedCargo = validCargos[0] || formData.cargo || "Colaborador";
-                        return (
-                          <input
-                            className={getInputClass(assignedCargo, true)}
-                            value={assignedCargo}
-                            disabled
-                            required
-                          />
-                        );
-                      })()
-                    ) : (
-                      <CustomDropdown
-                        placeholder="Informe o cargo"
-                        value={formData.cargo || ""}
-                        options={cargosDisponiveis}
-                        onChange={(value) => updateField("cargo", value)}
-                        size="lg"
-                      />
-                    )}
-                  </InputGroup>
-
-                  <InputGroup label="Data do registro" required badge={<BadgeAutomatico />}>
-                    <input
-                      type="date"
-                      className={getInputClass(formData.dataRegistro, true)}
-                      value={formData.dataRegistro || ""}
-                      onChange={(event) => updateField("dataRegistro", event.target.value)}
-                      required
-                      disabled
-                    />
-                  </InputGroup>
-                </div>
-
-              </div>
-            )}
-
-            {activeSection === 1 && (
               <div className="nova-solicitacao__fase nova-solicitacao__fase--solucao">
                 <p className="nova-solicitacao__instrucao-solucao">
                   Estas são as inteligências artificiais disponíveis para a escolha do solicitante. Selecione uma das opções abaixo ou marque <strong>“Outro”</strong> para digitar uma ferramenta diferente.
@@ -802,11 +694,14 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
               </div>
             )}
 
-            {activeSection === 2 && (
+            {activeSection === 1 && (
               <div className="nova-solicitacao__fase nova-solicitacao__fase--objetivo">
-                <div className="nova-solicitacao__campo-textarea">
-                  <label>Descreva onde e como a IA será utilizada <span>*</span></label>
-                  <div className="nova-solicitacao__textarea-wrap">
+                <div className="nova-solicitacao__campo-bloco nova-solicitacao__campo-textarea">
+                  <label id="label-descricao-atividade">Onde e como a IA será utilizada <span>*</span></label>
+                  <p className="nova-solicitacao__campo-ajuda" id="ajuda-descricao-atividade">
+                    Descreva o contexto de uso: setor, tarefas e momento em que a ferramenta entrará no fluxo de trabalho.
+                  </p>
+                  <div className="nova-solicitacao__textarea-wrap nova-solicitacao__textarea-wrap--destaque">
                     <textarea
                       className="nova-solicitacao__textarea nova-solicitacao__textarea--objetivo"
                       value={formData.descricaoAtividade || ""}
@@ -814,14 +709,18 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
                       placeholder="Exemplo: A IA será utilizada no setor de atendimento para auxiliar na organização de mensagens, respostas frequentes e triagem inicial de solicitações."
                       maxLength={1000}
                       required
+                      aria-describedby="ajuda-descricao-atividade"
                     />
                     <span className="nova-solicitacao__contador">{(formData.descricaoAtividade || "").length}/1000</span>
                   </div>
                 </div>
 
-                <div className="nova-solicitacao__objetivos">
-                  <label>Objetivo da utilização <span>*</span></label>
-                  <div className="nova-solicitacao__chips">
+                <div className="nova-solicitacao__campo-bloco nova-solicitacao__objetivos">
+                  <label id="label-utilizacoes">Selecione as utilizações <span>*</span></label>
+                  <p className="nova-solicitacao__campo-ajuda" id="ajuda-utilizacoes">
+                    Clique em uma ou mais opções abaixo. Você pode combinar utilizações que façam sentido para sua solicitação.
+                  </p>
+                  <div className="nova-solicitacao__chips" role="group" aria-labelledby="label-utilizacoes">
                     {Object.values(ObjetivosIA).map((option) => {
                       const selected = (formData.objetivos || []).includes(option);
                       return (
@@ -830,6 +729,7 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
                           type="button"
                           className={`nova-solicitacao__chip ${selected ? "nova-solicitacao__chip--selecionado" : ""}`}
                           onClick={() => handleArrayToggle("objetivos", option)}
+                          aria-pressed={selected}
                         >
                           {option}
                         </button>
@@ -839,21 +739,26 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
                 </div>
 
                 {formData.objetivos?.includes(ObjetivosIA.OUTRO) && (
-                  <InputGroup label="Descreva o outro objetivo" required>
-                    <input
-                      type="text"
-                      className={getInputClass(formData.objetivoOutro)}
-                      value={formData.objetivoOutro || ""}
-                      onChange={(event) => updateField("objetivoOutro", event.target.value)}
-                      placeholder="Descreva o outro objetivo"
-                      required
-                    />
-                  </InputGroup>
+                  <div className="nova-solicitacao__campo-bloco">
+                    <InputGroup label="Descreva a utilização “Outro”" required>
+                      <input
+                        type="text"
+                        className={getInputClass(formData.objetivoOutro)}
+                        value={formData.objetivoOutro || ""}
+                        onChange={(event) => updateField("objetivoOutro", event.target.value)}
+                        placeholder="Informe qual utilização não está listada acima"
+                        required
+                      />
+                    </InputGroup>
+                  </div>
                 )}
 
-                <div className="nova-solicitacao__campo-textarea">
-                  <label>Quais benefícios são esperados com o uso da IA? <span>*</span></label>
-                  <div className="nova-solicitacao__textarea-wrap">
+                <div className="nova-solicitacao__campo-bloco nova-solicitacao__campo-textarea">
+                  <label id="label-beneficios">Benefícios esperados com o uso da IA <span>*</span></label>
+                  <p className="nova-solicitacao__campo-ajuda" id="ajuda-beneficios">
+                    Explique o ganho prático para a equipe ou para o processo (tempo, qualidade, padronização, etc.).
+                  </p>
+                  <div className="nova-solicitacao__textarea-wrap nova-solicitacao__textarea-wrap--destaque">
                     <textarea
                       className="nova-solicitacao__textarea nova-solicitacao__textarea--objetivo"
                       value={formData.beneficiosEsperados || ""}
@@ -861,6 +766,7 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
                       placeholder="Exemplo: Reduzir tempo de atendimento, padronizar respostas, diminuir retrabalho, apoiar a equipe na análise de informações e melhorar a produtividade do setor."
                       maxLength={1000}
                       required
+                      aria-describedby="ajuda-beneficios"
                     />
                     <span className="nova-solicitacao__contador">{(formData.beneficiosEsperados || "").length}/1000</span>
                   </div>
@@ -906,7 +812,12 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
             )}
 
             {activeSection === 0 && (
-              <button type="button" onClick={handleSaveDraft} className="nova-solicitacao__botao nova-solicitacao__botao--rascunho">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                className="nova-solicitacao__botao nova-solicitacao__botao--rascunho"
+                disabled={isStep1Incomplete || isProfileIncompleteForStep1}
+              >
                 <Bookmark size={17} />
                 Salvar rascunho
               </button>
@@ -916,17 +827,21 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
               <button
                 type="button"
                 onClick={() => {
-                  if (activeSection === 0 && (isStep1Incomplete || isProfileIncompleteForStep1)) {
+                  if (isStep1Incomplete || isProfileIncompleteForStep1) {
                     alert("Complete seu perfil para continuar. Informe seu cargo/função antes de abrir uma solicitação de IA.");
                     return;
                   }
-                  if (activeSection === 1 && isStep2Incomplete) {
-                    alert("Por favor, selecione ou informe o nome da IA (Fase 2).");
+                  if (activeSection === 0 && isStep2Incomplete) {
+                    alert("Por favor, selecione ou informe o nome da IA (etapa Solução).");
                     return;
                   }
                   setActiveSection((section) => section + 1);
                 }}
-                disabled={activeSection === 0 ? (isStep1Incomplete || isProfileIncompleteForStep1) : isStep2Incomplete}
+                disabled={
+                  isStep1Incomplete ||
+                  isProfileIncompleteForStep1 ||
+                  (activeSection === 0 && isStep2Incomplete)
+                }
                 className="nova-solicitacao__botao nova-solicitacao__botao--primario"
               >
                 Próxima etapa

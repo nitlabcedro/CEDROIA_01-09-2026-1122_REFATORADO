@@ -10,6 +10,13 @@ import "@/estilos/paginas/chat-referencia.css";
 import { useAuth } from "@/contextos/ContextoAutenticacao";
 import { ChatMessage, UserProfile } from "@/tipos";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
+import {
+  avancarMarcadorLeituraParceiro,
+  calcularContagemNaoLidasPorParceiro,
+  obterIdUltimaMensagemRecebidaDoParceiro,
+  somarContagemPorParceiro,
+  type MensagemParaContagem,
+} from "@/servicos/chat-contagem-nao-lidas";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, User, MoreVertical, MessageSquare, X,
@@ -18,7 +25,12 @@ import {
   FileText, Download } from
 "lucide-react";
 
-export const Chat: React.FC = () => {
+type ChatProps = {
+  /** Perfis já carregados pelo useAplicacao — evita nova consulta à tabela perfis ao abrir o chat. */
+  catalogProfiles?: UserProfile[];
+};
+
+export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
   const { user, profile } = useAuth();
 
   // Estados reais do banco de dados do Supabase
@@ -57,6 +69,9 @@ export const Chat: React.FC = () => {
   const [favorites, setFavorites] = useState<string[]>([]);
 
   // Controle local de mensagens lidas (não-lidas reativos)
+  const lastSeenMessageMapRef = useRef<Record<string, string>>({});
+  const lastIncomingMessagesMapRef = useRef<Record<string, ChatMessage>>({});
+
   const [lastSeenMessageMap, setLastSeenMessageMap] = useState<Record<string, string>>(() => {
     try {
       const stored = localStorage.getItem(`${CHAVES_ARMAZENAMENTO_LOCAL.MAPA_CHAT_VISUALIZADO_PREFIXO}${user?.id || "anon"}`);
@@ -90,6 +105,14 @@ export const Chat: React.FC = () => {
     }
   }, [lastSeenMessageMap, user?.id]);
 
+  useEffect(() => {
+    lastSeenMessageMapRef.current = lastSeenMessageMap;
+  }, [lastSeenMessageMap]);
+
+  useEffect(() => {
+    lastIncomingMessagesMapRef.current = lastIncomingMessagesMap;
+  }, [lastIncomingMessagesMap]);
+
   // Compartilha qual conversa está aberta para que notificações globais não sinalizem a conversa visível.
   useEffect(() => {
     if (selectedConvId) {
@@ -105,30 +128,42 @@ export const Chat: React.FC = () => {
     };
   }, [selectedConvId]);
 
-  const markConversationAsSeen = React.useCallback((partnerId: string, incomingMessageId?: string | null) => {
-    if (!partnerId) return;
+  const markConversationAsSeen = React.useCallback(
+    (partnerId: string, mensagensContexto: MensagemParaContagem[] = []) => {
+      if (!partnerId || !user?.id) return;
 
-    // Zera imediatamente o contador visual da conversa aberta.
-    setUnreadCountsMap((prev) => {
-      if ((prev[partnerId] || 0) === 0) return prev;
-      return { ...prev, [partnerId]: 0 };
-    });
+      setUnreadCountsMap((prev) => {
+        if ((prev[partnerId] || 0) === 0) return prev;
+        return { ...prev, [partnerId]: 0 };
+      });
 
-    // O marcador de leitura precisa apontar para uma mensagem RECEBIDA.
-    // Nunca usamos a última mensagem geral, pois ela pode ter sido enviada pelo próprio usuário.
-    if (!incomingMessageId) return;
-    setLastSeenMessageMap((prev) => {
-      if (prev[partnerId] === incomingMessageId) return prev;
-      return { ...prev, [partnerId]: incomingMessageId };
-    });
-  }, []);
+      const candidatoNaConversa = obterIdUltimaMensagemRecebidaDoParceiro(
+        mensagensContexto,
+        user.id,
+        partnerId,
+      );
+      const ultimaRecebidaGlobal = lastIncomingMessagesMapRef.current[partnerId];
+      const candidatoId = candidatoNaConversa ?? ultimaRecebidaGlobal?.id;
+      if (!candidatoId) return;
 
-  // Ao abrir uma conversa, marca como vista a última mensagem que realmente foi RECEBIDA daquele contato.
-  // Assim, responder ao contato não faz a notificação reaparecer.
+      const contextoMarcador: MensagemParaContagem[] = candidatoNaConversa
+        ? mensagensContexto
+        : ultimaRecebidaGlobal
+          ? [...mensagensContexto, ultimaRecebidaGlobal]
+          : mensagensContexto;
+
+      setLastSeenMessageMap((prev) =>
+        avancarMarcadorLeituraParceiro(prev, user.id, partnerId, candidatoId, contextoMarcador),
+      );
+    },
+    [user?.id],
+  );
+
+  // Ao abrir/visualizar a conversa, marca como lidas todas as recebidas carregadas até o momento.
   useEffect(() => {
-    if (!selectedConvId) return;
-    markConversationAsSeen(selectedConvId, lastIncomingMessagesMap[selectedConvId]?.id);
-  }, [selectedConvId, lastIncomingMessagesMap, markConversationAsSeen]);
+    if (!selectedConvId || !user?.id) return;
+    markConversationAsSeen(selectedConvId, messages);
+  }, [selectedConvId, messages, lastIncomingMessagesMap, user?.id, markConversationAsSeen]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -169,6 +204,14 @@ export const Chat: React.FC = () => {
   // Protege contra duplo clique/Enter duplo que poderia gerar dois INSERTs idênticos.
   const ultimaTentativaEnvioRef = useRef<{ assinatura: string; em: number }>({ assinatura: "", em: 0 });
   const carregandoUsuariosRef = useRef(false);
+  const usuariosHidratadosDoCatalogoRef = useRef(false);
+
+  const aplicarCatalogoUsuarios = React.useCallback((lista: UserProfile[]) => {
+    if (!user?.id || lista.length === 0) return false;
+    setUsers(lista.filter((item) => item.id !== user.id));
+    usuariosHidratadosDoCatalogoRef.current = true;
+    return true;
+  }, [user?.id]);
   const carregandoUltimasMensagensRef = useRef(false);
   const conversasEmCarregamentoRef = useRef(new Set<string>());
 
@@ -217,7 +260,7 @@ export const Chat: React.FC = () => {
       }
 
       // 2. Se falhar ou do banco retornar erro, usar busca por consultas separadas (absolutamente imune a falhas)
-      if (error || !data) {
+      if (error) {
         console.log("Buscando mensagens separadamente para máxima compatibilidade...");
         const [sentRes, recvRes] = await Promise.all([
         supabase.
@@ -293,7 +336,7 @@ export const Chat: React.FC = () => {
         console.warn("Falha no .or de busca das últimas mensagens:", orErr);
       }
 
-      if (error || !data) {
+      if (error) {
         const [sentRes, recvRes] = await Promise.all([
         supabase.
         from(TABELAS_SUPABASE.MENSAGENS).
@@ -318,7 +361,6 @@ export const Chat: React.FC = () => {
       if (data) {
         const lastMsgs: Record<string, ChatMessage> = {};
         const lastIncoming: Record<string, ChatMessage> = {};
-        const recebidasPorParceiro: Record<string, ChatMessage[]> = {};
 
         // `data` está em ordem decrescente de created_at; portanto o primeiro item
         // encontrado por contato é a atividade mais recente daquela conversa.
@@ -332,27 +374,15 @@ export const Chat: React.FC = () => {
             if (!lastIncoming[msg.sender_id]) {
               lastIncoming[msg.sender_id] = msg;
             }
-            if (!recebidasPorParceiro[msg.sender_id]) recebidasPorParceiro[msg.sender_id] = [];
-            recebidasPorParceiro[msg.sender_id].push(msg);
           }
         });
 
-        const unread: Record<string, number> = {};
-        Object.entries(recebidasPorParceiro).forEach(([partnerId, recebidas]) => {
-          if (selectedConvIdRef.current === partnerId) {
-            unread[partnerId] = 0;
-            return;
-          }
-
-          const lastSeenId = lastSeenMessageMap[partnerId];
-          if (!lastSeenId) {
-            unread[partnerId] = recebidas.length;
-            return;
-          }
-
-          const indiceVista = recebidas.findIndex((msg) => msg.id === lastSeenId);
-          unread[partnerId] = indiceVista === -1 ? recebidas.length : indiceVista;
-        });
+        const unread = calcularContagemNaoLidasPorParceiro(
+          data as ChatMessage[],
+          user.id,
+          lastSeenMessageMapRef.current,
+          selectedConvIdRef.current,
+        );
 
         setLastMessagesMap(lastMsgs);
         setLastIncomingMessagesMap(lastIncoming);
@@ -366,6 +396,14 @@ export const Chat: React.FC = () => {
   };
 
   const selectedConvIdRef = useRef(selectedConvId);
+  useEffect(() => {
+    if (!user?.id) return;
+    const total = somarContagemPorParceiro(unreadCountsMap);
+    window.dispatchEvent(
+      new CustomEvent(EVENTOS_APLICACAO.CHAT_BADGE_ATUALIZADO, { detail: { total } }),
+    );
+  }, [unreadCountsMap, user?.id]);
+
   useEffect(() => {selectedConvIdRef.current = selectedConvId;}, [selectedConvId]);
 
   const usersRef = useRef(users);
@@ -376,9 +414,20 @@ export const Chat: React.FC = () => {
 
   // Atualizar tudo ao start ou mudar de usuário
   useEffect(() => {
-    fetchUsers();
+    usuariosHidratadosDoCatalogoRef.current = false;
+    if (!user?.id) return;
+
+    const hidratou = aplicarCatalogoUsuarios(catalogProfiles);
+    if (!hidratou) {
+      fetchUsers();
+    }
     fetchAllLastMessages();
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || catalogProfiles.length === 0) return;
+    aplicarCatalogoUsuarios(catalogProfiles);
+  }, [catalogProfiles, user?.id, aplicarCatalogoUsuarios]);
 
   useEffect(() => {
     if (selectedConvId) {
@@ -418,7 +467,7 @@ export const Chat: React.FC = () => {
 
               if (selectedConvIdRef.current === partnerId) {
                 // Se a conversa já está aberta, a nova mensagem é considerada visualizada imediatamente.
-                markConversationAsSeen(partnerId, insertMsg.id);
+                markConversationAsSeen(partnerId, [insertMsg]);
               } else {
                 setUnreadCountsMap((prev) => ({
                   ...prev,
@@ -473,7 +522,9 @@ export const Chat: React.FC = () => {
     // Reconciliacao de seguranca; o fluxo principal continua sendo o Realtime.
     const pollInterval = setInterval(() => {
       if (document.visibilityState !== "visible") return;
-      fetchUsers();
+      if (!usuariosHidratadosDoCatalogoRef.current) {
+        fetchUsers();
+      }
       fetchAllLastMessages();
     }, 120000);
 

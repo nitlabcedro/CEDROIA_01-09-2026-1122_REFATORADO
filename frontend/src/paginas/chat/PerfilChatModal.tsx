@@ -187,7 +187,7 @@ export const ProfileModal: React.FC<{profile: UserProfile;onClose: () => void;}>
                   <FileText size={15} />
                 </div>
                 <div className="chat__informacao-textos">
-                  <span className="chat__informacao-rotulo">IAs no Inventário</span>
+                  <span className="chat__informacao-rotulo">Minhas IAs</span>
                   <span className="chat-perfil-modal__inventario-total">
                     {loadingRecords ?
                     <span className="chat-perfil-modal__carregando" /> :
