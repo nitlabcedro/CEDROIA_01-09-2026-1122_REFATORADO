@@ -648,9 +648,12 @@ export default function ApprovalPage({
         </div> */}
 
         {/* Tabs Menu Navigation */}
-        <div className="aprovacoes__grupo-fila-de-aprovacao-2">
-          <div className="cedro-abas aprovacao-abas">
+        <div className="aprovacoes__grupo-fila-de-aprovacao-2 aprovacao-abas-barra">
+          <div className="cedro-abas aprovacao-abas" role="tablist" aria-label="Seções da aprovação">
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "queue"}
               onClick={() => setActiveTab("queue")}
               className={`cedro-aba ${activeTab === "queue" ? "cedro-aba--ativa" : ""} aprovacoes__botao-fila-de-aprovacao-2 ${
               activeTab === "queue" ?
@@ -663,6 +666,9 @@ export default function ApprovalPage({
             
             {isAdmin &&
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "config"}
               onClick={() => setActiveTab("config")}
               className={`cedro-aba ${activeTab === "config" ? "cedro-aba--ativa" : ""} aprovacoes__botao-fila-de-aprovacao-2 ${
               activeTab === "config" ?
@@ -950,6 +956,7 @@ export default function ApprovalPage({
                                   // setTiLogs("Possui logs");
                                   // setTiAcao("Não");
                                 }}
+                                type="button"
                                 className="grupo-interativo aprovacoes__botao-6">
                                 
                                     <span className="aprovacoes__texto-16" />
@@ -978,6 +985,7 @@ export default function ApprovalPage({
                               }
 
                                 <button
+                                type="button"
                                 onClick={() => onViewRecord(record)}
                                 className="aprovacoes__botao-ver-ficha">
                                 

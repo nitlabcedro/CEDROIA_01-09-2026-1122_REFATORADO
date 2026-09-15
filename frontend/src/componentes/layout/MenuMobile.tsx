@@ -47,7 +47,7 @@ const grupos: GrupoMenuMobile[] = [
   titulo: "Principal",
   itens: [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "inventory", label: "Inventário de IA", icon: ClipboardList },
+  { id: "inventory", label: "Minhas IAs", icon: ClipboardList },
   { id: "new", label: "Nova Solicitação", icon: PlusCircle }]
 
 },

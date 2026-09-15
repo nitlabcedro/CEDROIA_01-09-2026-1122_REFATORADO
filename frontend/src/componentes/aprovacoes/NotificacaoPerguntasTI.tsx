@@ -9,6 +9,10 @@ import {
 "@/servicos/interacoes-ti";
 import type { SolicitacaoInformacoesTI } from "@/tipos";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
+import {
+  INTERVALO_PENDENCIAS_TI_MS,
+  registrarPollingComVisibilidade,
+} from "@/utilitarios/polling-visibilidade";
 
 export default function NotificacaoPerguntasTI() {
   const [pendencias, setPendencias] = useState<SolicitacaoInformacoesTI[]>([]);
@@ -40,21 +44,18 @@ export default function NotificacaoPerguntasTI() {
 
   useEffect(() => {
     componenteAtivoRef.current = true;
-    carregarPendencias();
-    const intervalo = window.setInterval(() => {
-      if (document.visibilityState === "visible") carregarPendencias();
-    }, 30000);
-    const aoFocar = () => carregarPendencias();
-    const aoAlterarVisibilidade = () => {
-      if (document.visibilityState === "visible") carregarPendencias();
-    };
-    window.addEventListener("focus", aoFocar);
-    document.addEventListener("visibilitychange", aoAlterarVisibilidade);
+
+    const controle = registrarPollingComVisibilidade({
+      intervaloMs: INTERVALO_PENDENCIAS_TI_MS,
+      executar: () => {
+        void carregarPendencias();
+      },
+      documento: document,
+      executarAoIniciar: true,
+    });
 
     return () => {
-      window.clearInterval(intervalo);
-      window.removeEventListener("focus", aoFocar);
-      document.removeEventListener("visibilitychange", aoAlterarVisibilidade);
+      controle.dispose();
       componenteAtivoRef.current = false;
       requisicaoPendenteRef.current = false;
     };

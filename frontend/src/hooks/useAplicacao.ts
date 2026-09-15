@@ -1,4 +1,8 @@
 import { ROTAS_API } from "@/constantes/api";
+import {
+  INTERVALO_HEARTBEAT_PRESENCA_MS,
+  registrarPollingComVisibilidade,
+} from "@/utilitarios/polling-visibilidade";
 import { usuarioEhAdmin, usuarioEhModerador, usuarioEhPrivilegiado } from "@/utilitarios/permissoes";
 import { ABAS_APLICACAO, ROTA_REDEFINIR_SENHA, type AbaAplicacao } from "@/constantes/navegacao";
 import { RELACOES_SUPABASE, TABELAS_SUPABASE } from "@/constantes/supabase";
@@ -13,12 +17,20 @@ import {
   checkSupabaseStatus,
   deleteRecord,
   getProfiles,
+  seedGlobalRecordsCache,
+  seedProfilesCache,
   getRecords,
   saveRecordsToSupabase,
   updateRecord,
   updateUserProfile,
 } from "@/servicos/armazenamento";
 import { persistirCancelamentoCoerente } from "@/servicos/cancelamento-solicitacao";
+import {
+  calcularTotalMensagensNaoLidas,
+  LIMITE_MENSAGENS_CONTAGEM_BADGE,
+  mensagemIncrementaBadgeGlobal,
+  obterMapaVistoChat,
+} from "@/servicos/chat-contagem-nao-lidas";
 import { supabase } from "@/servicos/supabase";
 import {
   ApprovalConfig,
@@ -112,6 +124,7 @@ export function useAplicacao() {
   const [workflows, setWorkflows] = useState<ApprovalWorkflow[]>([]);
   const [approvalConfig, setApprovalConfig] = useState<ApprovalConfig>(() => criarConfiguracaoAprovacaoPadrao());
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
+  const [profilesCatalog, setProfilesCatalog] = useState<UserProfile[]>([]);
   const [supabaseStatus, setSupabaseStatus] = useState<"online" | "offline" | "checking">("checking");
   const [selectedRecord, setSelectedRecord] = useState<IARecord | null>(null);
   const [registroIdNavegacao, setRegistroIdNavegacao] = useState<string | null>(registroIdInicial);
@@ -547,40 +560,18 @@ export function useAplicacao() {
           .select("id,sender_id,recipient_id,created_at")
           .eq("recipient_id", user.id)
           .order("created_at", { ascending: false })
-          .limit(500);
+          .limit(LIMITE_MENSAGENS_CONTAGEM_BADGE);
 
         if (error) {
           console.warn("Não foi possível atualizar o contador de mensagens não lidas:", error);
           return;
         }
 
-        let seenMap: Record<string, string> = {};
-        try {
-          const stored = localStorage.getItem(`${CHAVES_ARMAZENAMENTO_LOCAL.MAPA_CHAT_VISUALIZADO_PREFIXO}${user.id}`);
-          seenMap = stored ? JSON.parse(stored) : {};
-        } catch {
-          seenMap = {};
-        }
-
-        const porRemetente: Record<string, any[]> = {};
-        (data || []).forEach((msg: any) => {
-          if (!msg.sender_id || msg.sender_id === user.id) return;
-          if (!porRemetente[msg.sender_id]) porRemetente[msg.sender_id] = [];
-          porRemetente[msg.sender_id].push(msg);
-        });
-
-        let total = 0;
-        Object.entries(porRemetente).forEach(([senderId, recebidas]) => {
-          const lastSeenId = seenMap[senderId];
-          if (!lastSeenId) {
-            total += recebidas.length;
-            return;
-          }
-
-          const indiceVista = recebidas.findIndex((msg: any) => msg.id === lastSeenId);
-          total += indiceVista === -1 ? recebidas.length : indiceVista;
-        });
-
+        const stored = localStorage.getItem(
+          `${CHAVES_ARMAZENAMENTO_LOCAL.MAPA_CHAT_VISUALIZADO_PREFIXO}${user.id}`,
+        );
+        const seenMap = obterMapaVistoChat(stored);
+        const total = calcularTotalMensagensNaoLidas(data || [], user.id, seenMap);
         setUnreadChatCount(total);
       } catch (error) {
         console.warn("Falha ao calcular mensagens não lidas:", error);
@@ -704,19 +695,13 @@ export function useAplicacao() {
       
         const data = await getRecords(user?.id, isPrivileged, profile?.setor, profile?.role);
         setRecords(data);
-      
-        // Sempre buscar perfis para que o chat e outros componentes tenham os dados correspondentes
-        const usersData = await getProfiles();
+        seedGlobalRecordsCache(data);
+
         if (isPrivileged) {
+          const usersData = await getProfiles();
+          seedProfilesCache(usersData);
+          setProfilesCatalog(usersData);
           setProfiles(usersData);
-        } else {
-          const userSector = profile?.setor?.toLowerCase().trim();
-          const filteredUsers = usersData.filter(p => {
-            const isUserAdmin = usuarioEhAdmin(p);
-            const isSameSector = p.setor && userSector && p.setor.toLowerCase().trim() === userSector;
-            return isUserAdmin || isSameSector;
-          });
-          setProfiles(filteredUsers);
         }
 
         // Carregar dados de conformidade e fluxos ativos de aprovação
@@ -753,12 +738,16 @@ export function useAplicacao() {
       }
     };
 
-    updatePresence();
-    const interval = window.setInterval(updatePresence, 60000);
+    const controle = registrarPollingComVisibilidade({
+      intervaloMs: INTERVALO_HEARTBEAT_PRESENCA_MS,
+      executar: () => {
+        void updatePresence();
+      },
+      documento: document,
+      executarAoIniciar: true,
+    });
 
-    return () => {
-      window.clearInterval(interval);
-    };
+    return () => controle.dispose();
   }, [user?.id]);
 
   useEffect(() => {
@@ -783,6 +772,7 @@ export function useAplicacao() {
   // Refs to always keep current values inside real-time event listeners
   const profileRef = React.useRef(profile);
   const profilesRef = React.useRef(profiles);
+  const profilesCatalogRef = React.useRef(profilesCatalog);
 
   useEffect(() => {
     profileRef.current = profile;
@@ -793,16 +783,48 @@ export function useAplicacao() {
   }, [profiles]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    profilesCatalogRef.current = profilesCatalog;
+  }, [profilesCatalog]);
 
-    refreshUnreadChatCount();
-    const handleChatSeen = () => refreshUnreadChatCount();
+  const carregarCatalogoPerfisCompartilhado = React.useCallback(async () => {
+    if (profilesCatalogRef.current.length > 0) return;
+    const usersData = await getProfiles();
+    seedProfilesCache(usersData);
+    setProfilesCatalog(usersData);
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (activeTabRef.current !== "chat") {
+      refreshUnreadChatCount();
+    }
+    const handleChatSeen = () => {
+      if (activeTabRef.current !== "chat") {
+        refreshUnreadChatCount();
+      }
+    };
+    const handleBadgeFromChat = (event: Event) => {
+      const detail = (event as CustomEvent<{ total?: number }>).detail;
+      if (activeTabRef.current === "chat" && typeof detail?.total === "number") {
+        setUnreadChatCount(detail.total);
+      }
+    };
     window.addEventListener(EVENTOS_APLICACAO.CHAT_LEITURA_ATUALIZADA, handleChatSeen);
+    window.addEventListener(EVENTOS_APLICACAO.CHAT_BADGE_ATUALIZADO, handleBadgeFromChat as EventListener);
 
     return () => {
       window.removeEventListener(EVENTOS_APLICACAO.CHAT_LEITURA_ATUALIZADA, handleChatSeen);
+      window.removeEventListener(EVENTOS_APLICACAO.CHAT_BADGE_ATUALIZADO, handleBadgeFromChat as EventListener);
     };
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || activeTab !== "chat") return;
+    carregarCatalogoPerfisCompartilhado();
+    return () => {
+      refreshUnreadChatCount();
+    };
+  }, [activeTab, user?.id, carregarCatalogoPerfisCompartilhado]);
 
   useEffect(() => {
     if (!user) return;
@@ -817,11 +839,20 @@ export function useAplicacao() {
           const msg = payload.new as any;
           if (!msg || msg.sender_id === user.id) return;
 
-          if (msg.recipient_id === user.id) {
-            refreshUnreadChatCount();
+          const currentTab = activeTabRef.current;
+          if (
+            mensagemIncrementaBadgeGlobal(
+              msg,
+              user.id,
+              currentTab === "chat" ? localStorage.getItem(CHAVES_ARMAZENAMENTO_LOCAL.CHAT_ATIVO_COM) : null,
+              localStorage.getItem(CHAVES_ARMAZENAMENTO_LOCAL.CHAT_ATIVO_COM),
+            )
+          ) {
+            if (currentTab !== "chat") {
+              setUnreadChatCount((prev) => prev + 1);
+            }
           }
 
-          const currentTab = activeTabRef.current;
           let shouldNotify = false;
 
           if (currentTab !== "chat") {
@@ -843,7 +874,9 @@ export function useAplicacao() {
 
           if (shouldNotify) {
             try {
-              const cachedSender = profilesRef.current.find((item) => item.id === msg.sender_id);
+              const cachedSender =
+                profilesCatalogRef.current.find((item) => item.id === msg.sender_id) ||
+                profilesRef.current.find((item) => item.id === msg.sender_id);
               let senderName = cachedSender?.full_name;
 
               if (!senderName) {
@@ -1914,6 +1947,7 @@ export function useAplicacao() {
     workflows,
     approvalConfig,
     profiles,
+    profilesCatalog,
     supabaseStatus,
     selectedRecord,
     setSelectedRecord,

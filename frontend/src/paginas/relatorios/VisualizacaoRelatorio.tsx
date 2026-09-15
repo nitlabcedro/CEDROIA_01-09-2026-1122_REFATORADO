@@ -40,7 +40,6 @@ import {
   type VarianteStatusGeral,
 } from "@/utilitarios/status-solicitacao";
 import { montarDadosRelatorioPdf } from "./pdf/dadosRelatorioPdf";
-import { gerarRelatorioPdfEstruturado } from "./pdf/gerarRelatorioPdf";
 import "./RelatorioPdfPainel.css";
 
 
@@ -194,6 +193,7 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
       setPdfUrl(null);
 
       try {
+        const { gerarRelatorioPdfEstruturado } = await import("./pdf/gerarRelatorioPdf");
         const { doc, fileName } = await gerarRelatorioPdfEstruturado(dadosPdf);
         const blob = doc.output("blob");
         urlGerada = URL.createObjectURL(blob);
@@ -416,7 +416,7 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
             className="grupo-interativo relatorio__botao-voltar-ao-inventario">
             
             <ArrowLeft size={14} className="relatorio__icone-arrowleft" />
-            Voltar ao Inventário
+            Voltar para Minhas IAs
           </button>
         </div>
 
@@ -778,7 +778,7 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
                     <Users size={18} />
                   </div>
                   <div className="relatorio__grupo-titulos-card">
-                    <span className="relatorio__texto-identidade relatorio__texto-identidade--azul">Ficha Solicitante</span>
+                    <span className="relatorio__texto-identidade relatorio__texto-identidade--azul">Identificação do solicitante</span>
                     <h4 className="relatorio__titulo-item-o-que-e-esta-ia">Quem solicitou?</h4>
                   </div>
                 </div>
@@ -804,7 +804,7 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
           </div>
         }
 
-        {/* TAB 2: USO DA IA — DADOS DA ETAPA 3 DA NOVA SOLICITAÇÃO */}
+        {/* TAB 2: USO DA IA — DADOS DA ETAPA 2 (OBJETIVO) DA NOVA SOLICITAÇÃO */}
         {activeTab === "finalidade-uso" &&
         <div className="relatorio-uso-ia">
           <div className="relatorio-uso-ia__cabecalho">
@@ -812,7 +812,7 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
               <Target size={19} />
             </div>
             <div>
-              <span className="relatorio-uso-ia__rotulo">Etapa 3 da Nova Solicitação</span>
+              <span className="relatorio-uso-ia__rotulo">Etapa 2 da Nova Solicitação</span>
               <h3 className="relatorio-uso-ia__titulo">Finalidade e Objetivos</h3>
               <p className="relatorio-uso-ia__subtitulo">
                 Informações declaradas pelo solicitante sobre onde a IA será utilizada, seus objetivos e os benefícios esperados.
@@ -838,8 +838,8 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
               <div className="relatorio-uso-ia__card-cabecalho">
                 <span className="relatorio-uso-ia__numero">02</span>
                 <div>
-                  <span className="relatorio-uso-ia__campo-rotulo">Objetivo da utilização</span>
-                  <h4>Objetivos selecionados</h4>
+                  <span className="relatorio-uso-ia__campo-rotulo">Utilizações selecionadas</span>
+                  <h4>Opções escolhidas no formulário</h4>
                 </div>
               </div>
 

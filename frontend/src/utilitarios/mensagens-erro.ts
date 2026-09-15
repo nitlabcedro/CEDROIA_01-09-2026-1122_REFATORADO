@@ -17,7 +17,7 @@ const FALLBACKS: Record<ContextoMensagemErro, string> = {
   "redefinicao-senha": "Não foi possível redefinir sua senha. Tente novamente.",
   perfil: "Não foi possível atualizar o perfil. Tente novamente.",
   chat: "Não foi possível concluir a operação no chat. Tente novamente.",
-  inventario: "Não foi possível concluir a operação no inventário. Tente novamente.",
+  inventario: "Não foi possível concluir a operação em Minhas IAs. Tente novamente.",
   aprovacao: "Não foi possível concluir a operação de aprovação. Tente novamente.",
   administracao: "Não foi possível concluir a operação administrativa. Tente novamente.",
   operacao: "Não foi possível concluir esta operação. Tente novamente.",

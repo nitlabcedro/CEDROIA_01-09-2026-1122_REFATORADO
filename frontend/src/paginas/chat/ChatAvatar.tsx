@@ -1,8 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { obterIniciais } from "./chat.utilitarios";
 
+const normalizarUrlAvatar = (url?: string | null) => {
+  const trimmed = (url || "").trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 // Avatar do Usuário customizado, seguro contra falhas e compatível com Supabase
-export const ChatAvatar: React.FC<{
+const ChatAvatarBase: React.FC<{
   avatarUrl?: string | null;
   fullName?: string;
   tamanho?: "pequeno" | "medio" | "grande" | "principal";
@@ -11,6 +16,7 @@ export const ChatAvatar: React.FC<{
   isOnline?: boolean;
 }> = ({ avatarUrl, fullName, tamanho = "medio", destaque = false, className = "", isOnline }) => {
   const [hasError, setHasError] = useState(false);
+  const stableAvatarUrl = useMemo(() => normalizarUrlAvatar(avatarUrl), [avatarUrl]);
 
   // Geração de iniciais a partir de full_name ou correspondente
   const initials = useMemo(() => obterIniciais(fullName), [fullName]);
@@ -18,9 +24,9 @@ export const ChatAvatar: React.FC<{
   // Resetar falha quando o avatar_url for atualizado
   useEffect(() => {
     setHasError(false);
-  }, [avatarUrl]);
+  }, [stableAvatarUrl]);
 
-  const hasPhoto = avatarUrl && avatarUrl.trim() !== "" && !hasError;
+  const hasPhoto = stableAvatarUrl && !hasError;
 
   return (
     <div className="chat-avatar__container">
@@ -33,9 +39,11 @@ export const ChatAvatar: React.FC<{
         
         {hasPhoto ?
         <img
-          src={avatarUrl}
+          src={stableAvatarUrl}
           alt={fullName || "Avatar"}
           className="chat-avatar__imagem"
+          loading="lazy"
+          decoding="async"
           referrerPolicy="no-referrer"
           onError={() => setHasError(true)} /> :
 
@@ -51,3 +59,5 @@ export const ChatAvatar: React.FC<{
     </div>);
 
 };
+
+export const ChatAvatar = React.memo(ChatAvatarBase);
