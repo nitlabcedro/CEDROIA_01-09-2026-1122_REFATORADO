@@ -192,7 +192,20 @@ async function converterImagemParaJpeg(blob: Blob): Promise<string> {
   });
 }
 
+/** JPEG em data URL — reutilizado entre gerações de PDF na mesma sessão (evita baixar ~1MB repetidamente). */
+let logoCedroJpegCache: string | undefined;
+let logoCedroCarregamento: Promise<string | undefined> | null = null;
+
+/** Apenas para testes: permite isolar o cache entre casos. */
+export const resetCacheLogoRelatorioPdf = () => {
+  logoCedroJpegCache = undefined;
+  logoCedroCarregamento = null;
+};
+
 async function carregarLogoCedro(): Promise<string | undefined> {
+  if (logoCedroJpegCache) return logoCedroJpegCache;
+  if (logoCedroCarregamento) return logoCedroCarregamento;
+
   if (
     typeof window === "undefined" ||
     typeof document === "undefined" ||
@@ -201,30 +214,40 @@ async function carregarLogoCedro(): Promise<string | undefined> {
     return undefined;
   }
 
-  const base = new URL(".", document.baseURI);
-  const candidatos = [
-    "LOGOCEDRO.png",
-    "LOGOCEDRO-interface.png",
-  ];
+  logoCedroCarregamento = (async () => {
+    const base = new URL(".", document.baseURI);
+    const candidatos = [
+      "LOGOCEDRO.png",
+      "LOGOCEDRO-interface.png",
+    ];
 
-  for (const arquivo of candidatos) {
-    try {
-      const url = new URL(arquivo, base).toString();
-      const resposta = await fetch(url, { cache: "no-store" });
-      if (!resposta.ok) continue;
+    for (const arquivo of candidatos) {
+      try {
+        const url = new URL(arquivo, base).toString();
+        const resposta = await fetch(url);
+        if (!resposta.ok) continue;
 
-      const blob = await resposta.blob();
-      if (!blob.size) continue;
-      if (blob.type && !blob.type.toLowerCase().startsWith("image/")) continue;
+        const blob = await resposta.blob();
+        if (!blob.size) continue;
+        if (blob.type && !blob.type.toLowerCase().startsWith("image/")) continue;
 
-      return await converterImagemParaJpeg(blob);
-    } catch (erro) {
-      console.warn(`Não foi possível preparar a logo ${arquivo}.`, erro);
+        const jpeg = await converterImagemParaJpeg(blob);
+        logoCedroJpegCache = jpeg;
+        return jpeg;
+      } catch (erro) {
+        console.warn(`Não foi possível preparar a logo ${arquivo}.`, erro);
+      }
     }
-  }
 
-  console.warn("Nenhuma logo válida foi encontrada para o relatório. Usando marca textual de segurança.");
-  return undefined;
+    console.warn("Nenhuma logo válida foi encontrada para o relatório. Usando marca textual de segurança.");
+    return undefined;
+  })();
+
+  try {
+    return await logoCedroCarregamento;
+  } finally {
+    logoCedroCarregamento = null;
+  }
 }
 
 /**
@@ -675,7 +698,7 @@ class DocumentoRelatorioCedroUmaPagina {
       proximoY,
     );
     proximoY = this.desenharBlocoTextoPaginado(
-      "Objetivos da utilização",
+      "Utilizações selecionadas",
       objetivos.length ? objetivos.join(" • ") : "Não informado.",
       proximoY,
     );

@@ -18,4 +18,6 @@ export const CHAVES_ARMAZENAMENTO_LOCAL = {
 export const EVENTOS_APLICACAO = {
   CHAT_LEITURA_ATUALIZADA: "cedro-chat-seen",
   CHAT_ABRIR_CONVERSA: "cedro-open-chat",
+  /** Total agregado de não lidas calculado pelo Chat (evita segunda consulta global na aba chat). */
+  CHAT_BADGE_ATUALIZADO: "cedro-chat-badge",
 } as const;

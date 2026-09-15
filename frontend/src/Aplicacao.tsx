@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -13,19 +13,22 @@ import { Sidebar } from "@/componentes/layout/BarraLateral";
 import { Topbar } from "@/componentes/layout/BarraSuperior";
 import MenuMobile from "@/componentes/layout/MenuMobile";
 import FundoLaboratorio from "@/componentes/fundo/FundoLaboratorio";
+import CarregamentoPagina from "@/componentes/comuns/CarregamentoPagina";
 import { useAplicacao } from "@/hooks/useAplicacao";
-import Painel from "@/paginas/painel/Painel";
-import Inventario from "@/paginas/inventario/Inventario";
-import MapaSetores from "@/paginas/relatorios/MapaSetores";
-import PainelAdministrativo from "@/paginas/administracao/PainelAdministrativo";
-import GerenciadorSetores from "@/paginas/administracao/GerenciadorSetores";
-import FormularioCadastro from "@/paginas/inventario/FormularioCadastro";
-import VisualizacaoRelatorio from "@/paginas/relatorios/VisualizacaoRelatorio";
-import { Auth as Autenticacao } from "@/paginas/autenticacao/Autenticacao";
-import { UserProfileView as PerfilUsuario } from "@/paginas/autenticacao/PerfilUsuario";
-import { Chat } from "@/paginas/chat/Chat";
-import PaginaAprovacao from "@/paginas/aprovacoes/PaginaAprovacao";
-import RedefinirSenha from "@/paginas/autenticacao/RedefinirSenha";
+import {
+  Autenticacao,
+  Chat,
+  FormularioCadastro,
+  GerenciadorSetores,
+  Inventario,
+  MapaSetores,
+  PaginaAprovacao,
+  Painel,
+  PainelAdministrativo,
+  PerfilUsuario,
+  RedefinirSenha,
+  VisualizacaoRelatorio,
+} from "@/paginas/lazyPaginas";
 import NotificacaoPerguntasTI from "@/componentes/aprovacoes/NotificacaoPerguntasTI";
 import {
   atualizarMensagemTransitoriaLogin,
@@ -46,6 +49,7 @@ export default function Aplicacao() {
     workflows,
     approvalConfig,
     profiles,
+    profilesCatalog,
     supabaseStatus,
     selectedRecord,
     originTab,
@@ -118,43 +122,45 @@ export default function Aplicacao() {
   ) {
     return (
       <div className={isDarkMode ? "dark" : ""}>
-        <RedefinirSenha
-          onConcluida={(mensagem) => setMensagemLogin((atual) =>
-            atualizarMensagemTransitoriaLogin(atual, {
-              tipo: "redefinicao-concluida",
-              mensagem,
-            })
-          )}
-          onRetornarLogin={() => forcarRenderAutenticacao((versao) => versao + 1)}
-        />
+        <Suspense fallback={<CarregamentoPagina variante="tela-cheia" />}>
+          <RedefinirSenha
+            onConcluida={(mensagem) => setMensagemLogin((atual) =>
+              atualizarMensagemTransitoriaLogin(atual, {
+                tipo: "redefinicao-concluida",
+                mensagem,
+              })
+            )}
+            onRetornarLogin={() => forcarRenderAutenticacao((versao) => versao + 1)}
+          />
+        </Suspense>
       </div>);
 
   }
 
   if (telaAplicacao === "carregando") {
-    return (
-      <div className="aplicacao__grupo">
-        <div className="aplicacao__grupo-2"></div>
-      </div>);
+    return <CarregamentoPagina variante="tela-cheia" />;
 
   }
 
   if (telaAplicacao === "login") {
     return (
       <div className={isDarkMode ? "dark" : ""}>
-        <Autenticacao
-          mensagemInicial={mensagemLogin}
-          onAuthSuccess={() => setMensagemLogin((atual) =>
-            atualizarMensagemTransitoriaLogin(atual, {
-              tipo: "login-normal-concluido",
-            })
-          )}
-        />
+        <Suspense fallback={<CarregamentoPagina variante="tela-cheia" />}>
+          <Autenticacao
+            mensagemInicial={mensagemLogin}
+            onAuthSuccess={() => setMensagemLogin((atual) =>
+              atualizarMensagemTransitoriaLogin(atual, {
+                tipo: "login-normal-concluido",
+              })
+            )}
+          />
+        </Suspense>
       </div>);
 
   }
 
   const renderConteudoAtivo = () =>
+  <Suspense fallback={<CarregamentoPagina />}>
   <>
       {activeTab === "dashboard" &&
     <Painel records={records} onNavigate={navegarPara} onView={handleView} isAdmin={isCurrentUserAdmin} workflows={workflows} approvalConfig={approvalConfig} currentUserId={user.id} />
@@ -221,6 +227,7 @@ export default function Aplicacao() {
       {activeTab === "new" &&
     <FormularioCadastro
       initialData={selectedRecord}
+      existingRecords={records}
       onSave={handleSave}
       onCancel={() => navegarPara("inventory")}
       isAdmin={isCurrentUserAdmin} />
@@ -262,9 +269,10 @@ export default function Aplicacao() {
 
 
     }
-      {activeTab === "chat" && <Chat />}
+      {activeTab === "chat" && <Chat catalogProfiles={profilesCatalog} />}
       {activeTab === "profile" && <PerfilUsuario />}
-    </>;
+    </>
+  </Suspense>;
 
 
   return (

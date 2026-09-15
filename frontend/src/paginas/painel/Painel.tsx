@@ -24,8 +24,6 @@ import {
   Pie,
   Cell } from
 "recharts";
-import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
 import { IARecord } from "@/tipos";
 import {
   KPICard,
@@ -94,8 +92,12 @@ export default function Dashboard({
   }, [records, workflows]);
 
   const handleExportExcel = async () => {
+    const [{ default: ExcelJS }, { saveAs }] = await Promise.all([
+      import("exceljs"),
+      import("file-saver"),
+    ]);
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Inventário de IA Cedro");
+    const worksheet = workbook.addWorksheet("Minhas IAs Cedro");
 
     const bgBrandGreen = "075618";
     const whiteText = "FFFFFF";
@@ -270,7 +272,7 @@ export default function Dashboard({
     if (arr.length < 3) {
       arr.push({
         id: "act-inv",
-        type: "Inventário Geral",
+        type: "Minhas IAs",
         iaName: "Mapear nova ferramenta integrada",
         date: "Rotina",
         icon: <PlusCircle size={16} className="painel__icone-pluscircle" />,
@@ -334,7 +336,7 @@ export default function Dashboard({
         <div className="painel-cartao painel-grafico cedro-card-premium painel__painel-cartao-estrutura">
           <div className="painel__grupo-evolucao-do-inventario">
             <div className="painel__grupo-evolucao-do-inventario-crescim">
-              <h2 className="painel__titulo-secao-evolucao-do-inventario">Evolução do inventário</h2>
+              <h2 className="painel__titulo-secao-evolucao-do-inventario">Evolução de Minhas IAs</h2>
               <p className="painel__descricao-crescimento-acumulado-das-ias-">Crescimento acumulado das IAs cadastradas</p>
             </div>
             <CustomDropdown

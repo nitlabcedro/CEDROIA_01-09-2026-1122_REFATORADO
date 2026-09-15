@@ -707,7 +707,7 @@ export default function SectorMap({ records, profiles, workflows = [] }: SectorM
                   <button
                     type="button"
                     onClick={() => {
-                      showTempFeedback("Encaminhando solicitação de edição para o painel do inventário.");
+                      showTempFeedback("Encaminhando solicitação de edição para Minhas IAs.");
                     }}
                     className="mapa-ias__botao-editar-cadastro"
                   >

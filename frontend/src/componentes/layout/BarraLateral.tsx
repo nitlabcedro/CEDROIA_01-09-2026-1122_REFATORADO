@@ -107,11 +107,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     label: "Dashboard",
     icon: LayoutDashboard,
     badge: null,
-    description: "Visão geral do inventário e KPIs"
+    description: "Visão geral de Minhas IAs e KPIs"
   },
   {
     id: "inventory",
-    label: "Inventário de IA",
+    label: "Minhas IAs",
     icon: ClipboardList,
     badge: recordsCount > 0 ? recordsCount : null,
     description: "Catálogo completo de ferramentas IA"
@@ -180,7 +180,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   );
 
   const groupConfigs = [
-  { title: "IA e Inventário", itemIds: ["dashboard", "inventory", "new"] },
+  { title: "Minhas IAs e solicitações", itemIds: ["dashboard", "inventory", "new"] },
   {
     title: "Administração",
     itemIds: ["approval_queue", "sectors", "sectors_mgr", "admin"],

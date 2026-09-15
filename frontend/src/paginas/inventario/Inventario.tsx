@@ -8,8 +8,6 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Search, Eye, ArrowUpDown, AlertTriangle, CheckCircle2, PlusCircle, Database, FileSpreadsheet, ChevronLeft, ChevronRight, RotateCcw, ClipboardList, ShieldCheck, MoreVertical, Pencil, XCircle } from "lucide-react";
 import { IARecord, ApprovalWorkflow } from "@/tipos";
-import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
 import {
   obterStatusGeralDoRegistro,
   obterVarianteStatus,
@@ -243,8 +241,12 @@ export default function Inventory({
   };
 
   const exportExcel = async () => {
+    const [{ default: ExcelJS }, { saveAs }] = await Promise.all([
+      import("exceljs"),
+      import("file-saver"),
+    ]);
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Inventário IA Cedro");
+    const worksheet = workbook.addWorksheet("Minhas IAs Cedro");
 
     const brandGreen = "00C875";
     const labDark = "0F172A";
@@ -479,7 +481,7 @@ export default function Inventory({
       {/* <div className="inventario-cabecalho inventario__inventario-cabecalho-estrutura">
         <div className="inventario-cabecalho__texto">
           <span className="inventario-cabecalho__sobretitulo">Governança de IA</span>
-          <h1 className="inventario-cabecalho__titulo">Inventário de IA</h1>
+          <h1 className="inventario-cabecalho__titulo">Minhas IAs</h1>
           <p className="inventario-cabecalho__descricao">Acompanhe, filtre e gerencie as soluções registradas no Cedro IA.</p>
         </div>
 
@@ -489,7 +491,7 @@ export default function Inventory({
             className="inventario__botao-exportar-inventario">
             
             <FileSpreadsheet size={16} className="inventario__icone-filespreadsheet" />
-            <span>Exportar inventário</span>
+            <span>Exportar Minhas IAs</span>
           </button>
           <button
             onClick={onAdd}
@@ -675,7 +677,7 @@ export default function Inventory({
         <div className="inventario__grupo-nenhum-registro-encontrado-no-">
             <Database size={34} className="inventario__icone-database" />
             <p className="inventario__descricao-nenhum-registro-encontrado-no-">
-              Nenhum registro encontrado no inventário
+              Nenhum registro encontrado em Minhas IAs
             </p>
           </div>
         }
@@ -884,7 +886,7 @@ export default function Inventory({
                     <div className="inventario__grupo-nenhum-registro-encontrado-no--2">
                       <Database size={40} className="inventario__icone-database-2" />
                       <p className="inventario__descricao-nenhum-registro-encontrado-no--2">
-                        Nenhum registro encontrado no inventário
+                        Nenhum registro encontrado em Minhas IAs
                       </p>
                     </div>
                   </td>

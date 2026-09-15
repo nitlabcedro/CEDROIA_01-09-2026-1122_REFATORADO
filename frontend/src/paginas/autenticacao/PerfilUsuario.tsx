@@ -737,8 +737,8 @@ export const UserProfileView: React.FC = () => {
                     }
                   </motion.div>
 
-                  {/* URL da foto de perfil field */}
-                  <motion.div variants={itemVariants} className="perfil__elemento-url-da-foto-de-perfil">
+                  {/* URL da foto de perfil — oculto na interface; valor ainda pode ser definido por upload/outros fluxos */}
+                  <motion.div variants={itemVariants} className="perfil__elemento-url-da-foto-de-perfil" hidden>
                     <label className="perfil__rotulo-nome-completo">
                       <Camera size={12} className="perfil__icone-user-2" /> URL da foto de perfil
                     </label>

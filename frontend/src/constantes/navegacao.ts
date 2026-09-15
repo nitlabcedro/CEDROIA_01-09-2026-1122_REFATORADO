@@ -40,7 +40,7 @@ export function normalizarAbaAplicacao(valor: string | null | undefined): AbaApl
 
 export const TITULOS_ABAS: Record<AbaAplicacao, string> = {
   dashboard: "Dashboard",
-  inventory: "Inventário de IA",
+  inventory: "Minhas IAs",
   new: "Nova Solicitação",
   report: "Relatório",
   profile: "Meu Perfil",

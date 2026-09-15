@@ -161,7 +161,7 @@ export default function SystemControls({
             </div>
 
             <p className="controles-sistema__descricao-define-o-rigor-com-que-os-cole">
-              Define o rigor com que os coletores e filtros de formulário e inventário impõem validações e termos de tratamento sobre os dados cadastrados.
+              Define o rigor com que os coletores e filtros de formulário e Minhas IAs impõem validações e termos de tratamento sobre os dados cadastrados.
             </p>
 
             {/* Selector Options */}
