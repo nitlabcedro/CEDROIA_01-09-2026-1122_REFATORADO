@@ -18,4 +18,9 @@ describe("useAplicacao — persistência da decisão", () => {
     assert.match(fonte, /throw new Error\(errRes\.error\);/);
     assert.match(fonte, /await refreshRecords\(\);\s*throw error;/);
   });
+
+  it("persiste coluna status e valida linha ao negar no fallback Supabase", () => {
+    assert.match(fonte, /updatePayload\.status = "Negado"/);
+    assert.match(fonte, /nenhuma linha foi atualizada no banco/);
+  });
 });

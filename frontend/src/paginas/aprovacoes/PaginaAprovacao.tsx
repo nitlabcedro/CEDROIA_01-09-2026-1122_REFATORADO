@@ -47,7 +47,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { IARecord, StatusAuditoria, UserProfile, ApprovalConfig, ApprovalWorkflow, SolicitacaoInformacoesTI } from "@/tipos";
 import { listarInteracoesTI } from "@/servicos/interacoes-ti";
-import { obterStatusGeralDoRegistro } from "@/utilitarios/status-solicitacao";
+import { fluxoEncerrado, obterStatusGeralDoRegistro } from "@/utilitarios/status-solicitacao";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 import {
   INTERVALO_PENDENCIAS_TI_MS,
@@ -342,7 +342,9 @@ export default function ApprovalPage({
   const filteredRecords = useMemo(() => {
     let list = records.filter((r) => {
       const status = getRecordStatus(r);
-      return status !== "Cancelada" && status !== "Não aprovada";
+      if (status === "Cancelada") return false;
+      if (queueFilter !== "all" && status === "Não aprovada") return false;
+      return true;
     });
 
     // Se o usuário logado pertence às etapas finais do fluxo, ele SÓ pode ver as IAs que estão aguardando estritamente a sua aprovação
@@ -352,8 +354,7 @@ export default function ApprovalPage({
         if (!isPending) return false;
 
         const wf = getRecordWf(r.id);
-        const isWfFinished = wf && (wf.finalStatus === "aprovado" || wf.finalStatus === "negado" || wf.finalStatus === "cancelado");
-        if (isWfFinished) return false;
+        if (fluxoEncerrado(r, wf)) return false;
 
         const currentStepNum = wf ? wf.currentStep : 1;
         // Deve estar exatamente na etapa dele (4 ou 5)
@@ -398,8 +399,7 @@ export default function ApprovalPage({
           if (!isPending) return false;
 
           const wf = getRecordWf(r.id);
-          const isWfFinished = wf && (wf.finalStatus === "aprovado" || wf.finalStatus === "negado" || wf.finalStatus === "cancelado");
-          if (isWfFinished) return false;
+          if (fluxoEncerrado(r, wf)) return false;
 
           const currentStepNum = wf ? wf.currentStep : 1;
           const stepDef = currentSteps.find((s) => s.stepNumber === currentStepNum);
@@ -432,8 +432,7 @@ export default function ApprovalPage({
       const isPending = recordEstaPendente(r);
       if (!isPending) return false;
       const wf = workflows.find((w) => w.iaRecordId === r.id);
-      const isWfFinished = wf && (wf.finalStatus === "aprovado" || wf.finalStatus === "negado" || wf.finalStatus === "cancelado");
-      if (isWfFinished) return false;
+      if (fluxoEncerrado(r, wf)) return false;
 
       const currentStepNum = wf ? wf.currentStep : 1;
       const stepDef = currentSteps.find((s) => s.stepNumber === currentStepNum);

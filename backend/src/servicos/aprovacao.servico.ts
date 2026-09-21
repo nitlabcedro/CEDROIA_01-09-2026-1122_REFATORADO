@@ -33,11 +33,15 @@ function obterEtapasOficiaisComResponsaveis(rows: any[] | null | undefined) {
 }
 
 export function garantirGravacaoSupabase(
-  resultado: { error?: { message?: string } | null },
+  resultado: { error?: { message?: string } | null; data?: unknown[] | null },
   contexto: string,
+  exigirLinhaAtualizada = false,
 ) {
   if (resultado?.error) {
     throw new Error(`${contexto}: ${resultado.error.message || "Falha ao gravar no banco."}`);
+  }
+  if (exigirLinhaAtualizada && (!resultado.data || resultado.data.length === 0)) {
+    throw new Error(`${contexto}: nenhuma linha foi atualizada no banco.`);
   }
 }
 
@@ -776,99 +780,127 @@ export async function decidirWorkflow(req: Request, res: Response) {
             .update(stepUpdatePayload)
             .eq("id", currentStepData.id);
           garantirGravacaoSupabase({ error: stepLegacyError }, "Não foi possível registrar a decisão da etapa");
-          const { error: workflowLegacyError } = await supabaseAdmin
+          const { data: workflowLegacy, error: workflowLegacyError } = await supabaseAdmin
             .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
             .update(workflowUpdatePayload)
-            .eq("id", wfData.id);
-          garantirGravacaoSupabase({ error: workflowLegacyError }, "Não foi possível atualizar o fluxo de aprovação");
+            .eq("id", wfData.id)
+            .select("id, final_status")
+            .limit(1);
+          garantirGravacaoSupabase(
+            { error: workflowLegacyError, data: workflowLegacy },
+            "Não foi possível atualizar o fluxo de aprovação",
+            true,
+          );
         } else {
           const erroMapeado = mapearErroRpcInteracaoTI(rpcError);
           return res.status(erroMapeado.status).json({ error: erroMapeado.mensagem });
         }
       }
     } else {
-      const { error: workflowDecisionError } = await supabaseAdmin
+      const { data: workflowPersistido, error: workflowDecisionError } = await supabaseAdmin
         .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
         .update(workflowUpdatePayload)
-        .eq("id", wfData.id);
-      garantirGravacaoSupabase({ error: workflowDecisionError }, "Não foi possível atualizar o fluxo de aprovação");
+        .eq("id", wfData.id)
+        .select("id, final_status")
+        .limit(1);
+      garantirGravacaoSupabase(
+        { error: workflowDecisionError, data: workflowPersistido },
+        "Não foi possível atualizar o fluxo de aprovação",
+        true,
+      );
     }
 
-    // 7. Atualizar o registro da IA no banco
-    const { data: iaRecord } = await supabaseAdmin
+    // 7. Atualizar o registro da IA no banco (sempre — colunas + JSON data)
+    const { data: iaRecord, error: iaLookupError } = await supabaseAdmin
       .from(TABELAS_SUPABASE.REGISTROS_IA)
       .select("data")
       .eq("id", recordId)
-      .single();
+      .maybeSingle();
 
-    if (iaRecord?.data) {
-      const recordData = iaRecord.data as any;
-      let actionLabel = decision === "aprovado"
-        ? `Etapa ${currentStepNumber}/${maxStep} aprovada por ${fullName}`
-        : `Etapa ${currentStepNumber}/${maxStep} negada por ${fullName}`;
-
-      if (decision === "negado" && isFinancialStep) {
-        actionLabel = `Direção Financeira: parecer desfavorável. Fluxo concluído com aprovação da Presidência.`;
-      }
-
-      const updatedData = {
-        ...recordData,
-        ...(coordinatorData || {}),
-        statusAuditoria: newAuditStatus,
-        statusUso: newStatusUso,
-        observacoesGeraisOriginais: recordData.observacoesGeraisOriginais || recordData.observacoesGerais || "",
-        historico: [{
-          date: new Date().toISOString(),
-          user: fullName,
-          action: actionLabel,
-          message: comment || actionLabel
-        }, ...(recordData.historico || [])]
-      };
-
-      const updatePayload: any = {
-        data: updatedData,
-        status_uso: newStatusUso,
-      };
-
-      const currentDateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-
-      if (decision === "negado" && isFinancialStep) {
-        updatePayload.status_uso = "Aprovado";
-        updatedData.statusUso = "Aprovado";
-        updatedData.statusAuditoria = "Aprovado";
-        updatePayload.observacoes_gerais = comment || "Direção Financeira: parecer desfavorável. Fluxo concluído com aprovação da Presidência.";
-      } else if (decision === "negado") {
-        updatePayload.status_uso = "Não aprovado";
-        updatePayload.parecer_tecnico = "IA indeferida no fluxo de aprovação.";
-        updatePayload.data_aprovacao = currentDateStr;
-        if (comment) {
-          updatePayload.observacoes_gerais = comment;
-        }
-
-        updatedData.statusUso = "Não aprovado";
-        updatedData.statusAuditoria = "Negado";
-        updatedData.parecerTecnico = "IA indeferida no fluxo de aprovação.";
-        updatedData.dataAprovacao = currentDateStr;
-      } else if (decision === "aprovado" && isFinalStep) {
-        updatePayload.status_uso = "Aprovado";
-        updatePayload.parecer_tecnico = "IA aprovada no fluxo de aprovação.";
-        updatePayload.data_aprovacao = currentDateStr;
-        if (comment) {
-          updatePayload.observacoes_gerais = comment;
-        }
-
-        updatedData.statusUso = "Aprovado";
-        updatedData.statusAuditoria = "Aprovado";
-        updatedData.parecerTecnico = "IA aprovada no fluxo de aprovação.";
-        updatedData.dataAprovacao = currentDateStr;
-      }
-
-      const { error: recordDecisionError } = await supabaseAdmin
-        .from(TABELAS_SUPABASE.REGISTROS_IA)
-        .update(updatePayload)
-        .eq("id", recordId);
-      garantirGravacaoSupabase({ error: recordDecisionError }, "Não foi possível atualizar o registro da solicitação");
+    if (iaLookupError) {
+      throw new Error(`Não foi possível localizar o registro da solicitação: ${iaLookupError.message}`);
     }
+    if (!iaRecord) {
+      throw new Error("Registro de IA não encontrado para persistir a decisão.");
+    }
+
+    const recordData = (iaRecord.data as Record<string, unknown> | null) || {};
+    let actionLabel = decision === "aprovado"
+      ? `Etapa ${currentStepNumber}/${maxStep} aprovada por ${fullName}`
+      : `Etapa ${currentStepNumber}/${maxStep} negada por ${fullName}`;
+
+    if (decision === "negado" && isFinancialStep) {
+      actionLabel = `Direção Financeira: parecer desfavorável. Fluxo concluído com aprovação da Presidência.`;
+    }
+
+    const updatedData: Record<string, unknown> = {
+      ...recordData,
+      ...(coordinatorData || {}),
+      statusAuditoria: newAuditStatus,
+      statusUso: newStatusUso,
+      observacoesGeraisOriginais: recordData.observacoesGeraisOriginais || recordData.observacoesGerais || "",
+      historico: [{
+        date: new Date().toISOString(),
+        user: fullName,
+        action: actionLabel,
+        message: comment || actionLabel
+      }, ...((recordData.historico as unknown[]) || [])]
+    };
+
+    const updatePayload: Record<string, unknown> = {
+      data: updatedData,
+      status: newAuditStatus,
+      status_uso: newStatusUso,
+      updated_at: new Date().toISOString(),
+    };
+
+    const currentDateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+    if (decision === "negado" && isFinancialStep) {
+      updatePayload.status = "Aprovado";
+      updatePayload.status_uso = "Aprovado";
+      updatedData.statusUso = "Aprovado";
+      updatedData.statusAuditoria = "Aprovado";
+      updatePayload.observacoes_gerais = comment || "Direção Financeira: parecer desfavorável. Fluxo concluído com aprovação da Presidência.";
+    } else if (decision === "negado") {
+      updatePayload.status = "Negado";
+      updatePayload.status_uso = "Não aprovado";
+      updatePayload.parecer_tecnico = "IA indeferida no fluxo de aprovação.";
+      updatePayload.data_aprovacao = currentDateStr;
+      if (comment) {
+        updatePayload.observacoes_gerais = comment;
+      }
+
+      updatedData.statusUso = "Não aprovado";
+      updatedData.statusAuditoria = "Negado";
+      updatedData.parecerTecnico = "IA indeferida no fluxo de aprovação.";
+      updatedData.dataAprovacao = currentDateStr;
+    } else if (decision === "aprovado" && isFinalStep) {
+      updatePayload.status = "Aprovado";
+      updatePayload.status_uso = "Aprovado";
+      updatePayload.parecer_tecnico = "IA aprovada no fluxo de aprovação.";
+      updatePayload.data_aprovacao = currentDateStr;
+      if (comment) {
+        updatePayload.observacoes_gerais = comment;
+      }
+
+      updatedData.statusUso = "Aprovado";
+      updatedData.statusAuditoria = "Aprovado";
+      updatedData.parecerTecnico = "IA aprovada no fluxo de aprovação.";
+      updatedData.dataAprovacao = currentDateStr;
+    }
+
+    const { data: registroPersistido, error: recordDecisionError } = await supabaseAdmin
+      .from(TABELAS_SUPABASE.REGISTROS_IA)
+      .update(updatePayload)
+      .eq("id", recordId)
+      .select("id, status, status_uso")
+      .limit(1);
+    garantirGravacaoSupabase(
+      { error: recordDecisionError, data: registroPersistido },
+      "Não foi possível atualizar o registro da solicitação",
+      true,
+    );
 
     let responseMessage = "";
     if (decision === "negado" && isFinancialStep) {

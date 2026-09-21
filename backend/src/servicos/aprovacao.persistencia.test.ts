@@ -21,8 +21,16 @@ describe("persistência das decisões de aprovação", () => {
 
   it("confere error das gravações de etapa, fluxo e registro na decisão", () => {
     assert.match(fonte, /garantirGravacaoSupabase\(\{ error: stepDecisionError \}/);
-    assert.match(fonte, /garantirGravacaoSupabase\(\{ error: workflowDecisionError \}/);
-    assert.match(fonte, /garantirGravacaoSupabase\(\{ error: recordDecisionError \}/);
+    assert.match(fonte, /garantirGravacaoSupabase\(\s*\{ error: workflowDecisionError, data: workflowPersistido \}/);
+    assert.match(fonte, /garantirGravacaoSupabase\(\s*\{ error: recordDecisionError, data: registroPersistido \}/);
+    assert.match(fonte, /updatePayload\.status = "Negado"/);
     assert.match(fonte, /if \(nextStep >= 3\) \{\s*newStatusUso = "Em teste\/piloto";/);
+  });
+
+  it("exige linha atualizada quando gravação crítica não afeta registros", () => {
+    assert.throws(
+      () => garantirGravacaoSupabase({ error: null, data: [] }, "fluxo", true),
+      /nenhuma linha foi atualizada/,
+    );
   });
 });

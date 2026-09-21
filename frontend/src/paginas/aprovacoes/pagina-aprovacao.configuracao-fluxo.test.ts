@@ -46,3 +46,12 @@ describe("PaginaAprovacao — configurar fluxo", () => {
     assert.match(fonte, /disabled=\{possuiSolicitacaoTiPendente \|\| salvandoDecisaoEtapa\}/);
   });
 });
+
+describe("PaginaAprovacao — filas após negativa", () => {
+  const fonte = ler();
+
+  it("mantém IAs negadas em Todos e remove das filas ativas", () => {
+    assert.match(fonte, /queueFilter !== "all" && status === "Não aprovada"/);
+    assert.match(fonte, /fluxoEncerrado\(r, wf\)/);
+  });
+});

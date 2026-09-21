@@ -15,10 +15,23 @@ export type StatusGeral = (typeof STATUS_GERAIS_OFICIAIS)[number];
 
 export type VarianteStatusGeral = "analise" | "teste" | "aprovada" | "negada" | "cancelada";
 
+export interface WorkflowStepStatusInput {
+  stepNumber?: number | null;
+  status?: string | null;
+  isOpinionOnly?: boolean | null;
+}
+
 export interface WorkflowStatusInput {
   finalStatus?: string | null;
   currentStep?: number | null;
+  steps?: WorkflowStepStatusInput[] | null;
 }
+
+const STATUS_GERAIS_TERMINAIS: StatusGeral[] = [
+  "Aprovada",
+  "Não aprovada",
+  "Cancelada",
+];
 
 function normalizarTexto(status: string): string {
   return String(status)
@@ -104,6 +117,80 @@ export function obterStatusPorWorkflow(
   return null;
 }
 
+/**
+ * Etapa decisória com "negado" encerra o fluxo, exceto parecer desfavorável
+ * da etapa financeira (somente opinião — não reprova a IA).
+ */
+export function obterStatusPorNegacaoEmEtapas(
+  workflow?: WorkflowStatusInput | null,
+): StatusGeral | null {
+  if (!workflow?.steps?.length) return null;
+
+  for (const step of workflow.steps) {
+    const statusEtapa = normalizarTexto(step.status || "");
+    if (statusEtapa !== "negado") continue;
+    if (step.isOpinionOnly) continue;
+    return "Não aprovada";
+  }
+
+  return null;
+}
+
+function obterStatusNormalizadoDoRegistro(record: {
+  statusUso?: string | null;
+  statusAuditoria?: string | null;
+}): StatusGeral | null {
+  const usoNorm = record.statusUso ? normalizar(record.statusUso) : null;
+  const audNorm = record.statusAuditoria ? normalizar(record.statusAuditoria) : null;
+
+  if (audNorm && STATUS_GERAIS_TERMINAIS.includes(audNorm)) return audNorm;
+  if (usoNorm && STATUS_GERAIS_TERMINAIS.includes(usoNorm)) return usoNorm;
+  if (usoNorm) return usoNorm;
+  if (audNorm) return audNorm;
+
+  return null;
+}
+
+/** Fluxo encerrado (aprovada, negada ou cancelada) — filas ativas de aprovação. */
+export function fluxoEncerrado(
+  record: {
+    statusUso?: string | null;
+    statusAuditoria?: string | null;
+  },
+  workflow?: WorkflowStatusInput | null,
+): boolean {
+  const status = obterStatusGeralDoRegistro(record, workflow);
+  return (
+    status === "Aprovada" ||
+    status === "Não aprovada" ||
+    status === "Cancelada"
+  );
+}
+
+/**
+ * Detecta divergência crítica: etapa negada mas status global ainda "em andamento".
+ */
+export function detectarDivergenciaEncerramentoNegado(
+  record: {
+    statusUso?: string | null;
+    statusAuditoria?: string | null;
+  },
+  workflow?: WorkflowStatusInput | null,
+): boolean {
+  const negacaoEtapa = obterStatusPorNegacaoEmEtapas(workflow);
+  if (negacaoEtapa !== "Não aprovada") return false;
+
+  const finalWorkflow = normalizarTexto(workflow?.finalStatus || "");
+  if (finalWorkflow === "negado" || finalWorkflow === "cancelado") return false;
+
+  const statusPersistido = obterStatusNormalizadoDoRegistro(record);
+  if (statusPersistido === "Não aprovada" || statusPersistido === "Aprovada") {
+    return false;
+  }
+
+  return true;
+}
+
 export function obterStatusGeralDoRegistro(
   record: {
     statusUso?: string | null;
@@ -111,8 +198,7 @@ export function obterStatusGeralDoRegistro(
   },
   workflow?: WorkflowStatusInput | null,
 ): StatusGeral {
-  const statusArmazenado = record.statusUso || record.statusAuditoria;
-  const statusNormalizado = statusArmazenado ? normalizar(statusArmazenado) : null;
+  const statusNormalizado = obterStatusNormalizadoDoRegistro(record);
   const finalWorkflow = normalizarTexto(workflow?.finalStatus || "");
 
   if (finalWorkflow === "aprovado") return "Aprovada";
@@ -120,6 +206,11 @@ export function obterStatusGeralDoRegistro(
   if (finalWorkflow === "cancelado") return "Cancelada";
 
   if (statusNormalizado === "Cancelada") return "Cancelada";
+  if (statusNormalizado === "Não aprovada") return "Não aprovada";
+  if (statusNormalizado === "Aprovada") return "Aprovada";
+
+  const negacaoEtapa = obterStatusPorNegacaoEmEtapas(workflow);
+  if (negacaoEtapa) return negacaoEtapa;
 
   const statusWorkflow = obterStatusPorWorkflow(workflow);
   if (statusWorkflow) return statusWorkflow;
