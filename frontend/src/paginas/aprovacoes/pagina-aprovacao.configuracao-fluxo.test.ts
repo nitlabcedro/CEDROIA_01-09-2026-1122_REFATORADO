@@ -34,4 +34,15 @@ describe("PaginaAprovacao — configurar fluxo", () => {
     assert.match(fonte, /cedro-segment-nav__item--ativo/);
     assert.doesNotMatch(fonte, /aprovacao-abas-barra/);
   });
+
+  it("só fecha o modal de decisão depois de persistir com sucesso", () => {
+    assert.match(fonte, /const handleDecisionSubmit = async \(status: StatusAuditoria\) => \{/);
+    assert.match(fonte, /if \(salvandoDecisaoEtapa\) return;/);
+    assert.match(
+      fonte,
+      /await onUpdateStatus\(record\.id, status, finalComment, extraFields\);\s*setAnalysisModal\(\{\s*isOpen: false,/,
+    );
+    assert.match(fonte, /setErroInteracoesTi\(obterMensagemErroUsuario\(error, "aprovacao"\)\);/);
+    assert.match(fonte, /disabled=\{possuiSolicitacaoTiPendente \|\| salvandoDecisaoEtapa\}/);
+  });
 });

@@ -17,7 +17,7 @@ export interface ApprovalPageProps {
     status: StatusAuditoria,
     comment?: string,
     extraFields?: unknown,
-  ) => void;
+  ) => void | Promise<void>;
   onSaveApprovalConfig: (config: ApprovalConfig) => void | Promise<void>;
   onViewRecord: (record: IARecord) => void;
   isAdmin: boolean;

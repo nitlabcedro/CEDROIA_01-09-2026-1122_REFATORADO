@@ -1329,7 +1329,9 @@ export function useAplicacao() {
 
   const handleUpdateStatus = async (recordId: string, status: any, comment?: string, extraFields?: any) => {
     const record = records.find(r => r.id === recordId);
-    if (!record) return;
+    if (!record) {
+      throw new Error("Registro não encontrado para registrar a decisão.");
+    }
 
     // Verificar se o usuário atual é o responsável designado para a etapa atual, um admin ou moderador
     const wf = workflows.find(w => w.iaRecordId === recordId);
@@ -1341,13 +1343,11 @@ export function useAplicacao() {
     const isAssignedToMe = assignedUserId === user?.id;
 
     if (!assignedUserId) {
-      alert("Esta etapa ainda não possui responsável definido. Configure o fluxo antes de aprovar ou negar.");
-      return;
+      throw new Error("Esta etapa ainda não possui responsável definido. Configure o fluxo antes de aprovar ou negar.");
     }
 
     if (!isAssignedToMe) {
-      alert("Apenas o responsável designado para esta etapa pode aprovar ou negar.");
-      return;
+      throw new Error("Apenas o responsável designado para esta etapa pode aprovar ou negar.");
     }
 
     const decision = status === StatusAuditoria.APROVADO ? "aprovado" : "negado";
@@ -1375,13 +1375,9 @@ export function useAplicacao() {
           const errRes = await response.json().catch(() => ({}));
           console.warn("O servidor retornou erro na decisão:", errRes);
           if (errRes.error) {
-            addToast({
-              title: "Não foi possível registrar a decisão",
-              message: obterMensagemErroUsuario(errRes.error, "aprovacao"),
-              type: "error",
-            });
-            return;
+            throw new Error(errRes.error);
           }
+          throw new Error(`Não foi possível registrar a decisão (HTTP ${response.status}).`);
         }
       } catch (err) {
         console.warn("Falha de conexão com a API de decisão do workflow. Iniciando fallback local no Supabase:", err);
@@ -1397,17 +1393,21 @@ export function useAplicacao() {
           .eq("ia_record_id", recordId)
           .maybeSingle();
 
+        if (wfData.error) throw wfData.error;
+
         let activeWf = wfData.data;
         if (!activeWf) {
           throw new Error("Workflow ativo não encontrado no Supabase.");
         }
 
-        const { data: stepRow } = await supabase
+        const { data: stepRow, error: stepLookupError } = await supabase
           .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
           .select("id, is_opinion_only, assigned_user_id, assigned_user_name")
           .eq("workflow_id", activeWf.id)
           .eq("step_number", activeWf.current_step)
           .maybeSingle();
+
+        if (stepLookupError) throw stepLookupError;
 
         if (!stepRow) {
           throw new Error("Etapa do fluxo não encontrada diretamente no banco.");
@@ -1416,7 +1416,7 @@ export function useAplicacao() {
         const decisionStatus = decision === "aprovado" ? "aprovado" : "negado";
         const fullName = (session?.user as any)?.user_metadata?.full_name || session?.user?.email || "Avaliador";
 
-        await supabase
+        const { error: stepUpdateError } = await supabase
           .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
           .update({
             status: decisionStatus,
@@ -1426,6 +1426,8 @@ export function useAplicacao() {
             assigned_user_name: stepRow.assigned_user_name || fullName,
           })
           .eq("id", stepRow.id);
+
+        if (stepUpdateError) throw stepUpdateError;
 
         const { data: allSteps } = await supabase
           .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
@@ -1483,7 +1485,7 @@ export function useAplicacao() {
           finalStatus = "pendente";
           newAuditStatus = "Pendente";
 
-          if (nextStep >= 4) {
+          if (nextStep >= 3) {
             newStatusUso = "Em teste/piloto";
           } else {
             newStatusUso = "Em avaliação";
@@ -1495,16 +1497,20 @@ export function useAplicacao() {
           };
         }
 
-        await supabase
+        const { error: workflowUpdateError } = await supabase
           .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
           .update(workflowUpdatePayload)
           .eq("id", activeWf.id);
 
-        const { data: iaRecord } = await supabase
+        if (workflowUpdateError) throw workflowUpdateError;
+
+        const { data: iaRecord, error: iaLookupError } = await supabase
           .from(TABELAS_SUPABASE.REGISTROS_IA)
           .select("data")
           .eq("id", recordId)
           .single();
+
+        if (iaLookupError) throw iaLookupError;
 
         if (iaRecord?.data) {
           const recordData = iaRecord.data as any;
@@ -1568,10 +1574,12 @@ export function useAplicacao() {
             updatedData.dataAprovacao = currentDateStr;
           }
 
-          await supabase
+          const { error: recordUpdateError } = await supabase
             .from(TABELAS_SUPABASE.REGISTROS_IA)
             .update(updatePayload)
             .eq("id", recordId);
+
+          if (recordUpdateError) throw recordUpdateError;
         }
 
         let responseMessage = "";
@@ -1624,6 +1632,7 @@ export function useAplicacao() {
       console.error("Erro ao atualizar status:", error);
       addToast({ title: "Não foi possível atualizar", message: obterMensagemErroUsuario(error, "aprovacao"), type: "error" });
       await refreshRecords();
+      throw error;
     }
   };
 
