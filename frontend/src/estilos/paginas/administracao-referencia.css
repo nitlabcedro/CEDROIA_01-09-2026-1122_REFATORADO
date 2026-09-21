@@ -501,6 +501,8 @@
   align-items: center;
   gap: 11px;
   padding: 10px 14px;
+  min-width: 0;
+  max-width: 100%;
   color: #4e5c54;
   background: #f7f9f8;
   border: 1px solid #e2e8e4;
@@ -548,6 +550,14 @@
   color: #58665e;
   font-size: 10.5px;
   line-height: 1.35;
+}
+
+#administracao-conteudo .administracao__texto-7 {
+  flex: 1 1 100%;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 #administracao-conteudo .administracao__texto-por-em {

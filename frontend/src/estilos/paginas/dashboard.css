@@ -19,15 +19,6 @@
    Não adicionar utilitários no JSX; evoluir estes seletores semanticamente.
    ============================================================ */
 
-.painel__icone-clock {
-  color: #f59e0b;
-  animation: cedro-pulsar 2s cubic-bezier(.4,0,.6,1) infinite;
-}
-
-.painel__icone-pluscircle {
-  color: #075618;
-}
-
 .painel__painel-indicadores-estrutura {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -366,5 +357,400 @@
   .pagina-dashboard .painel__painel-cartao-estrutura,
   .pagina-dashboard .painel__painel-cartao-estrutura-2 {
     display: none !important;
+  }
+}
+
+/* === REFINO VISUAL DO DASHBOARD === */
+.pagina-dashboard {
+  gap: 24px !important;
+  padding-bottom: 40px;
+}
+
+.pagina-dashboard .painel__painel-indicadores-estrutura,
+.pagina-dashboard .painel__painel-resumo-estrutura {
+  gap: 18px !important;
+}
+
+.pagina-dashboard .cartao-kpi {
+  min-height: 116px !important;
+  padding: 18px 19px !important;
+  background: linear-gradient(155deg, #ffffff 0%, #f8fbf9 100%);
+  border: 1px solid #dce6de;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 24px rgba(18, 56, 28, 0.055);
+}
+
+.pagina-dashboard .cartao-kpi__conteudo {
+  height: 100%;
+  align-items: center;
+}
+
+.pagina-dashboard .cartao-kpi__informacoes {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.pagina-dashboard .cartao-kpi__rotulo {
+  margin-bottom: 9px !important;
+  color: #66766b;
+  font-size: 10px;
+  letter-spacing: .07em;
+}
+
+.pagina-dashboard .cartao-kpi__valor {
+  font-size: 36px !important;
+  line-height: .95;
+}
+
+.pagina-dashboard .cartao-kpi__icone {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 12px !important;
+}
+
+.pagina-dashboard .painel__painel-cartao-estrutura,
+.pagina-dashboard .painel__painel-cartao-estrutura-2 {
+  min-height: 360px;
+  padding: 22px !important;
+  background: #ffffff !important;
+  border-color: #dfe8e1 !important;
+  border-radius: 17px !important;
+  box-shadow: 0 10px 28px rgba(18, 56, 28, 0.055) !important;
+}
+
+.pagina-dashboard .painel__grupo-evolucao-do-inventario {
+  margin-bottom: 18px;
+}
+
+.pagina-dashboard .painel__grupo-evolucao-do-inventario-crescim {
+  display: block;
+}
+
+.pagina-dashboard .painel__titulo-secao-evolucao-do-inventario,
+.pagina-dashboard .painel__titulo-bloco-status-de-aprovacao {
+  margin: 0;
+  color: #183d23 !important;
+  font-size: 15px;
+  font-weight: 850 !important;
+  letter-spacing: -.015em;
+  text-transform: none;
+}
+
+.pagina-dashboard .painel__descricao-crescimento-acumulado-das-ias-,
+.pagina-dashboard .painel__descricao-status {
+  margin: 4px 0 0;
+  color: #738077;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.pagina-dashboard .painel__grupo {
+  height: 272px;
+  padding: 10px 8px 0;
+  background: linear-gradient(180deg, #fbfdfb 0%, #ffffff 100%);
+  border: 1px solid #edf2ee;
+  border-radius: 13px;
+}
+
+.pagina-dashboard .painel__status-conteudo {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.pagina-dashboard .painel__grupo-status-de-aprovacao {
+  margin-bottom: 8px;
+}
+
+.pagina-dashboard .painel__grupo-2 {
+  height: 180px;
+  margin-bottom: 8px;
+}
+
+.pagina-dashboard .painel__texto {
+  color: #183d23;
+  font-size: 26px;
+}
+
+.pagina-dashboard .painel__texto-total {
+  color: #7a887e;
+  font-size: 9px;
+}
+
+.pagina-dashboard .painel__grupo-3 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
+  margin-top: auto;
+  padding: 13px 0 0;
+  border-color: #e8eee9;
+}
+
+.pagina-dashboard .painel__grupo-4 {
+  min-width: 0;
+  align-items: flex-start;
+  padding: 7px 8px;
+  background: #f8faf8;
+  border: 1px solid #edf1ee;
+  border-radius: 9px;
+  text-align: left;
+}
+
+.pagina-dashboard .painel__texto-2 {
+  justify-content: flex-start;
+  color: #6d7b71;
+  font-size: 9px;
+}
+
+.pagina-dashboard .painel__texto-4 {
+  margin-top: 5px;
+  color: #263f2d;
+  font-size: 13px;
+}
+
+.pagina-dashboard .painel__texto-5 {
+  margin-left: 3px;
+  color: #819087;
+  font-size: 9px;
+}
+
+.pagina-dashboard .painel__estado-vazio-grafico,
+.pagina-dashboard .painel__estado-vazio-status {
+  display: flex;
+  min-height: 210px;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: #718078;
+  text-align: center;
+}
+
+.pagina-dashboard .painel__estado-vazio-status {
+  min-height: 250px;
+}
+
+.pagina-dashboard .painel__estado-vazio-icone {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 12px;
+  place-items: center;
+  color: #237a36;
+  background: #eaf5ec;
+  border: 1px solid #d4e8d8;
+  border-radius: 14px;
+}
+
+.pagina-dashboard .painel__estado-vazio-grafico strong,
+.pagina-dashboard .painel__estado-vazio-status strong {
+  color: #294832;
+  font-size: 13px;
+}
+
+.pagina-dashboard .painel__estado-vazio-grafico p,
+.pagina-dashboard .painel__estado-vazio-status p {
+  max-width: 290px;
+  margin: 5px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.pagina-dashboard .cartao-tabela {
+  min-height: 100%;
+  padding: 20px !important;
+  background: #ffffff !important;
+}
+
+.pagina-dashboard .cartao-tabela__cabecalho {
+  min-height: 34px;
+}
+
+.pagina-dashboard .cartao-tabela__titulo {
+  font-size: 15px;
+}
+
+.pagina-dashboard .cartao-tabela__ver-todas {
+  padding: 8px 11px;
+  border-radius: 10px;
+  text-transform: none;
+}
+
+.pagina-dashboard .cartao-tabela__vazio {
+  min-height: 220px;
+  padding: 28px 16px;
+}
+
+.pagina-dashboard .cartao-tabela__vazio strong {
+  font-size: 13px;
+}
+
+.pagina-dashboard .cartao-tabela__vazio p {
+  max-width: 320px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.pagina-dashboard .acesso-rapido {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  padding: 20px;
+  background: #ffffff !important;
+  border-color: #dfe8e1 !important;
+}
+
+.acesso-rapido__cabecalho h3 {
+  margin: 0;
+  color: #183d23;
+  font-size: 15px;
+  font-weight: 850;
+  letter-spacing: -.015em;
+}
+
+.acesso-rapido__cabecalho p {
+  margin: 4px 0 0;
+  color: #738077;
+  font-size: 11px;
+}
+
+.acesso-rapido__grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.acesso-rapido__item {
+  display: flex;
+  min-width: 0;
+  min-height: 76px;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  color: #294832;
+  background: #f8fbf8;
+  border: 1px solid #dfe8e1;
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.acesso-rapido__item:hover {
+  transform: translateY(-1px);
+  background: #ffffff;
+  border-color: #b9cfbd;
+  box-shadow: 0 8px 18px rgba(18, 56, 28, .07);
+}
+
+.acesso-rapido__item:focus-visible {
+  outline: 3px solid rgba(38, 132, 57, .18);
+  outline-offset: 2px;
+  border-color: #268439;
+}
+
+.acesso-rapido__icone {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #176b29;
+  background: #e8f4eb;
+  border-radius: 10px;
+}
+
+.acesso-rapido__texto {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.acesso-rapido__texto strong {
+  color: #26452f;
+  font-size: 11.5px;
+  line-height: 1.25;
+}
+
+.acesso-rapido__texto small {
+  color: #738078;
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+
+@media (max-width: 1023px) {
+  .pagina-dashboard .painel__painel-cartao-estrutura,
+  .pagina-dashboard .painel__painel-cartao-estrutura-2 {
+    display: flex !important;
+    min-height: 340px;
+  }
+
+  .pagina-dashboard .painel__grupo {
+    height: 245px;
+  }
+}
+
+@media (max-width: 639px) {
+  .pagina-dashboard {
+    gap: 18px !important;
+    padding-bottom: 28px;
+  }
+
+  .pagina-dashboard .painel__painel-indicadores-estrutura,
+  .pagina-dashboard .painel__painel-resumo-estrutura {
+    gap: 12px !important;
+  }
+
+  .pagina-dashboard .cartao-kpi {
+    min-height: 106px !important;
+    padding: 15px !important;
+  }
+
+  .pagina-dashboard .cartao-kpi__valor {
+    font-size: 31px !important;
+  }
+
+  .pagina-dashboard .cartao-kpi__icone {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .pagina-dashboard .painel__painel-cartao-estrutura,
+  .pagina-dashboard .painel__painel-cartao-estrutura-2,
+  .pagina-dashboard .cartao-tabela {
+    padding: 16px !important;
+  }
+
+  .pagina-dashboard .painel__grupo {
+    height: 225px;
+    padding-inline: 0;
+  }
+
+  .pagina-dashboard .cartao-tabela__cabecalho {
+    align-items: flex-start;
+  }
+
+  .pagina-dashboard .cartao-tabela__ver-todas {
+    flex: 0 0 auto;
+    padding: 7px 9px;
+  }
+
+  .pagina-dashboard .acesso-rapido {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .acesso-rapido__grade {
+    grid-template-columns: 1fr;
+  }
+
+  .acesso-rapido__item {
+    min-height: 68px;
   }
 }

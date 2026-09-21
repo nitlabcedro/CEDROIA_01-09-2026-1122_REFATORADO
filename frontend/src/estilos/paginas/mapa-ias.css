@@ -389,7 +389,7 @@
 
 .pagina-mapa-ias .mapa-ias__grupo-8 {
   display: grid;
-  grid-template-columns: minmax(150px, .7fr) minmax(170px, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
   min-height: 58px;
@@ -399,6 +399,13 @@
   border-bottom: 1px solid #edf1ee;
   border-radius: 0;
   cursor: pointer;
+}
+
+.pagina-mapa-ias .mapa-ias__identidade-item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
 }
 
 .pagina-mapa-ias .mapa-ias__grupo-8:last-child {

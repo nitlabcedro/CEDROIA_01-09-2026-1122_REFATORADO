@@ -8,13 +8,18 @@ import {
   salvarRascunhoRespostasTI } from
 "@/servicos/interacoes-ti";
 import type { SolicitacaoInformacoesTI } from "@/tipos";
+import { MENSAGEM_LIMITE_TEXTO_FLUXO_APROVACAO } from "@/constantes/fluxo-aprovacao";
+import { CampoTextoLongoFluxoAprovacao } from "@/componentes/aprovacoes/CampoTextoLongoFluxoAprovacao";
+import { TextoExibicaoFluxoAprovacao } from "@/componentes/aprovacoes/TextoExibicaoFluxoAprovacao";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
+import { textoEntradaExcedeLimiteFluxoAprovacao } from "@/utilitarios/texto-fluxo-aprovacao";
+import ModalComunicacaoTI from "@/componentes/aprovacoes/ModalComunicacaoTI";
 import {
   INTERVALO_PENDENCIAS_TI_MS,
   registrarPollingComVisibilidade,
 } from "@/utilitarios/polling-visibilidade";
 
-export default function NotificacaoPerguntasTI() {
+export default function NotificacaoPerguntasTI({ currentUserId }: { currentUserId: string }) {
   const [pendencias, setPendencias] = useState<SolicitacaoInformacoesTI[]>([]);
   const [solicitacaoAbertaId, setSolicitacaoAbertaId] = useState<string | null>(null);
   const [respostas, setRespostas] = useState<Record<string, string>>({});
@@ -139,6 +144,10 @@ export default function NotificacaoPerguntasTI() {
 
   const enviar = async () => {
     if (!solicitacaoAberta || !todasRespondidas) return;
+    if (respostasPayload.some((item) => textoEntradaExcedeLimiteFluxoAprovacao(item.resposta))) {
+      setErro(MENSAGEM_LIMITE_TEXTO_FLUXO_APROVACAO);
+      return;
+    }
 
     try {
       setEnviando(true);
@@ -161,6 +170,7 @@ export default function NotificacaoPerguntasTI() {
   const respondidasCard = pendenciaPrincipal.perguntas.filter((pergunta) =>
   String(pergunta.resposta || "").trim()
   ).length;
+  const pendenciaChat = pendenciaPrincipal.modo === "chat";
 
   return (
     <>
@@ -188,11 +198,15 @@ export default function NotificacaoPerguntasTI() {
                     {pendenciaPrincipal.nomeFerramenta || pendenciaPrincipal.iaRecordId}
                   </h4>
                   <p className="notificacao-ti__descricao-a-equipe-de-ti-enviou-pergunta">
-                    A equipe de TI enviou {pendenciaPrincipal.perguntas.length} pergunta(s) para continuar a análise da sua solicitação.
+                    {pendenciaChat
+                      ? "A equipe de TI enviou uma mensagem para continuar a análise da sua solicitação."
+                      : `A equipe de TI enviou ${pendenciaPrincipal.perguntas.length} pergunta(s) para continuar a análise da sua solicitação.`}
                   </p>
                   <div className="notificacao-ti__grupo-de-respondidas">
                     <span className="notificacao-ti__texto-de-respondidas">
-                      {respondidasCard} de {pendenciaPrincipal.perguntas.length} respondidas
+                      {pendenciaChat
+                        ? "Resposta obrigatória"
+                        : `${respondidasCard} de ${pendenciaPrincipal.perguntas.length} respondidas`}
                       {pendencias.length > 1 ? ` • ${pendencias.length} pendências` : ""}
                     </span>
                     <button
@@ -200,7 +214,9 @@ export default function NotificacaoPerguntasTI() {
                       onClick={() => abrirPendencia(pendenciaPrincipal.id)}
                       className="notificacao-ti__botao">
                       
-                      {respondidasCard > 0 ? "Continuar respondendo" : "Responder agora"}
+                      {pendenciaChat
+                        ? "Responder"
+                        : respondidasCard > 0 ? "Continuar respondendo" : "Responder agora"}
                     </button>
                   </div>
                 </div>
@@ -211,7 +227,7 @@ export default function NotificacaoPerguntasTI() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {solicitacaoAberta &&
+        {solicitacaoAberta?.modo === "legado" &&
         <div className="cedro-modal-overlay notificacao-ti__grupo-6">
             <motion.button
             type="button"
@@ -266,20 +282,24 @@ export default function NotificacaoPerguntasTI() {
                         {String(pergunta.ordem).padStart(2, "0")}
                       </span>
                       <div className="notificacao-ti__grupo-informacoes-solicitadas-pela-t">
-                        <p className="notificacao-ti__descricao-2">
+                        <TextoExibicaoFluxoAprovacao
+                          as="p"
+                          className="notificacao-ti__descricao-2"
+                        >
                           {pergunta.pergunta}
-                        </p>
+                        </TextoExibicaoFluxoAprovacao>
                         <label className="notificacao-ti__rotulo-sua-resposta">
                           Sua resposta
                         </label>
-                        <textarea
+                        <CampoTextoLongoFluxoAprovacao
                       value={respostas[pergunta.id] || ""}
                       onChange={(event) => {
                         setRespostas((anterior) => ({ ...anterior, [pergunta.id]: event.target.value }));
                         setRascunhoAlterado(true);
                       }}
                       placeholder="Digite sua resposta..."
-                      className="notificacao-ti__campo-texto-digite-sua-resposta" />
+                      className="notificacao-ti__campo-texto-digite-sua-resposta"
+                    />
                     
                       </div>
                     </div>
@@ -316,6 +336,20 @@ export default function NotificacaoPerguntasTI() {
           </div>
         }
       </AnimatePresence>
+      {(solicitacaoAberta?.modo === "chat" || solicitacaoAberta?.modo === "bloco") && (
+        <ModalComunicacaoTI
+          aberto
+          recordId={solicitacaoAberta.iaRecordId}
+          nomeFerramenta={solicitacaoAberta.nomeFerramenta}
+          papelUsuario="solicitante"
+          currentUserId={currentUserId}
+          interacoesIniciais={[solicitacaoAberta]}
+          onFechar={() => setSolicitacaoAbertaId(null)}
+          onAtualizar={async () => {
+            await carregarPendencias();
+          }}
+        />
+      )}
     </>);
 
 }

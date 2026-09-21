@@ -1,5 +1,11 @@
 import type { ApprovalConfig, ApprovalStep } from "@/tipos";
 
+/** Limite único para campos de texto livre do fluxo de aprovação (entrada nova). */
+export const LIMITE_TEXTO_FLUXO_APROVACAO = 2000;
+
+export const MENSAGEM_LIMITE_TEXTO_FLUXO_APROVACAO =
+  `O texto pode ter no máximo ${LIMITE_TEXTO_FLUXO_APROVACAO} caracteres.`;
+
 export const ETAPAS_APROVACAO_OFICIAIS = [
   { stepNumber: 1, roleName: "Coordenador NIT", shortName: "NIT", displayName: "NIT", isOpinionOnly: false },
   { stepNumber: 2, roleName: "Gerente TI", shortName: "TI", displayName: "TI", isOpinionOnly: false },

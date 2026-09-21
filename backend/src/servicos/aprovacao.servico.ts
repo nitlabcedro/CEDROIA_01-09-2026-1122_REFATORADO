@@ -4,6 +4,11 @@ import { papelEhAdmin, papelEhCoordenadorNit } from "../utilitarios/permissoes";
 import type { Request, Response } from "express";
 
 import { obterClienteSupabase } from "../configuracoes/supabase";
+import {
+  chamarRpcDecidirEtapaTI,
+  estruturaChatAusente,
+  mapearErroRpcInteracaoTI,
+} from "./interacoes-ti.servico";
 
 function configuracaoSegueFluxoOficial(rows: any[] | null | undefined) {
   return rows?.length === ETAPAS_PADRAO_APROVACAO.length && ETAPAS_PADRAO_APROVACAO.every(
@@ -645,17 +650,22 @@ export async function decidirWorkflow(req: Request, res: Response) {
     // 5. Registrar decisão (Regra 4)
     // Atualizar status da etapa correspondente para 'aprovado' ou 'negado'
     const decisionStatus = decision === "aprovado" ? "aprovado" : "negado";
+    const stepUpdatePayload = {
+      status: decisionStatus,
+      comment: comment || null,
+      decided_at: new Date().toISOString(),
+      assigned_user_id: currentStepData.assigned_user_id || user.id,
+      assigned_user_name: currentStepData.assigned_user_name || fullName,
+    };
 
-    await supabaseAdmin
-      .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
-      .update({
-        status: decisionStatus,
-        comment: comment || null,
-        decided_at: new Date().toISOString(),
-        assigned_user_id: currentStepData.assigned_user_id || user.id,
-        assigned_user_name: currentStepData.assigned_user_name || fullName,
-      })
-      .eq("id", currentStepData.id);
+    // Na Etapa 2, etapa + workflow são atualizados juntos pela RPC após uma
+    // segunda validação de pendência sob o mesmo lock usado pelo chat.
+    if (Number(wfData.current_step) !== 2) {
+      await supabaseAdmin
+        .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
+        .update(stepUpdatePayload)
+        .eq("id", currentStepData.id);
+    }
 
     // 6. Contar total de etapas e calcular regras de fluxo dinamicamente
     const { data: allSteps } = await supabaseAdmin
@@ -726,10 +736,43 @@ export async function decidirWorkflow(req: Request, res: Response) {
       };
     }
 
-    await supabaseAdmin
-      .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-      .update(workflowUpdatePayload)
-      .eq("id", wfData.id);
+    if (currentStepNumber === 2) {
+      try {
+        await chamarRpcDecidirEtapaTI(supabaseAdmin as any, {
+          workflowId: wfData.id,
+          stepId: currentStepData.id,
+          userId: user.id,
+          decision,
+          comment,
+          userName: fullName,
+        });
+      } catch (rpcError: any) {
+        if (estruturaChatAusente(rpcError)) {
+          // Compatibilidade temporária antes de SUPABASE_TI_CHAT.sql:
+          // sem chat novo, preserva-se a decisão legada já validada acima.
+          console.warn(
+            "RPC de decisão segura da TI indisponível. Revise documentacao/SUPABASE_TI_CHAT.sql:",
+            rpcError?.message || rpcError,
+          );
+          await supabaseAdmin
+            .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
+            .update(stepUpdatePayload)
+            .eq("id", currentStepData.id);
+          await supabaseAdmin
+            .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
+            .update(workflowUpdatePayload)
+            .eq("id", wfData.id);
+        } else {
+          const erroMapeado = mapearErroRpcInteracaoTI(rpcError);
+          return res.status(erroMapeado.status).json({ error: erroMapeado.mensagem });
+        }
+      }
+    } else {
+      await supabaseAdmin
+        .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
+        .update(workflowUpdatePayload)
+        .eq("id", wfData.id);
+    }
 
     // 7. Atualizar o registro da IA no banco
     const { data: iaRecord } = await supabaseAdmin

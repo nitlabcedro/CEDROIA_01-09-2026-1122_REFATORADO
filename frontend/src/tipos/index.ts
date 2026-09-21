@@ -251,6 +251,12 @@ export interface ApprovalConfig {
 }
 
 export type StatusSolicitacaoInformacoesTI = "aguardando_resposta" | "respondida";
+export type ModoComunicacaoTI = "legado" | "chat" | "bloco";
+export type EstadoComunicacaoTI =
+  | "aguardando_solicitante"
+  | "aguardando_ti"
+  | "encerrada";
+export type TurnoComunicacaoTI = "solicitante" | "ti";
 
 export interface PerguntaInformacaoTI {
   id: string;
@@ -260,6 +266,18 @@ export interface PerguntaInformacaoTI {
   resposta?: string;
   respondidaEm?: string;
   atualizadaEm?: string;
+}
+
+export interface MensagemComunicacaoTI {
+  id: string;
+  solicitacaoId: string;
+  sequencia: number;
+  autorId: string;
+  autorNome: string;
+  papelAutor: TurnoComunicacaoTI;
+  conteudo: string;
+  criadoEm: string;
+  sintetica?: boolean;
 }
 
 export interface SolicitacaoInformacoesTI {
@@ -272,9 +290,17 @@ export interface SolicitacaoInformacoesTI {
   solicitadoPorNome: string;
   solicitanteId: string;
   status: StatusSolicitacaoInformacoesTI;
+  modo: ModoComunicacaoTI;
+  estado: EstadoComunicacaoTI;
+  turnoAtual?: TurnoComunicacaoTI;
+  encerradaEm?: string;
   criadoEm: string;
   respondidoEm?: string;
   perguntas: PerguntaInformacaoTI[];
+  mensagens: MensagemComunicacaoTI[];
+  totalPerguntas: number;
+  totalRespondidas: number;
+  todasRespondidas: boolean;
 }
 
 export type UserRole = "admin" | "moderator" | "user";

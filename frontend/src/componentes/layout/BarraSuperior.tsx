@@ -9,6 +9,7 @@ import { Bell, UserCircle, ChevronDown, X, CheckCircle2, Eye, LogOut, ArrowRight
 import { UserProfile, IARecord } from "@/tipos";
 import { SystemAlert, saveAlertInteraction } from "@/utilitarios/alertas";
 import type { NavegarPara } from "@/hooks/useAplicacao";
+import { obterCargoPrincipal } from "@/utilitarios/perfil-usuario";
 
 interface TopbarProps {
   profile: UserProfile | null;
@@ -224,7 +225,7 @@ export const Topbar: React.FC<TopbarProps> = ({
               </span>
               <div>
                 <strong>{profile?.full_name || "Membro Cedro"}</strong>
-                <span>{isCurrentUserAdmin ? "Administrador" : "Colaborador"}</span>
+                <span>{obterCargoPrincipal(profile?.cargo) || "Cargo não informado"}</span>
               </div>
             </div>
 
