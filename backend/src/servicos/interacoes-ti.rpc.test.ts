@@ -17,6 +17,7 @@ import {
   identificarModoInteracaoTI,
   identificarPayloadCriacaoInteracaoTI,
   mapearErroRpcInteracaoTI,
+  usuarioPodeConsultarInteracoesTI,
   validarMensagemComunicacaoTI,
   validarPerguntasBlocoTI,
   validarRespostaBlocoTI,
@@ -40,6 +41,34 @@ function criarClienteRpc(
 }
 
 describe("integração RPC das interações TI", () => {
+  it("permite consulta global ao admin e preserva os demais limites", () => {
+    assert.equal(usuarioPodeConsultarInteracoesTI({
+      userId: "admin-1",
+      role: "ADMIN",
+      ownerId: null,
+      responsavelTiId: "ti-1",
+    }), true);
+    assert.equal(usuarioPodeConsultarInteracoesTI({
+      userId: "solicitante-1",
+      role: "user",
+      ownerId: null,
+      ownerIdLegado: "solicitante-1",
+      responsavelTiId: "ti-1",
+    }), true);
+    assert.equal(usuarioPodeConsultarInteracoesTI({
+      userId: "ti-1",
+      role: "user",
+      ownerId: "solicitante-1",
+      responsavelTiId: "ti-1",
+    }), true);
+    assert.equal(usuarioPodeConsultarInteracoesTI({
+      userId: "outro-1",
+      role: "user",
+      ownerId: "solicitante-1",
+      responsavelTiId: "ti-1",
+    }), false);
+  });
+
   it("pending-ti inclui somente chat aberto no turno da TI", () => {
     assert.equal(conversaEhPendenciaResponsavelTI({ current_turn: "ti", closed_at: null }), true);
     assert.equal(conversaEhPendenciaResponsavelTI({ current_turn: "solicitante", closed_at: null }), false);

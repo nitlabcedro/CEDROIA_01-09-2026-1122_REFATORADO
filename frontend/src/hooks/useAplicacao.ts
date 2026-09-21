@@ -1152,10 +1152,6 @@ export function useAplicacao() {
           try {
             const initRes = await requisicaoApi(ROTAS_API.WORKFLOW_INIT, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${session.access_token}`
-              },
               body: JSON.stringify({ recordId: record.id })
             });
             
@@ -1369,10 +1365,6 @@ export function useAplicacao() {
       try {
         const response = await requisicaoApi(ROTAS_API.WORKFLOW_DECIDE, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${session?.access_token}`
-          },
           body: JSON.stringify({ recordId, decision, comment, coordinatorData: extraFields })
         });
 
@@ -1647,10 +1639,6 @@ export function useAplicacao() {
       if (session?.access_token) {
         const res = await requisicaoApi(ROTAS_API.WORKFLOW_RESET_STATUS, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${session.access_token}`
-          },
           body: JSON.stringify({ recordId, newStatus, reason })
         });
         if (res.ok) {

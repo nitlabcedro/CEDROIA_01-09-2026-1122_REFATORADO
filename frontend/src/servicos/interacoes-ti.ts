@@ -8,6 +8,7 @@ import {
   rotaRascunhoInteracaoTI,
   rotaRespostaBlocoTI,
 } from "@/constantes/api";
+import { workflowApiBloqueadaPorAutenticacao } from "@/servicos/autenticacao-api";
 import { requisicaoApi } from "@/servicos/api";
 import type { SolicitacaoInformacoesTI } from "@/tipos";
 
@@ -34,13 +35,20 @@ function invalidarCachePendenciasSolicitanteTI() {
 async function lerJson<T>(response: Response): Promise<T> {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const mensagem = (payload as any)?.error || `Erro HTTP ${response.status}`;
+    const mensagem = (payload as { error?: string })?.error || `Erro HTTP ${response.status}`;
     throw new Error(mensagem);
   }
   return payload as T;
 }
 
+function garantirChamadaWorkflowAutenticada(): void {
+  if (workflowApiBloqueadaPorAutenticacao()) {
+    throw new Error("Sessão expirada. Faça login novamente para continuar.");
+  }
+}
+
 export async function listarInteracoesTI(recordId: string): Promise<SolicitacaoInformacoesTI[]> {
+  garantirChamadaWorkflowAutenticada();
   const response = await requisicaoApi(rotaInteracoesTI(recordId));
   const payload = await lerJson<{ interactions: SolicitacaoInformacoesTI[] }>(response);
   return payload.interactions || [];
@@ -53,6 +61,7 @@ export async function listarPendenciasTI(): Promise<SolicitacaoInformacoesTI[]> 
   }
 
   requisicaoPendencias = (async () => {
+    if (workflowApiBloqueadaPorAutenticacao()) return [];
     const response = await requisicaoApi(ROTAS_API.TI_INTERACOES_PENDENTES);
     const payload = await lerJson<{ interactions: SolicitacaoInformacoesTI[] }>(response);
     pendenciasCache = payload.interactions || [];
@@ -75,6 +84,7 @@ export async function listarPendenciasResponsavelTI(): Promise<SolicitacaoInform
   }
 
   requisicaoPendenciasResponsavel = (async () => {
+    if (workflowApiBloqueadaPorAutenticacao()) return [];
     const response = await requisicaoApi(ROTAS_API.TI_INTERACOES_PENDENTES_RESPONSAVEL);
     const payload = await lerJson<{ interactions: SolicitacaoInformacoesTI[] }>(response);
     pendenciasResponsavelCache = payload.interactions || [];
