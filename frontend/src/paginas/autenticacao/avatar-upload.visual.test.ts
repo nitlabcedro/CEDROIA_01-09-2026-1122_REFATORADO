@@ -8,6 +8,11 @@ const perfil = readFileSync(
   "utf8",
 );
 
+const perfilCss = readFileSync(
+  resolve(process.cwd(), "frontend/src/estilos/paginas/perfil.css"),
+  "utf8",
+);
+
 describe("feedback do upload de avatar", () => {
   it("mostra processamento no avatar e desabilita a câmera", () => {
     assert.match(perfil, /perfil__avatar-upload-overlay/);
@@ -31,5 +36,17 @@ describe("feedback do upload de avatar", () => {
   it("remove o banner amarelo antigo", () => {
     assert.doesNotMatch(perfil, /perfil__grupo-enviando-foto/);
     assert.doesNotMatch(perfil, /Aguarde alguns segundos até a imagem ser salva no perfil/);
+  });
+
+  it("centraliza o ícone fallback do avatar no círculo branco", () => {
+    assert.match(perfil, /className="perfil__icone-user"/);
+    assert.match(
+      perfilCss,
+      /\.perfil__grupo-7\s*\{[\s\S]*display:\s*flex;[\s\S]*align-items:\s*center;[\s\S]*justify-content:\s*center;/,
+    );
+    assert.match(
+      perfilCss,
+      /\.perfil__icone-user\s*\{[\s\S]*display:\s*block;[\s\S]*flex-shrink:\s*0;/,
+    );
   });
 });

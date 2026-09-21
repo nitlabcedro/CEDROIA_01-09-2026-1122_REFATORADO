@@ -1497,23 +1497,31 @@ export function useAplicacao() {
           };
         }
 
-        const { error: workflowUpdateError } = await supabase
+        const { data: workflowPersistido, error: workflowUpdateError } = await supabase
           .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
           .update(workflowUpdatePayload)
-          .eq("id", activeWf.id);
+          .eq("id", activeWf.id)
+          .select("id, final_status")
+          .limit(1);
 
         if (workflowUpdateError) throw workflowUpdateError;
+        if (!workflowPersistido?.length) {
+          throw new Error("Não foi possível atualizar o fluxo de aprovação: nenhuma linha foi atualizada no banco.");
+        }
 
         const { data: iaRecord, error: iaLookupError } = await supabase
           .from(TABELAS_SUPABASE.REGISTROS_IA)
           .select("data")
           .eq("id", recordId)
-          .single();
+          .maybeSingle();
 
         if (iaLookupError) throw iaLookupError;
+        if (!iaRecord) {
+          throw new Error("Registro de IA não encontrado para persistir a decisão.");
+        }
 
-        if (iaRecord?.data) {
-          const recordData = iaRecord.data as any;
+        {
+          const recordData = (iaRecord.data as Record<string, unknown> | null) || {};
           let actionLabel = decision === "aprovado"
             ? `Etapa ${currentStepNumber}/${maxStep} aprovada por ${fullName}`
             : `Etapa ${currentStepNumber}/${maxStep} negada por ${fullName}`;
@@ -1533,24 +1541,28 @@ export function useAplicacao() {
               user: fullName,
               action: actionLabel,
               message: comment || actionLabel
-            }, ...(recordData.historico || [])]
+            }, ...((recordData.historico as unknown[]) || [])]
           };
 
-          const updatePayload: any = {
+          const updatePayload: Record<string, unknown> = {
             data: updatedData,
+            status: newAuditStatus,
             status_uso: newStatusUso,
+            updated_at: new Date().toISOString(),
           };
 
           const currentDateStr = new Date().toISOString().split("T")[0];
 
           if (decision === "negado" && isFinancialStep) {
+            updatePayload.status = "Aprovado";
             updatePayload.status_uso = "Aprovado";
             updatedData.statusUso = "Aprovado";
             updatedData.statusAuditoria = "Aprovado";
             updatePayload.observacoes_gerais = comment || "Direção Financeira: parecer desfavorável. Fluxo concluído com aprovação da Presidência.";
           } else if (decision === "negado") {
+            updatePayload.status = "Negado";
             updatePayload.status_uso = "Não aprovado";
-            updatePayload.parecer_tecnico = "IA indeferida no fluxo de aprovacão.";
+            updatePayload.parecer_tecnico = "IA indeferida no fluxo de aprovação.";
             updatePayload.data_aprovacao = currentDateStr;
             if (comment) {
               updatePayload.observacoes_gerais = comment;
@@ -1561,6 +1573,7 @@ export function useAplicacao() {
             updatedData.parecerTecnico = "IA indeferida no fluxo de aprovação.";
             updatedData.dataAprovacao = currentDateStr;
           } else if (decision === "aprovado" && isFinalStep) {
+            updatePayload.status = "Aprovado";
             updatePayload.status_uso = "Aprovado";
             updatePayload.parecer_tecnico = "IA aprovada no fluxo de aprovação.";
             updatePayload.data_aprovacao = currentDateStr;
@@ -1574,12 +1587,17 @@ export function useAplicacao() {
             updatedData.dataAprovacao = currentDateStr;
           }
 
-          const { error: recordUpdateError } = await supabase
+          const { data: registroPersistido, error: recordUpdateError } = await supabase
             .from(TABELAS_SUPABASE.REGISTROS_IA)
             .update(updatePayload)
-            .eq("id", recordId);
+            .eq("id", recordId)
+            .select("id, status, status_uso")
+            .limit(1);
 
           if (recordUpdateError) throw recordUpdateError;
+          if (!registroPersistido?.length) {
+            throw new Error("Não foi possível atualizar o registro da solicitação: nenhuma linha foi atualizada no banco.");
+          }
         }
 
         let responseMessage = "";
