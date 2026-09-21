@@ -28,7 +28,7 @@ describe("mensagens de erro destinadas ao usuário", () => {
   it("traduz falha de banco durante o cadastro", () => {
     assert.equal(
       obterMensagemErroUsuario("Database error saving new user", "cadastro"),
-      "Não foi possível concluir o cadastro no momento. Tente novamente em alguns instantes.",
+      "Não foi possível concluir o cadastro. Verifique os dados e tente novamente.",
     );
   });
 
@@ -53,6 +53,23 @@ describe("mensagens de erro destinadas ao usuário", () => {
     assert.equal(resultado, "Não foi possível concluir esta operação. Tente novamente.");
     assert.equal(resultado.includes("PGRST"), false);
     assert.equal(resultado.includes("internal_secret"), false);
+  });
+
+  it("preserva mensagens funcionais seguras dos blocos TI", () => {
+    assert.equal(
+      obterMensagemErroUsuario(
+        new Error("Todas as perguntas precisam ser respondidas antes do envio."),
+        "aprovacao",
+      ),
+      "Todas as perguntas precisam ser respondidas antes do envio.",
+    );
+    assert.equal(
+      obterMensagemErroUsuario(
+        new Error("Esta resposta já não pode mais ser alterada."),
+        "aprovacao",
+      ),
+      "Esta resposta já não pode mais ser alterada.",
+    );
   });
 
   it("traduz senha igual à atual na redefinição", () => {

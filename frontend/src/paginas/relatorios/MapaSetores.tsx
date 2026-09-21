@@ -5,6 +5,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
+import { IconeIA } from "@/componentes/comuns/IconeIA";
 import {
   Users,
   ChevronRight,
@@ -23,74 +24,16 @@ import {
   AlertCircle,
   Target,
   Pencil,
-  Aperture,
-  Sparkles,
-  Copy,
-  Asterisk,
-  Orbit,
-  Bot,
   Shield
 } from "lucide-react";
 import { IARecord, UserProfile, ApprovalWorkflow } from "@/tipos";
 import { obterUltimoParecerLimpo as getCleanLastOpinion } from "@/utilitarios/pareceres";
 import { motion, AnimatePresence } from "framer-motion";
-import { identificarMarcaIA } from "@/utilitarios/inteligencia-artificial";
 import {
   obterStatusGeralDoRegistro,
   STATUS_GERAIS_OFICIAIS,
   type StatusGeral,
 } from "@/utilitarios/status-solicitacao";
-
-
-function IconeInteligenciaArtificial({ nome }: { nome?: string }) {
-  const marca = identificarMarcaIA(nome);
-
-  if (marca === "chatgpt") {
-    return (
-      <span className="mapa-ias__marca-ia mapa-ias__marca-ia--chatgpt" aria-label="ChatGPT">
-        <Aperture size={29} strokeWidth={2.1} />
-      </span>
-    );
-  }
-
-  if (marca === "gemini") {
-    return (
-      <span className="mapa-ias__marca-ia mapa-ias__marca-ia--gemini" aria-label="Google Gemini">
-        <Sparkles size={28} strokeWidth={2} />
-      </span>
-    );
-  }
-
-  if (marca === "copilot") {
-    return (
-      <span className="mapa-ias__marca-ia mapa-ias__marca-ia--copilot" aria-label="Microsoft Copilot">
-        <Copy size={27} strokeWidth={2} />
-      </span>
-    );
-  }
-
-  if (marca === "claude") {
-    return (
-      <span className="mapa-ias__marca-ia mapa-ias__marca-ia--claude" aria-label="Claude">
-        <Asterisk size={29} strokeWidth={2.2} />
-      </span>
-    );
-  }
-
-  if (marca === "grok") {
-    return (
-      <span className="mapa-ias__marca-ia mapa-ias__marca-ia--grok" aria-label="Grok">
-        <Orbit size={29} strokeWidth={2} />
-      </span>
-    );
-  }
-
-  return (
-    <span className="mapa-ias__marca-ia mapa-ias__marca-ia--outro" aria-label="Outra inteligência artificial">
-      <Bot size={28} strokeWidth={2} />
-    </span>
-  );
-}
 
 interface SectorMapProps {
   records: IARecord[];
@@ -432,13 +375,16 @@ export default function SectorMap({ records, profiles, workflows = [] }: SectorM
                     onClick={() => setSelectedIA(r)}
                     className="grupo-interativo-ia mapa-ias__grupo-8">
                     
-                      <div className="mapa-ias__grupo-9">
-                        <p className="mapa-ias__descricao">
-                          {r.nomeFerramenta}
-                        </p>
-                        <p className="mapa-ias__descricao-2">
-                          <User size={10} className="mapa-ias__icone-slidershorizontal" /> {r.responsavelPreenchimento}
-                        </p>
+                      <div className="mapa-ias__identidade-item">
+                        <IconeIA nome={r.nomeFerramenta} tamanho={28} />
+                        <div className="mapa-ias__grupo-9">
+                          <p className="mapa-ias__descricao">
+                            {r.nomeFerramenta}
+                          </p>
+                          <p className="mapa-ias__descricao-2">
+                            <User size={10} className="mapa-ias__icone-slidershorizontal" /> {r.responsavelPreenchimento}
+                          </p>
+                        </div>
                       </div>
 
                       <div className="mapa-ias__grupo-10">
@@ -531,7 +477,7 @@ export default function SectorMap({ records, profiles, workflows = [] }: SectorM
                   </div>
 
                   <div className="mapa-ias__titulo-modal-ia">
-                    <IconeInteligenciaArtificial nome={selectedIA.nomeFerramenta} />
+                    <IconeIA nome={selectedIA.nomeFerramenta} tamanho={40} />
                     <h2 id="mapa-ias-modal-titulo" className="mapa-ias__titulo-secao">
                       {selectedIA.nomeFerramenta}
                     </h2>

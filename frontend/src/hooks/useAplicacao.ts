@@ -1320,6 +1320,11 @@ export function useAplicacao() {
       // A tela passa a refletir exatamente o que foi persistido no banco.
       setApprovalConfig(persistedConfig);
       await loadApprovalData();
+      addToast({
+        title: "Sucesso",
+        message: "Configuração das etapas salva com sucesso.",
+        type: "success",
+      });
     } catch (e) {
       console.error("Erro ao salvar config de aprovação:", e);
       throw e;

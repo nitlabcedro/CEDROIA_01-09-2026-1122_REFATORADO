@@ -7,14 +7,16 @@ import React from "react";
 import { ArrowRight, CheckCircle2, ChevronRight } from "lucide-react";
 import { ApprovalWorkflow, IARecord } from "@/tipos";
 import { StatusBadge } from "./IndicadoresStatus";
+import { IconeIA } from "./IconeIA";
 import { obterStatusGeralDoRegistro } from "@/utilitarios/status-solicitacao";
+import type { NavegarPara } from "@/hooks/useAplicacao";
 
 interface TableCardProps {
   title: string;
   subtitle?: string;
   records: IARecord[];
   workflows?: ApprovalWorkflow[];
-  onNavigate: (tab: string) => void;
+  onNavigate: NavegarPara;
   onViewRecord: (record: IARecord) => void;
 }
 
@@ -26,7 +28,7 @@ export const TableCard: React.FC<TableCardProps> = ({ title, subtitle, records, 
         {subtitle && <p className="cartao-tabela__subtitulo">{subtitle}</p>}
       </div>
       <button type="button" onClick={() => onNavigate("inventory")} className="cartao-tabela__ver-todas">
-        Ver todas <ArrowRight size={13} />
+        Abrir catálogo <ArrowRight size={13} />
       </button>
     </header>
 
@@ -35,8 +37,8 @@ export const TableCard: React.FC<TableCardProps> = ({ title, subtitle, records, 
         <div className="cartao-tabela__vazio">
           <span className="cartao-tabela__vazio-icone"><CheckCircle2 size={24} /></span>
           <div>
-            <strong>Tudo em conformidade</strong>
-            <p>Nenhuma pendência prioritária aguardando ação.</p>
+            <strong>Seu catálogo está vazio</strong>
+            <p>Cadastre uma solução de IA para acompanhar seus dados por aqui.</p>
           </div>
         </div>
       ) : (
@@ -44,7 +46,7 @@ export const TableCard: React.FC<TableCardProps> = ({ title, subtitle, records, 
           <div className="cartao-tabela__lista-mobile">
             {records.map((record) => (
               <button type="button" key={record.id} onClick={() => onViewRecord(record)} className="cartao-tabela__item-mobile">
-                <span className="cartao-tabela__sigla">{(record.nomeFerramenta || "IA").slice(0, 2)}</span>
+                <IconeIA nome={record.nomeFerramenta} tamanho={36} />
                 <span className="cartao-tabela__item-mobile-conteudo">
                   <span className="cartao-tabela__item-mobile-cabecalho">
                     <span>
@@ -74,7 +76,15 @@ export const TableCard: React.FC<TableCardProps> = ({ title, subtitle, records, 
             <tbody>
               {records.map((record) => (
                 <tr key={record.id}>
-                  <td><strong>{record.nomeFerramenta}</strong><small>{record.id}</small></td>
+                  <td>
+                    <div className="cartao-tabela__identidade">
+                      <IconeIA nome={record.nomeFerramenta} tamanho={34} />
+                      <div className="cartao-tabela__identidade-texto">
+                        <strong>{record.nomeFerramenta}</strong>
+                        <small>{record.id}</small>
+                      </div>
+                    </div>
+                  </td>
                   <td>{record.unidadeSetor}</td>
                   <td><StatusBadge status={obterStatusGeralDoRegistro(record, workflows.find((workflow) => workflow.iaRecordId === record.id))} /></td>
                   <td className="cartao-tabela__coluna-acoes">

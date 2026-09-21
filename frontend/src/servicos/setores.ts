@@ -1,30 +1,27 @@
-import { CHAVES_ARMAZENAMENTO_LOCAL } from "@/constantes/armazenamento-local";
-import { obterCargosPadrao } from "@/constantes/setores";
+import { supabase } from "@/servicos/supabase";
+import {
+  normalizarSetoresAtivos,
+  type SetorCadastro,
+} from "@/utilitarios/cadastro-usuario";
 
-interface DetalheSetorLocal {
-  cargos?: unknown;
-}
+const TABELA_SETORES_CADASTRO = "sectors";
 
 /**
- * Obtém cargos de um setor respeitando a ordem de fonte já usada pelo sistema:
- * Supabase -> cache legado do navegador -> fallback institucional.
+ * Fonte oficial do cadastro: public.sectors.
+ * Não usa cache legado nem lista hardcoded para não aceitar atribuições obsoletas.
  */
+export async function obterSetoresAtivos(): Promise<SetorCadastro[]> {
+  const { data, error } = await supabase
+    .from(TABELA_SETORES_CADASTRO)
+    .select("name,cargos,status")
+    .eq("status", "Ativo")
+    .order("name");
+
+  if (error) throw error;
+  return normalizarSetoresAtivos(data);
+}
+
 export async function obterCargosDoSetor(setor: string): Promise<string[]> {
-  const nomeSetor = setor.trim();
-  if (!nomeSetor) return [];
-
-  try {
-    const raw = localStorage.getItem(CHAVES_ARMAZENAMENTO_LOCAL.DETALHES_SETORES);
-    if (raw) {
-      const detalhes = JSON.parse(raw) as Record<string, DetalheSetorLocal>;
-      const cargos = detalhes[nomeSetor]?.cargos;
-      if (Array.isArray(cargos) && cargos.length > 0) {
-        return cargos.filter((cargo): cargo is string => typeof cargo === "string" && cargo.trim().length > 0);
-      }
-    }
-  } catch (erro) {
-    console.warn(`Não foi possível ler cargos locais de ${nomeSetor}:`, erro);
-  }
-
-  return obterCargosPadrao(nomeSetor);
+  const setores = await obterSetoresAtivos();
+  return setores.find((item) => item.name === setor.trim())?.cargos || [];
 }

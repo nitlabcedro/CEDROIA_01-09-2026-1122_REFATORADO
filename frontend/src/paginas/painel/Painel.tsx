@@ -3,15 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo, useState } from "react";
-import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
+import React, { useMemo } from "react";
 import {
   Database,
   Clock,
   CheckCircle2,
-  XCircle,
-  PlusCircle,
-  Sparkles } from
+  XCircle } from
 "lucide-react";
 import {
   AreaChart,
@@ -27,9 +24,10 @@ import {
 import { IARecord } from "@/tipos";
 import {
   KPICard,
-  TableCard,
-  ActionCard } from
+  TableCard } from
 "@/componentes/painel/ComponentesPainel";
+import { AcessoRapido } from "@/componentes/painel/AcessoRapido";
+import type { NavegarPara } from "@/hooks/useAplicacao";
 import {
   obterStatusGeralDoRegistro,
   type StatusGeral,
@@ -37,9 +35,10 @@ import {
 
 interface DashboardProps {
   records: IARecord[];
-  onNavigate: (tab: string) => void;
+  onNavigate: NavegarPara;
   onView?: (record: IARecord) => void;
   isAdmin?: boolean;
+  isPrivileged?: boolean;
   workflows?: any[];
   approvalConfig?: any;
   currentUserId?: string;
@@ -50,12 +49,11 @@ export default function Dashboard({
   onNavigate,
   onView,
   isAdmin,
+  isPrivileged,
   workflows = [],
   approvalConfig,
   currentUserId
 }: DashboardProps) {
-
-  const [period, setPeriod] = useState<string>("30-days");
 
   const obterStatus = (record: IARecord): StatusGeral => {
     const workflow = workflows.find((wf) => wf.iaRecordId === record.id);
@@ -244,53 +242,6 @@ export default function Dashboard({
     slice(0, 5);
   }, [records, workflows]);
 
-  const nextActions = useMemo(() => {
-    const arr: any[] = [];
-
-    workflows.forEach((wf) => {
-      if (wf.finalStatus === "pendente") {
-        const correspondingRecord = records.find((r) => r.id === wf.iaRecordId);
-        if (
-          correspondingRecord &&
-          ["Em análise", "Em teste"].includes(obterStatusGeralDoRegistro(correspondingRecord, wf))
-        ) {
-          const currentStepItem = wf.steps?.find((s: any) => s.stepNumber === wf.currentStep);
-          const roleAssigned = currentStepItem?.roleName || "Avaliador";
-
-          arr.push({
-            id: `wf-${wf.iaRecordId}`,
-            type: "Fila de Aprovação",
-            iaName: `${correspondingRecord.nomeFerramenta} (${roleAssigned})`,
-            date: "Pendente",
-            icon: <Clock size={16} className="painel__icone-clock" />,
-            action: () => onNavigate("approval_queue")
-          });
-        }
-      }
-    });
-
-    if (arr.length < 3) {
-      arr.push({
-        id: "act-inv",
-        type: "Minhas IAs",
-        iaName: "Mapear nova ferramenta integrada",
-        date: "Rotina",
-        icon: <PlusCircle size={16} className="painel__icone-pluscircle" />,
-        action: () => onNavigate("new")
-      });
-      arr.push({
-        id: "act-rev",
-        type: "Conformidade LGPD",
-        iaName: "Revisar uso de cookies e dados anônimos",
-        date: "Semanal",
-        icon: <Sparkles size={16} className="painel__icone-pluscircle" />,
-        action: () => onNavigate("inventory")
-      });
-    }
-
-    return arr.slice(0, 3);
-  }, [workflows, records, onNavigate]);
-
   function onViewRecord(record: IARecord) {
     if (onView) {
       onView(record);
@@ -305,28 +256,24 @@ export default function Dashboard({
         <KPICard
           label="Total de IAs"
           value={stats.total}
-          comparison="vs. 30 dias"
           icon={<Database size={16} />}
           accentColor="slate" />
         
         <KPICard
           label="Em andamento"
           value={stats.emAndamento}
-          comparison="Aguardando parecer"
           icon={<Clock size={16} />}
           accentColor="orange" />
         
         <KPICard
-          label="Aprovada"
+          label="Aprovadas"
           value={stats.aprovadas}
-          comparison="Acesso autorizado"
           icon={<CheckCircle2 size={16} />}
           accentColor="green" />
         
         <KPICard
-          label="Não aprovada"
+          label="Não aprovadas"
           value={stats.naoAprovadas}
-          comparison="Uso restrito"
           icon={<XCircle size={16} />}
           accentColor="red" />
         
@@ -336,120 +283,125 @@ export default function Dashboard({
         <div className="painel-cartao painel-grafico cedro-card-premium painel__painel-cartao-estrutura">
           <div className="painel__grupo-evolucao-do-inventario">
             <div className="painel__grupo-evolucao-do-inventario-crescim">
-              <h2 className="painel__titulo-secao-evolucao-do-inventario">Evolução de Minhas IAs</h2>
-              <p className="painel__descricao-crescimento-acumulado-das-ias-">Crescimento acumulado das IAs cadastradas</p>
+              <h2 className="painel__titulo-secao-evolucao-do-inventario">Evolução do catálogo</h2>
+              <p className="painel__descricao-crescimento-acumulado-das-ias-">Total acumulado de IAs cadastradas nos últimos seis meses</p>
             </div>
-            <CustomDropdown
-              value={period}
-              onChange={(val) => setPeriod(val)}
-              options={[
-              { value: "30-days", label: "Últimos 30 dias" },
-              { value: "90-days", label: "Últimos 90 dias" },
-              { value: "180-days", label: "Histórico completo" }]
-              }
-              size="sm"
-              className="painel__icone-customdropdown" />
-            
           </div>
 
           <div className="painel__grupo">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={evolutionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#075618" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#075618" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="name"
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: "600" }} />
-                
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: "600" }} />
-                
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#ffffff",
-                    border: "1px solid #f1f5f9",
-                    borderRadius: "12px",
-                    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    color: "#1e293b"
-                  }} />
-                
-                <Area
-                  type="monotone"
-                  dataKey="Total de IAs"
-                  stroke="#075618"
-                  strokeWidth={2.5}
-                  fillOpacity={1}
-                  fill="url(#colorTotal)" />
-                
-              </AreaChart>
-            </ResponsiveContainer>
+            {records.length === 0 ? (
+              <div className="painel__estado-vazio-grafico">
+                <span className="painel__estado-vazio-icone"><Database size={22} /></span>
+                <strong>Ainda não há dados para exibir</strong>
+                <p>A evolução será apresentada após o primeiro cadastro de IA.</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={evolutionData} margin={{ top: 12, right: 12, left: -16, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#075618" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#075618" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis
+                    dataKey="name"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: "#718078", fontSize: 11, fontWeight: "600" }} />
+                  <YAxis
+                    allowDecimals={false}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: "#718078", fontSize: 11, fontWeight: "600" }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#ffffff",
+                      border: "1px solid #dce7de",
+                      borderRadius: "10px",
+                      boxShadow: "0 10px 24px rgba(18, 56, 28, 0.08)",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      color: "#1e293b"
+                    }} />
+                  <Area
+                    type="monotone"
+                    dataKey="Total de IAs"
+                    stroke="#075618"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#colorTotal)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
         <div className="painel-cartao painel-grafico-status cedro-card-premium painel__painel-cartao-estrutura-2">
-          <div>
+          <div className="painel__status-conteudo">
             <div className="painel__grupo-status-de-aprovacao">
-              <h3 className="painel__titulo-bloco-status-de-aprovacao">Status de Aprovação</h3>
-            </div>
-
-            <div className="painel__grupo-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={donutData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={65}
-                    paddingAngle={3}
-                    dataKey="value"
-                    stroke="none">
-                    
-                    {donutData.map((entry, index) =>
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                    )}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#ffffff",
-                      border: "1px solid #f1f5f9",
-                      borderRadius: "8px",
-                      fontSize: "11px",
-                      fontWeight: "bold"
-                    }} />
-                  
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="painel__grupo-total">
-                <span className="painel__texto">{stats.total}</span>
-                <span className="painel__texto-total">Total</span>
+              <div>
+                <h3 className="painel__titulo-bloco-status-de-aprovacao">Status das aprovações</h3>
+                <p className="painel__descricao-status">Distribuição atual do catálogo</p>
               </div>
             </div>
 
-            <div className="painel__grupo-3">
-              {donutData.map((item, idx) => {
-                const pct = stats.total ? Math.round(item.value / stats.total * 100) : 0;
-                return (
-                  <div key={idx} className="painel__grupo-4">
-                    <span className="painel__texto-2">
-                      <span className="painel__texto-3" style={{ backgroundColor: item.color }}></span>
-                      {item.name}
-                    </span>
-                    <span className="painel__texto-4">{item.value} <span className="painel__texto-5">({pct}%)</span></span>
-                  </div>);
+            {donutData.length === 0 ? (
+              <div className="painel__estado-vazio-status">
+                <span className="painel__estado-vazio-icone"><CheckCircle2 size={22} /></span>
+                <strong>Nenhuma IA cadastrada</strong>
+                <p>Os status aparecerão após o primeiro cadastro.</p>
+              </div>
+            ) : (
+              <>
+                <div className="painel__grupo-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={donutData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={67}
+                        paddingAngle={3}
+                        dataKey="value"
+                        stroke="none">
+                        {donutData.map((entry, index) =>
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        )}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#ffffff",
+                          border: "1px solid #dce7de",
+                          borderRadius: "9px",
+                          fontSize: "11px",
+                          fontWeight: "bold"
+                        }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="painel__grupo-total">
+                    <span className="painel__texto">{stats.total}</span>
+                    <span className="painel__texto-total">IAs</span>
+                  </div>
+                </div>
 
-              })}
-            </div>
+                <div className="painel__grupo-3">
+                  {donutData.map((item, idx) => {
+                    const pct = stats.total ? Math.round(item.value / stats.total * 100) : 0;
+                    return (
+                      <div key={idx} className="painel__grupo-4">
+                        <span className="painel__texto-2">
+                          <span className="painel__texto-3" style={{ backgroundColor: item.color }}></span>
+                          {item.name}
+                        </span>
+                        <span className="painel__texto-4">{item.value} <span className="painel__texto-5">{pct}%</span></span>
+                      </div>);
+
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -457,7 +409,7 @@ export default function Dashboard({
       <div className="painel-resumo painel__painel-resumo-estrutura">
         <div className="painel__grupo-5">
           <TableCard
-            title="Catalogo"
+            title="Catálogo de IAs"
             records={priorityPedings}
             workflows={workflows}
             onNavigate={onNavigate}
@@ -468,13 +420,11 @@ export default function Dashboard({
         </div>
 
         <div className="painel__grupo-6">
-          {isAdmin &&
-          <ActionCard
-            title="Próximas ações"
-            actions={nextActions}
-            onNavigate={onNavigate} />
-
-          }
+          <AcessoRapido
+            navegarPara={onNavigate}
+            isAdmin={Boolean(isAdmin)}
+            isPrivileged={Boolean(isPrivileged)}
+          />
         </div>
       </div>
     </div>);

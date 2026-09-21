@@ -12,7 +12,7 @@ export type ContextoMensagemErro =
 
 const FALLBACKS: Record<ContextoMensagemErro, string> = {
   login: "Não foi possível entrar. Tente novamente.",
-  cadastro: "Não foi possível concluir o cadastro no momento. Tente novamente.",
+  cadastro: "Não foi possível concluir o cadastro. Verifique os dados e tente novamente.",
   "recuperacao-senha": "Não foi possível enviar o link de recuperação. Tente novamente.",
   "redefinicao-senha": "Não foi possível redefinir sua senha. Tente novamente.",
   perfil: "Não foi possível atualizar o perfil. Tente novamente.",
@@ -22,6 +22,16 @@ const FALLBACKS: Record<ContextoMensagemErro, string> = {
   administracao: "Não foi possível concluir a operação administrativa. Tente novamente.",
   operacao: "Não foi possível concluir esta operação. Tente novamente.",
 };
+
+const MENSAGENS_FUNCIONAIS_SEGURAS = [
+  "O bloco deve conter entre 1 e 10 perguntas.",
+  "Cada pergunta deve ter entre 1 e 1000 caracteres.",
+  "A resposta deve ter entre 1 e 1000 caracteres.",
+  "Todas as perguntas precisam ser respondidas antes do envio.",
+  "Esta resposta já não pode mais ser alterada.",
+  "Esta comunicação já foi encerrada.",
+  "Você não tem permissão para realizar esta ação.",
+] as const;
 
 function extrairTextoErro(erro: unknown): string {
   if (typeof erro === "string") return erro;
@@ -55,6 +65,11 @@ export function obterMensagemErroUsuario(
 ): string {
   const mensagem = extrairTextoErro(erro).trim().toLocaleLowerCase("en-US");
 
+  const mensagemFuncional = MENSAGENS_FUNCIONAIS_SEGURAS.find(
+    (item) => item.toLocaleLowerCase("en-US") === mensagem,
+  );
+  if (mensagemFuncional) return mensagemFuncional;
+
   if (indicaSenhaIgualAtual(erro, mensagem)) {
     return "A nova senha deve ser diferente da senha atual.";
   }
@@ -76,7 +91,7 @@ export function obterMensagemErroUsuario(
   }
 
   if (mensagem.includes("database error saving new user")) {
-    return "Não foi possível concluir o cadastro no momento. Tente novamente em alguns instantes.";
+    return "Não foi possível concluir o cadastro. Verifique os dados e tente novamente.";
   }
 
   if (

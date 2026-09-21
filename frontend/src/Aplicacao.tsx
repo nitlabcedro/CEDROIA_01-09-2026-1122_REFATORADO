@@ -30,6 +30,7 @@ import {
   VisualizacaoRelatorio,
 } from "@/paginas/lazyPaginas";
 import NotificacaoPerguntasTI from "@/componentes/aprovacoes/NotificacaoPerguntasTI";
+import NotificacaoRespostaTI from "@/componentes/aprovacoes/NotificacaoRespostaTI";
 import {
   atualizarMensagemTransitoriaLogin,
   decidirTelaAplicacao,
@@ -163,7 +164,7 @@ export default function Aplicacao() {
   <Suspense fallback={<CarregamentoPagina />}>
   <>
       {activeTab === "dashboard" &&
-    <Painel records={records} onNavigate={navegarPara} onView={handleView} isAdmin={isCurrentUserAdmin} workflows={workflows} approvalConfig={approvalConfig} currentUserId={user.id} />
+    <Painel records={records} onNavigate={navegarPara} onView={handleView} isAdmin={isCurrentUserAdmin} isPrivileged={isCurrentUserPrivileged} workflows={workflows} approvalConfig={approvalConfig} currentUserId={user.id} />
     }
       {activeTab === "inventory" &&
     <Inventario
@@ -366,7 +367,8 @@ export default function Aplicacao() {
       }
 
       {/* Pendência persistente de perguntas da Etapa 2 — TI */}
-      <NotificacaoPerguntasTI />
+      <NotificacaoPerguntasTI currentUserId={user.id} />
+      <NotificacaoRespostaTI currentUserId={user.id} />
 
       {/* Delete Confirmation Modal */}
       <AnimatePresence>

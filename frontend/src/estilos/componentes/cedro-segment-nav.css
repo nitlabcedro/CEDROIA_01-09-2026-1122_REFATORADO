@@ -1,0 +1,209 @@
+/*
+ * Cedro IA — navegação segmentada (Fila/Config, Admin, Relatórios).
+ * Padrão visual compartilhado: container compacto, trilho interno, aba ativa verde Cedro.
+ */
+
+.cedro-segment-nav {
+  display: block;
+  width: fit-content;
+  max-width: min(100%, 520px);
+  margin: 0 0 12px;
+  padding: 5px;
+  background: #fff;
+  border: 1px solid #8fb39a;
+  border-radius: 14px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .9) inset,
+    0 2px 6px rgba(2, 43, 13, .1);
+  box-sizing: border-box;
+}
+
+/* --largo: usado somente na página de Relatórios (largura no escopo .pagina-relatorio). */
+
+.cedro-segment-nav__grupo {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 6px;
+  width: auto;
+  max-width: 100%;
+  padding: 0;
+  background: #edf5f0;
+  border: 1px solid #c5d9cc;
+  border-radius: 11px;
+  box-sizing: border-box;
+}
+
+.cedro-segment-nav__grupo--unico {
+  display: inline-flex;
+}
+
+.cedro-segment-nav__item {
+  flex: 0 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 40px;
+  margin: 0;
+  padding: 10px 18px;
+  color: #1a4d32;
+  background: #fff;
+  border: 1px solid #c8ddd2;
+  border-radius: 9px;
+  box-shadow: 0 1px 2px rgba(2, 43, 13, .06);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0;
+  text-align: center;
+  text-transform: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 100ms ease;
+}
+
+.cedro-segment-nav__item:hover:not(.cedro-segment-nav__item--ativo) {
+  color: #03350d;
+  background: #f7fcf9;
+  border-color: #7fb38e;
+  box-shadow: 0 2px 4px rgba(2, 43, 13, .08);
+}
+
+.cedro-segment-nav__item--ativo {
+  color: #fff;
+  background: linear-gradient(180deg, #0a6f24 0%, #075618 55%, #064e1e 100%);
+  border-color: #03350d;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .14) inset,
+    0 3px 10px rgba(2, 43, 13, .22);
+}
+
+.cedro-segment-nav__item--ativo:hover {
+  color: #fff;
+  background: linear-gradient(180deg, #0b7828 0%, #08601c 55%, #075618 100%);
+}
+
+.cedro-segment-nav__item:focus-visible {
+  outline: 2px solid #075618;
+  outline-offset: 2px;
+  z-index: 1;
+}
+
+.cedro-segment-nav__item-icone {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.cedro-segment-nav__item--ativo .cedro-segment-nav__item-icone {
+  opacity: 1;
+}
+
+@media (min-width: 1024px) {
+  .cedro-segment-nav__item {
+    min-height: 38px;
+    padding: 8px 20px;
+    font-size: 13px;
+  }
+}
+
+/* Relatórios: mesma largura útil do card "Etapas de aprovação" (100% do container ~1180px) */
+.pagina-relatorio.relatorio-detalhes .cedro-segment-nav--largo {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+  .pagina-relatorio.relatorio-detalhes .cedro-segment-nav--largo .cedro-segment-nav__grupo--rolagem {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+    overflow: visible;
+  }
+
+  .pagina-relatorio.relatorio-detalhes .cedro-segment-nav--largo .cedro-segment-nav__grupo--rolagem .cedro-segment-nav__item {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .cedro-segment-nav {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 10px;
+    padding: 4px;
+  }
+
+  .cedro-segment-nav__grupo--dupla {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    width: 100%;
+  }
+
+  .cedro-segment-nav__grupo--dupla.cedro-segment-nav__grupo--unico {
+    grid-template-columns: 1fr;
+  }
+
+  .cedro-segment-nav__grupo--dupla .cedro-segment-nav__item,
+  .cedro-segment-nav__grupo--rolagem .cedro-segment-nav__item {
+    min-height: 44px;
+    padding: 10px 10px;
+    font-size: 12px;
+  }
+
+  .cedro-segment-nav__grupo--dupla .cedro-segment-nav__item {
+    white-space: normal;
+  }
+
+  /* Relatórios (5 abas): rolagem horizontal controlada no trilho */
+  .cedro-segment-nav__grupo--rolagem {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 5px;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(7, 86, 24, 0.25) transparent;
+  }
+
+  .cedro-segment-nav__grupo--rolagem::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .cedro-segment-nav__grupo--rolagem .cedro-segment-nav__item {
+    flex: 0 0 auto;
+    min-width: max(6.75rem, 30%);
+    scroll-snap-align: start;
+    white-space: nowrap;
+  }
+}
+
+/* Administração: segmento na toolbar sem esticar a linha inteira */
+#administracao-conteudo .administracao-toolbar .cedro-segment-nav {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  align-self: center;
+}
+
+@media (max-width: 1023px) {
+  #administracao-conteudo .administracao-toolbar .cedro-segment-nav {
+    width: 100%;
+  }
+}

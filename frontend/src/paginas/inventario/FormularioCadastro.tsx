@@ -6,6 +6,7 @@
 import { CHAVES_ARMAZENAMENTO_LOCAL } from "@/constantes/armazenamento-local";
 import React, { useState, useEffect } from "react";
 import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
+import { IconeIA } from "@/componentes/comuns/IconeIA";
 import {
   Save, X, Info, AlertTriangle, Zap, Database, Share2, ClipboardCheck, Scale, FileText, ChevronRight,
   Check, UserRound, Clock3, Bookmark
@@ -645,14 +646,6 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
                 <div className="nova-solicitacao__grade-ias">
                   {["ChatGPT", "Google Gemini", "Microsoft Copilot", "Claude", "Grok", "Outro"].map((name) => {
                     const isSelected = name === "Outro" ? outroActive : formData.nomeFerramenta === name && !outroActive;
-                    const simbolos: Record<string, string> = {
-                      ChatGPT: "AI",
-                      "Google Gemini": "✦",
-                      "Microsoft Copilot": "◫",
-                      Claude: "AI",
-                      Grok: "G",
-                      Outro: "•••"
-                    };
                     return (
                       <button
                         key={name}
@@ -668,7 +661,7 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
                           }
                         }}
                       >
-                        <span className="nova-solicitacao__ia-icone" aria-hidden="true">{simbolos[name]}</span>
+                        <IconeIA nome={name} tamanho={48} className="nova-solicitacao__ia-icone" />
                         <span>{name}</span>
                         {isSelected && <Check size={18} className="nova-solicitacao__ia-check" aria-hidden="true" />}
                       </button>

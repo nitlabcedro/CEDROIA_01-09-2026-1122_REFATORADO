@@ -1,7 +1,22 @@
 import type { ApprovalPageProps } from "./aprovacoes.tipos";
+import {
+  deveAplicarEtapasDoServidor,
+  formatarHorarioSalvoFluxo,
+  impressaoDigitalEtapasFluxo,
+  normalizarEtapasFluxoLocal,
+} from "./configuracao-fluxo.util";
 import { interpretarComentarioAprovacao, obterObservacoesOriginais } from "./aprovacoes.utilitarios";
-import { NOMES_ETAPAS_CURTOS, NOMES_ETAPAS_EXIBICAO } from "@/constantes/fluxo-aprovacao";
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import {
+  MENSAGEM_LIMITE_TEXTO_FLUXO_APROVACAO,
+  NOMES_ETAPAS_CURTOS,
+  NOMES_ETAPAS_EXIBICAO,
+} from "@/constantes/fluxo-aprovacao";
+import { CampoTextoLongoFluxoAprovacao } from "@/componentes/aprovacoes/CampoTextoLongoFluxoAprovacao";
+import { TextoExibicaoFluxoAprovacao } from "@/componentes/aprovacoes/TextoExibicaoFluxoAprovacao";
+import ModalComunicacaoTI from "@/componentes/aprovacoes/ModalComunicacaoTI";
+import { IconeIA } from "@/componentes/comuns/IconeIA";
+import { textoEntradaExcedeLimiteFluxoAprovacao } from "@/utilitarios/texto-fluxo-aprovacao";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
 import {
   CheckCircle2,
@@ -21,8 +36,6 @@ import {
   MessageSquare,
   HelpCircle,
   Plus,
-  Trash2,
-  Send,
   Loader2,
   RefreshCw,
   X,
@@ -33,9 +46,13 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { IARecord, StatusAuditoria, UserProfile, ApprovalConfig, ApprovalWorkflow, SolicitacaoInformacoesTI } from "@/tipos";
-import { criarSolicitacaoInformacoesTI, listarInteracoesTI } from "@/servicos/interacoes-ti";
+import { listarInteracoesTI } from "@/servicos/interacoes-ti";
 import { obterStatusGeralDoRegistro } from "@/utilitarios/status-solicitacao";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
+import {
+  INTERVALO_PENDENCIAS_TI_MS,
+  registrarPollingComVisibilidade,
+} from "@/utilitarios/polling-visibilidade";
 
 const FIXED_STEP_NAMES = NOMES_ETAPAS_CURTOS;
 const DISPLAY_STEP_NAMES = NOMES_ETAPAS_EXIBICAO;
@@ -52,32 +69,63 @@ export default function ApprovalPage({
   isAdmin
 }: ApprovalPageProps) {
   const [activeTab, setActiveTab] = useState<"queue" | "config">("queue");
-  const [workflowConfig, setWorkflowConfig] = useState<ApprovalConfig["steps"]>(
-    (approvalConfig?.steps ?? [
-    { stepNumber: 1, roleName: FIXED_STEP_NAMES[1], isOpinionOnly: false },
-    { stepNumber: 2, roleName: FIXED_STEP_NAMES[2], isOpinionOnly: false },
-    { stepNumber: 3, roleName: FIXED_STEP_NAMES[3], isOpinionOnly: false },
-    { stepNumber: 4, roleName: FIXED_STEP_NAMES[4], isOpinionOnly: false },
-    { stepNumber: 5, roleName: FIXED_STEP_NAMES[5], isOpinionOnly: true }]).
-    map((s) => ({
-      ...s,
-      roleName: FIXED_STEP_NAMES[s.stepNumber] || s.roleName
-    }))
+
+  const etapasPadraoFluxo = useMemo<ApprovalConfig["steps"]>(
+    () => [
+      { stepNumber: 1, roleName: FIXED_STEP_NAMES[1], isOpinionOnly: false },
+      { stepNumber: 2, roleName: FIXED_STEP_NAMES[2], isOpinionOnly: false },
+      { stepNumber: 3, roleName: FIXED_STEP_NAMES[3], isOpinionOnly: false },
+      { stepNumber: 4, roleName: FIXED_STEP_NAMES[4], isOpinionOnly: false },
+      { stepNumber: 5, roleName: FIXED_STEP_NAMES[5], isOpinionOnly: true },
+    ],
+    [],
   );
 
-  // Sincronizar estado ao carregar assincronamente do servidor
+  const [workflowConfig, setWorkflowConfig] = useState<ApprovalConfig["steps"]>(() =>
+    normalizarEtapasFluxoLocal(
+      approvalConfig?.steps?.length ? approvalConfig.steps : etapasPadraoFluxo,
+      FIXED_STEP_NAMES,
+    ),
+  );
+
+  const workflowEditandoRef = useRef(false);
+  const impressaoServidorRef = useRef<string | null>(
+    approvalConfig?.steps?.length
+      ? impressaoDigitalEtapasFluxo(
+          normalizarEtapasFluxoLocal(approvalConfig.steps, FIXED_STEP_NAMES),
+        )
+      : null,
+  );
+
   useEffect(() => {
-    if (approvalConfig?.steps && approvalConfig.steps.length > 0) {
-      setWorkflowConfig(
-        approvalConfig.steps.map((s) => ({
-          ...s,
-          roleName: FIXED_STEP_NAMES[s.stepNumber] || s.roleName
-        }))
-      );
-    }
+    if (!approvalConfig?.steps?.length) return;
+    const normalizado = normalizarEtapasFluxoLocal(approvalConfig.steps, FIXED_STEP_NAMES);
+    const impressao = impressaoDigitalEtapasFluxo(normalizado);
+    if (impressao === impressaoServidorRef.current) return;
+    impressaoServidorRef.current = impressao;
+    if (!deveAplicarEtapasDoServidor(workflowEditandoRef.current)) return;
+    setWorkflowConfig(normalizado);
   }, [approvalConfig]);
+
   const [workflowSaved, setWorkflowSaved] = useState(false);
+  const [workflowSavedAt, setWorkflowSavedAt] = useState<Date | null>(null);
+  const [salvandoConfiguracaoFluxo, setSalvandoConfiguracaoFluxo] = useState(false);
   const [workflowSaveError, setWorkflowSaveError] = useState<string | null>(null);
+  const workflowSavedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (workflowSavedTimeoutRef.current) clearTimeout(workflowSavedTimeoutRef.current);
+  }, []);
+
+  const marcarFluxoEditado = useCallback(() => {
+    workflowEditandoRef.current = true;
+    setWorkflowSaved(false);
+    setWorkflowSavedAt(null);
+    if (workflowSavedTimeoutRef.current) {
+      clearTimeout(workflowSavedTimeoutRef.current);
+      workflowSavedTimeoutRef.current = null;
+    }
+  }, []);
   const [approvalSearchInput, setApprovalSearchInput] = useState("");
   const [approvalSearchTerm, setApprovalSearchTerm] = useState("");
 
@@ -105,8 +153,6 @@ export default function ApprovalPage({
   const [carregandoInteracoesTi, setCarregandoInteracoesTi] = useState(false);
   const [erroInteracoesTi, setErroInteracoesTi] = useState("");
   const [modalPerguntasTiAberto, setModalPerguntasTiAberto] = useState(false);
-  const [novasPerguntasTi, setNovasPerguntasTi] = useState<string[]>([""]);
-  const [enviandoPerguntasTi, setEnviandoPerguntasTi] = useState(false);
   const interacoesTiRequestRef = React.useRef<string | null>(null);
 
   const [showPainelExecutivo, setShowPainelExecutivo] = useState(false);
@@ -278,39 +324,18 @@ export default function ApprovalPage({
       return;
     }
 
-    carregarInteracoesTi(record.id);
-    const intervalo = window.setInterval(() => {
-      if (document.visibilityState === "visible") carregarInteracoesTi(record.id);
-    }, 30000);
-    return () => window.clearInterval(intervalo);
+    const controle = registrarPollingComVisibilidade({
+      intervaloMs: INTERVALO_PENDENCIAS_TI_MS,
+      executar: () => void carregarInteracoesTi(record.id),
+      documento: document,
+      executarAoIniciar: true,
+    });
+    return () => controle.dispose();
   }, [analysisModal.isOpen, analysisModal.record?.id, workflows, carregarInteracoesTi]);
 
   const abrirModalPerguntasTi = () => {
-    setNovasPerguntasTi([""]);
     setErroInteracoesTi("");
     setModalPerguntasTiAberto(true);
-  };
-
-  const enviarPerguntasTi = async (recordId: string) => {
-    const perguntasValidas = novasPerguntasTi.map((item) => item.trim()).filter(Boolean);
-    if (perguntasValidas.length === 0) {
-      setErroInteracoesTi("Adicione pelo menos uma pergunta antes de enviar.");
-      return;
-    }
-
-    try {
-      setEnviandoPerguntasTi(true);
-      setErroInteracoesTi("");
-      await criarSolicitacaoInformacoesTI(recordId, perguntasValidas);
-      setModalPerguntasTiAberto(false);
-      setNovasPerguntasTi([""]);
-      await carregarInteracoesTi(recordId);
-    } catch (error: unknown) {
-      console.error("Erro ao enviar perguntas ao solicitante:", error);
-      setErroInteracoesTi(obterMensagemErroUsuario(error, "aprovacao"));
-    } finally {
-      setEnviandoPerguntasTi(false);
-    }
   };
 
   const filteredRecords = useMemo(() => {
@@ -550,13 +575,16 @@ export default function ApprovalPage({
                     </div>
 
                     {/* Titulo */}
-                    <div>
-                      <h3 className="aprovacoes__titulo-bloco">
-                        {record.nomeFerramenta}
-                      </h3>
-                      <p className="aprovacoes__descricao">
-                        {record.unidadeSetor} • {record.responsavelPreenchimento}
-                      </p>
+                    <div className="aprovacoes__identidade-card">
+                      <IconeIA nome={record.nomeFerramenta} tamanho={32} />
+                      <div className="aprovacoes__identidade-texto">
+                        <h3 className="aprovacoes__titulo-bloco">
+                          {record.nomeFerramenta}
+                        </h3>
+                        <p className="aprovacoes__descricao">
+                          {record.unidadeSetor} • {record.responsavelPreenchimento}
+                        </p>
+                      </div>
                     </div>
 
                     {/* Metadados: Etapa do fluxo e Data */}
@@ -647,40 +675,45 @@ export default function ApprovalPage({
           </div>
         </div> */}
 
-        {/* Tabs Menu Navigation */}
-        <div className="aprovacoes__grupo-fila-de-aprovacao-2 aprovacao-abas-barra">
-          <div className="cedro-abas aprovacao-abas" role="tablist" aria-label="Seções da aprovação">
+        {/* Navegação principal: fila vs configurar fluxo */}
+        <nav className="cedro-segment-nav" aria-label="Seções da aprovação">
+          <div
+            className={`cedro-segment-nav__grupo cedro-segment-nav__grupo--dupla${
+              isAdmin ? "" : " cedro-segment-nav__grupo--unico"
+            }`}
+            role="tablist"
+          >
             <button
               type="button"
               role="tab"
+              id="aprovacao-aba-fila"
+              aria-controls="aprovacao-painel-fila"
               aria-selected={activeTab === "queue"}
               onClick={() => setActiveTab("queue")}
-              className={`cedro-aba ${activeTab === "queue" ? "cedro-aba--ativa" : ""} aprovacoes__botao-fila-de-aprovacao-2 ${
-              activeTab === "queue" ?
-              "aprovacoes__botao-fila-de-aprovacao-3" :
-              "aprovacoes__botao-fila-de-aprovacao-4"}`
-              }>
-              
+              className={`cedro-segment-nav__item${
+                activeTab === "queue" ? " cedro-segment-nav__item--ativo" : ""
+              }`}
+            >
               Fila de aprovação
             </button>
-            
+
             {isAdmin &&
             <button
               type="button"
               role="tab"
+              id="aprovacao-aba-config"
+              aria-controls="aprovacao-painel-config"
               aria-selected={activeTab === "config"}
               onClick={() => setActiveTab("config")}
-              className={`cedro-aba ${activeTab === "config" ? "cedro-aba--ativa" : ""} aprovacoes__botao-fila-de-aprovacao-2 ${
-              activeTab === "config" ?
-              "aprovacoes__botao-fila-de-aprovacao-3" :
-              "aprovacoes__botao-configurar-fluxo"}`
-              }>
-              
-                Configurar fluxo
-              </button>
+              className={`cedro-segment-nav__item${
+                activeTab === "config" ? " cedro-segment-nav__item--ativo" : ""
+              }`}
+            >
+              Configurar fluxo
+            </button>
             }
           </div>
-        </div>
+        </nav>
 
         <AnimatePresence mode="wait">
           <div>
@@ -698,7 +731,12 @@ export default function ApprovalPage({
               })();
 
               return (
-                <div className="aprovacoes__grupo-6 aprovacao-layout">
+                <div
+                  id="aprovacao-painel-fila"
+                  role="tabpanel"
+                  aria-labelledby="aprovacao-aba-fila"
+                  className="aprovacoes__grupo-6 aprovacao-layout"
+                >
                   {/* COLUNA ESQUERDA: Fila de Solicitações (col-span-5) */}
                   <div className="aprovacoes__grupo-fila-de-aprovacao-3 aprovacao-layout__fila aprovacao-fila">
                     <div>
@@ -825,20 +863,25 @@ export default function ApprovalPage({
                                 </span>
                               </div>
 
-                              <h3 className="aprovacoes__titulo-bloco-2">
-                                {record.nomeFerramenta}
-                              </h3>
+                              <div className="aprovacoes__identidade-lista">
+                                <IconeIA nome={record.nomeFerramenta} tamanho={28} />
+                                <div className="aprovacoes__identidade-texto">
+                                  <h3 className="aprovacoes__titulo-bloco-2">
+                                    {record.nomeFerramenta}
+                                  </h3>
 
-                              <div className="aprovacoes__grupo-14">
-                                <span className="aprovacoes__texto-14">
-                                  {record.unidadeSetor} •{" "}
-                                  {record.responsavelPreenchimento}
-                                </span>
-                                <span className="aprovacoes__texto-15">
-                                  {new Date(
-                                  record.createdAt
-                                ).toLocaleDateString()}
-                                </span>
+                                  <div className="aprovacoes__grupo-14">
+                                    <span className="aprovacoes__texto-14">
+                                      {record.unidadeSetor} •{" "}
+                                      {record.responsavelPreenchimento}
+                                    </span>
+                                    <span className="aprovacoes__texto-15">
+                                      {new Date(
+                                      record.createdAt
+                                    ).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
                             </div>);
 
@@ -922,17 +965,20 @@ export default function ApprovalPage({
                         <>
                             {/* Pane Header */}
                             <div className="aprovacoes__grupo-16 aprovacao-detalhes__cabecalho">
-                              <div>
-                                <span className="aprovacoes__texto-9">
-                                  {record.id}
-                                </span>
-                                <h2 className="aprovacoes__titulo-secao">
-                                  {record.nomeFerramenta}
-                                </h2>
-                                <p className="aprovacoes__descricao-4">
-                                  {record.unidadeSetor} •{" "}
-                                  {record.responsavelPreenchimento}
-                                </p>
+                              <div className="aprovacoes__identidade-detalhe">
+                                <IconeIA nome={record.nomeFerramenta} tamanho={36} />
+                                <div className="aprovacoes__identidade-texto">
+                                  <span className="aprovacoes__texto-9">
+                                    {record.id}
+                                  </span>
+                                  <h2 className="aprovacoes__titulo-secao">
+                                    {record.nomeFerramenta}
+                                  </h2>
+                                  <p className="aprovacoes__descricao-4">
+                                    {record.unidadeSetor} •{" "}
+                                    {record.responsavelPreenchimento}
+                                  </p>
+                                </div>
                               </div>
 
                               <div className="aprovacoes__grupo-17">
@@ -1235,7 +1281,9 @@ export default function ApprovalPage({
                                                   className="aprovacao-responsavel-acordeao__criterio"
                                                 >
                                                   <span>{criterion.label}</span>
-                                                  <strong>{criterion.value}</strong>
+                                                  <TextoExibicaoFluxoAprovacao as="strong">
+                                                    {criterion.value}
+                                                  </TextoExibicaoFluxoAprovacao>
                                                 </div>
                                               ))}
                                             </div>
@@ -1247,7 +1295,9 @@ export default function ApprovalPage({
                                                 <MessageSquare size={15} />
                                                 <span>Parecer técnico justificado</span>
                                               </div>
-                                              <p>{parsedOpinion.parecer}</p>
+                                              <TextoExibicaoFluxoAprovacao>
+                                                {parsedOpinion.parecer}
+                                              </TextoExibicaoFluxoAprovacao>
                                             </div>
                                           ) : (
                                             <div className="aprovacao-responsavel-acordeao__vazio">
@@ -1294,20 +1344,50 @@ export default function ApprovalPage({
 
             })()}
 
-            {activeTab === "config" && isAdmin &&
-            <div className="aprovacoes__grupo-40 aprovacao-configuracao">
+            {isAdmin &&
+            <div
+              id="aprovacao-painel-config"
+              role="tabpanel"
+              aria-labelledby="aprovacao-aba-config"
+              className="aprovacoes__grupo-40 aprovacao-configuracao"
+              hidden={activeTab !== "config"}
+            >
                 <div className="aprovacoes__grupo-fila-de-aprovacao-2 aprovacao-configuracao__cabecalho">
                   <div>
                     <h3 className="aprovacoes__titulo-bloco-definir-responsaveis-pelas-eta">Definir responsáveis pelas etapas</h3>
                     <p className="aprovacao-configuracao__descricao">Selecione os usuários responsáveis por cada etapa fixa do fluxo de aprovação.</p>
                   </div>
-                  {workflowSaved &&
-                <span className="aprovacoes__texto-configuracao-salva">✓ Configuração salva</span>
-                }
                   {workflowSaveError &&
-                <span className="aprovacoes__texto-configuracao-erro">{workflowSaveError}</span>
+                <span className="aprovacoes__texto-configuracao-erro" role="alert">{workflowSaveError}</span>
                 }
                 </div>
+
+                <AnimatePresence>
+                  {workflowSaved &&
+                  <motion.div
+                    key="fluxo-salvo"
+                    className="aprovacao-configuracao__alerta-sucesso"
+                    role="status"
+                    aria-live="polite"
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.22 }}
+                  >
+                    <CheckCircle2 size={22} className="aprovacao-configuracao__alerta-icone" aria-hidden />
+                    <div>
+                      <p className="aprovacao-configuracao__alerta-titulo">
+                        Configuração das etapas salva com sucesso.
+                      </p>
+                      {workflowSavedAt &&
+                      <p className="aprovacao-configuracao__alerta-horario">
+                        Salvo às {formatarHorarioSalvoFluxo(workflowSavedAt)}
+                      </p>
+                      }
+                    </div>
+                  </motion.div>
+                  }
+                </AnimatePresence>
 
                 <div className="aprovacoes__grupo-41 aprovacao-configuracao__grade">
                   {workflowConfig.map((step, idx) =>
@@ -1337,7 +1417,7 @@ export default function ApprovalPage({
                           userName: selectedProfile?.full_name || undefined
                         };
                         setWorkflowConfig(updated);
-                        setWorkflowSaved(false);
+                        marcarFluxoEditado();
                       }}
                       placeholder="— Selecione uma conta autorizada —"
                       options={approvalEligibleProfiles.map((p) => {
@@ -1371,8 +1451,11 @@ export default function ApprovalPage({
 
                 <div className="aprovacoes__grupo-45 aprovacao-configuracao__rodape">
                   <button
+                  type="button"
+                  disabled={salvandoConfiguracaoFluxo}
+                  aria-busy={salvandoConfiguracaoFluxo}
                   onClick={async () => {
-                    if (!onSaveApprovalConfig) return;
+                    if (!onSaveApprovalConfig || salvandoConfiguracaoFluxo) return;
 
                     const stepsProtegidos = workflowConfig.map((step) => ({
                       ...step,
@@ -1380,32 +1463,38 @@ export default function ApprovalPage({
                     }));
 
                     setWorkflowConfig(stepsProtegidos);
-                    setWorkflowSaved(false);
                     setWorkflowSaveError(null);
+                    setSalvandoConfiguracaoFluxo(true);
 
                     try {
                       await onSaveApprovalConfig({ steps: stepsProtegidos });
+                      workflowEditandoRef.current = false;
+                      impressaoServidorRef.current = impressaoDigitalEtapasFluxo(stepsProtegidos);
                       setWorkflowSaved(true);
-                      setTimeout(() => setWorkflowSaved(false), 4000);
+                      setWorkflowSavedAt(new Date());
+                      if (workflowSavedTimeoutRef.current) clearTimeout(workflowSavedTimeoutRef.current);
+                      workflowSavedTimeoutRef.current = setTimeout(() => {
+                        setWorkflowSaved(false);
+                        workflowSavedTimeoutRef.current = null;
+                      }, 10000);
                     } catch (error) {
                       console.error("Erro ao salvar responsáveis do fluxo:", error);
                       setWorkflowSaveError(obterMensagemErroUsuario(error, "aprovacao"));
+                    } finally {
+                      setSalvandoConfiguracaoFluxo(false);
                     }
                   }}
-                  className={`aprovacoes__botao-7 ${
-                  workflowSaved ?
-                  "aprovacoes__botao-8" :
-                  "aprovacoes__botao-9"}`
-                  }>
-                  
-                    {workflowSaved ?
+                  className={`aprovacoes__botao-7 aprovacoes__botao-9 ${
+                    salvandoConfiguracaoFluxo ? "aprovacoes__botao-7--salvando" : ""
+                  } ${workflowSaved && !salvandoConfiguracaoFluxo ? "aprovacoes__botao-7--salvo-recente" : ""}`}
+                  >
+                    {salvandoConfiguracaoFluxo ?
                   <>
-                        <CheckCircle2 size={16} />
-                        Fluxo configurado com sucesso!
+                        <Loader2 size={16} className="aprovacao-configuracao__icone-girando" aria-hidden />
+                        Salvando configurações...
                       </> :
-
                   <>
-                        <Save size={16} />
+                        <Save size={16} aria-hidden />
                         Salvar Configuração de Etapas
                       </>
                   }
@@ -1432,7 +1521,9 @@ export default function ApprovalPage({
           const activeWfStep = wf?.steps?.find((s) => s.stepNumber === currentStepNum);
           const activeEvaluatorName = activeWfStep?.assignedUserName || activeStepDef?.assignedUserName || "Qualquer usuário";
 
-          const solicitacaoTiPendente = interacoesTi.find((item) => item.status === "aguardando_resposta");
+          const solicitacaoTiPendente = interacoesTi.find(
+            (item) => item.estado === "aguardando_solicitante",
+          );
           const possuiSolicitacaoTiPendente = currentStepNum === 2 && Boolean(solicitacaoTiPendente);
 
           const renderPainelInteracoesTi = (compacto = false) => {
@@ -1449,18 +1540,18 @@ export default function ApprovalPage({
                       </h4>
                     </div>
                     <p className="aprovacoes__descricao-crie-perguntas-especificas-par">
-                      Crie perguntas específicas para esta solicitação. A etapa permanece na TI até o usuário responder toda a rodada.
+                      Consulte o histórico ou envie uma mensagem ao solicitante quando não houver conversa aberta.
                     </p>
                   </div>
 
                   <button
                     type="button"
                     onClick={abrirModalPerguntasTi}
-                    disabled={Boolean(solicitacaoTiPendente) || carregandoInteracoesTi}
+                    disabled={carregandoInteracoesTi}
                     className="aprovacoes__botao-solicitar-informacoes">
                     
                     <Plus size={14} />
-                    Solicitar informações
+                    {interacoesTi.length > 0 ? "Abrir comunicação" : "Solicitar informações"}
                   </button>
                 </div>
 
@@ -1488,16 +1579,29 @@ export default function ApprovalPage({
                                 Rodada {interacao.numeroRodada}
                               </p>
                               <p className="aprovacoes__descricao-8">
-                                {interacao.perguntas.length} pergunta(s) • {new Date(interacao.criadoEm).toLocaleDateString()}
+                                {interacao.modo === "chat"
+                                  ? `${interacao.mensagens.length} mensagem(ns)`
+                                  : `${interacao.perguntas.length} pergunta(s)`}
+                                {" • "}{new Date(interacao.criadoEm).toLocaleDateString()}
                               </p>
                             </div>
                             <span className={`aprovacoes__texto-23 ${aguardando ? "aprovacoes__texto-24" : "aprovacoes__texto-25"}`}>
-                              {aguardando ? "Aguardando resposta" : "Resposta recebida"}
+                              {interacao.estado === "encerrada"
+                                ? "Conversa encerrada"
+                                : aguardando ? "Aguardando resposta" : "Resposta recebida"}
                             </span>
                           </div>
 
                           <div className="aprovacoes__grupo-55">
-                            {interacao.perguntas.map((pergunta) =>
+                            {interacao.modo === "chat" ? (
+                              <button
+                                type="button"
+                                onClick={abrirModalPerguntasTi}
+                                className="aprovacoes__botao-tentar-novamente"
+                              >
+                                Ver histórico da conversa
+                              </button>
+                            ) : interacao.perguntas.map((pergunta) =>
                           <div key={pergunta.id} className="aprovacoes__grupo-56">
                                 <div className="aprovacoes__grupo-57">
                                   <span className="aprovacoes__texto-26">
@@ -1505,13 +1609,17 @@ export default function ApprovalPage({
                                   </span>
                                   <div className="aprovacoes__grupo-58">
                                     <p className="aprovacoes__descricao-11">
-                                      {pergunta.pergunta}
+                                      <TextoExibicaoFluxoAprovacao as="span">
+                                        {pergunta.pergunta}
+                                      </TextoExibicaoFluxoAprovacao>
                                     </p>
                                     {pergunta.resposta?.trim() ?
                                 <div className="aprovacoes__grupo-resposta-do-solicitante">
                                         <p className="aprovacoes__descricao-resposta-do-solicitante">Resposta do solicitante</p>
                                         <p className="aprovacoes__descricao-12">
-                                          {pergunta.resposta}
+                                          <TextoExibicaoFluxoAprovacao as="span">
+                                            {pergunta.resposta}
+                                          </TextoExibicaoFluxoAprovacao>
                                         </p>
                                       </div> :
 
@@ -1561,6 +1669,10 @@ export default function ApprovalPage({
           const handleDecisionSubmit = (status: StatusAuditoria) => {
             if (currentStepNum === 2 && possuiSolicitacaoTiPendente) {
               setErroInteracoesTi("Aguarde o solicitante responder todas as perguntas antes de concluir a Etapa 2 — TI.");
+              return;
+            }
+            if (auditComment.trim() && textoEntradaExcedeLimiteFluxoAprovacao(auditComment)) {
+              setErroInteracoesTi(MENSAGEM_LIMITE_TEXTO_FLUXO_APROVACAO);
               return;
             }
 
@@ -1644,9 +1756,12 @@ export default function ApprovalPage({
                         </span>
                       </div>
 
-                      <h2 className="aprovacoes__titulo-secao-2">
-                        {renderValue(record.nomeFerramenta)}
-                      </h2>
+                      <div className="aprovacoes__identidade-modal">
+                        <IconeIA nome={record.nomeFerramenta} tamanho={36} />
+                        <h2 className="aprovacoes__titulo-secao-2">
+                          {renderValue(record.nomeFerramenta)}
+                        </h2>
+                      </div>
 
                       <p className="aprovacoes__descricao-id-protocolo-avaliador">
                         ID/Protocolo: <span className="aprovacoes__texto-32">{record.id}</span> • Avaliador: <span className="aprovacoes__texto-33">
@@ -1862,9 +1977,9 @@ export default function ApprovalPage({
                                       <p className="aprovacoes__descricao-etapa">
                                         Etapa {s.stepNumber} • {s.roleName}
                                       </p>
-                                      <p className="aprovacoes__descricao-21">
+                                      <TextoExibicaoFluxoAprovacao className="aprovacoes__descricao-21">
                                         {parsed.parecer || s.comment || "(Sem parecer informado)"}
-                                      </p>
+                                      </TextoExibicaoFluxoAprovacao>
                                       <p className="aprovacoes__descricao-por">
                                         Por: {s.assignedUserName || "Aprovação Livre"}
                                       </p>
@@ -2012,12 +2127,13 @@ export default function ApprovalPage({
                             <p className="aprovacoes__descricao-insira-detalhes-adicionais-sob">
                               Insira detalhes adicionais sobre o período de teste e as condições técnicas observadas na ferramenta durante a simulação prática (opcional).
                             </p>
-                            <textarea
+                            <CampoTextoLongoFluxoAprovacao
                               id="campoRelatorioPeriodoTeste"
                               value={auditComment}
                               onChange={(e) => setAuditComment(e.target.value)}
                               placeholder="Registre observações técnicas relativas aos testes realizados com a Inteligência Artificial..."
-                              className="aprovacao-campo-parecer" />
+                              className="aprovacao-campo-parecer"
+                            />
                             
                           </div>
 
@@ -2095,7 +2211,7 @@ export default function ApprovalPage({
 
                                         <div className="aprovacao-executiva__parecer-conteudo">
                                           <span className="aprovacao-executiva__parecer-rotulo">Parecer registrado</span>
-                                          <p>{parecer}</p>
+                                          <TextoExibicaoFluxoAprovacao>{parecer}</TextoExibicaoFluxoAprovacao>
                                         </div>
                                       </article>
                                     );
@@ -2120,7 +2236,7 @@ export default function ApprovalPage({
                                 <MessageSquare size={14} className="aprovacoes__descricao-etapa-atual" /> Parecer Técnico Justificado
                               </label>
                         }
-                            <textarea
+                            <CampoTextoLongoFluxoAprovacao
                           id="campoParecerTecnico"
                           value={auditComment}
                           onChange={(e) => setAuditComment(e.target.value)}
@@ -2130,7 +2246,8 @@ export default function ApprovalPage({
                           "Descreva aqui sua justificativa técnica detalhada corporativa. Seus argumentos de parecer fundamentarão documentalmente o histórico desta IA no banco do Cedro..."
                           }
                           className="aprovacao-campo-parecer"
-                          required />
+                          required
+                        />
                         
                           </div>) :
                       null}
@@ -2215,7 +2332,8 @@ export default function ApprovalPage({
                     </div>
 
                     <div className="aprovacoes__grupo-86">
-                      {renderValue(record.nomeFerramenta)}
+                      <IconeIA nome={record.nomeFerramenta} tamanho={32} />
+                      <span>{renderValue(record.nomeFerramenta)}</span>
                     </div>
 
                     <p className="aprovacoes__descricao-id-protocolo">
@@ -2284,9 +2402,9 @@ export default function ApprovalPage({
                                     <p className="aprovacoes__descricao-etapa-2">
                                       Etapa {s.stepNumber} • {s.roleName}
                                     </p>
-                                    <p className="aprovacoes__descricao-23">
+                                    <TextoExibicaoFluxoAprovacao className="aprovacoes__descricao-23">
                                       {parsed.parecer || s.comment || "(Sem parecer informado)"}
-                                    </p>
+                                    </TextoExibicaoFluxoAprovacao>
                                     <p className="aprovacoes__descricao-por-2">
                                       Por: {s.assignedUserName || "Aprovação Livre"}
                                     </p>
@@ -2430,7 +2548,7 @@ export default function ApprovalPage({
                         <label className="aprovacoes__rotulo-parecer-tecnico-justificado-2">
                           <MessageSquare size={14} className="aprovacoes__descricao-etapa-atual" /> {currentStepNum === 3 ? "Relatório Geral do Período de Teste e Observações" : "Parecer Técnico Justificado"}
                         </label>
-                        <textarea
+                        <CampoTextoLongoFluxoAprovacao
                           id="campoParecerTecnicoMobile"
                           value={auditComment}
                           onChange={(e) => setAuditComment(e.target.value)}
@@ -2442,7 +2560,8 @@ export default function ApprovalPage({
                           "Descreva aqui sua justificativa técnica detalhada corporativa. Seus argumentos de parecer fundamentarão documentalmente o histórico desta IA no banco do Cedro..."
                           }
                           className="aprovacao-campo-parecer"
-                          required />
+                          required
+                        />
                         
                       </div>
                     </div>
@@ -2480,124 +2599,18 @@ export default function ApprovalPage({
                   </div>
                 </motion.div>
               </div>
-              <AnimatePresence>
-                {modalPerguntasTiAberto && currentStepNum === 2 &&
-                <div className="cedro-modal-overlay aprovacoes__grupo-98">
-                    <motion.button
-                    type="button"
-                    aria-label="Fechar criação de perguntas"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onClick={() => setModalPerguntasTiAberto(false)}
-                    className="aprovacoes__elemento-fechar-criacao-de-perguntas" />
-                  
-
-                    <motion.section
-                    initial={{ opacity: 0, y: 18, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 14, scale: 0.97 }}
-                    className="cedro-modal-painel aprovacoes__elemento-3">
-                    
-                      <div className="aprovacoes__grupo-99" />
-                      <header className="aprovacoes__cabecalho-etapa-2-ti">
-                        <div>
-                          <p className="aprovacoes__descricao-etapa-2-ti">
-                            Etapa 2 — TI
-                          </p>
-                          <h3 className="aprovacoes__titulo-bloco-solicitar-informacoes-ao-usuar">
-                            Solicitar informações ao usuário
-                          </h3>
-                          <p className="aprovacoes__descricao-escreva-somente-as-perguntas-n">
-                            Escreva somente as perguntas necessárias para esta solicitação. O usuário receberá uma notificação persistente até responder todas.
-                          </p>
-                        </div>
-                        <button
-                        type="button"
-                        onClick={() => setModalPerguntasTiAberto(false)}
-                        className="aprovacoes__botao-17">
-                        
-                          <X size={17} />
-                        </button>
-                      </header>
-
-                      <div className="aprovacoes__grupo-100">
-                        {novasPerguntasTi.map((pergunta, indice) =>
-                      <div key={indice} className="aprovacoes__grupo-101">
-                            <div className="aprovacoes__grupo-102">
-                              <span className="aprovacoes__texto-49">
-                                {String(indice + 1).padStart(2, "0")}
-                              </span>
-                              <div className="aprovacoes__grupo-58">
-                                <label className="aprovacoes__rotulo-pergunta">
-                                  Pergunta
-                                </label>
-                                <textarea
-                              value={pergunta}
-                              onChange={(event) => {
-                                const atualizadas = [...novasPerguntasTi];
-                                atualizadas[indice] = event.target.value;
-                                setNovasPerguntasTi(atualizadas);
-                              }}
-                              placeholder="Digite a pergunta que deve ser respondida pelo solicitante..."
-                              className="aprovacoes__campo-texto-digite-a-pergunta-que-deve-ser"
-                              autoFocus={indice === novasPerguntasTi.length - 1} />
-                            
-                              </div>
-                              {novasPerguntasTi.length > 1 &&
-                          <button
-                            type="button"
-                            onClick={() => setNovasPerguntasTi((anteriores) => anteriores.filter((_, posicao) => posicao !== indice))}
-                            className="aprovacoes__botao-remover-pergunta"
-                            title="Remover pergunta">
-                            
-                                  <Trash2 size={14} />
-                                </button>
-                          }
-                            </div>
-                          </div>
-                      )}
-
-                        <button
-                        type="button"
-                        onClick={() => setNovasPerguntasTi((anteriores) => [...anteriores, ""])}
-                        disabled={novasPerguntasTi.length >= 20}
-                        className="aprovacoes__botao-adicionar-pergunta">
-                        
-                          <Plus size={14} />
-                          Adicionar pergunta
-                        </button>
-
-                        {erroInteracoesTi &&
-                      <div className="aprovacoes__grupo-103">
-                            {erroInteracoesTi}
-                          </div>
-                      }
-                      </div>
-
-                      <footer className="aprovacoes__rodape-cancelar">
-                        <button
-                        type="button"
-                        onClick={() => setModalPerguntasTiAberto(false)}
-                        disabled={enviandoPerguntasTi}
-                        className="aprovacoes__botao-cancelar">
-                        
-                          Cancelar
-                        </button>
-                        <button
-                        type="button"
-                        onClick={() => enviarPerguntasTi(record.id)}
-                        disabled={enviandoPerguntasTi || novasPerguntasTi.every((item) => !item.trim())}
-                        className="aprovacoes__botao-18">
-                        
-                          {enviandoPerguntasTi ? <Loader2 size={14} className="aprovacoes__icone-loader2" /> : <Send size={14} />}
-                          {enviandoPerguntasTi ? "Enviando..." : "Enviar ao solicitante"}
-                        </button>
-                      </footer>
-                    </motion.section>
-                  </div>
-                }
-              </AnimatePresence>
+              <ModalComunicacaoTI
+                aberto={modalPerguntasTiAberto && currentStepNum === 2}
+                recordId={record.id}
+                nomeFerramenta={record.nomeFerramenta}
+                papelUsuario="ti"
+                currentUserId={currentUserId}
+                interacoesIniciais={interacoesTi}
+                onFechar={() => setModalPerguntasTiAberto(false)}
+                onAtualizar={async (dados) => {
+                  setInteracoesTi(dados);
+                }}
+              />
             </>);
 
         })()}

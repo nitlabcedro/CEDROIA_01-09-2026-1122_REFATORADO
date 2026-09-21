@@ -25,7 +25,9 @@
 
 @import "./componentes/marca-cedro-ia.css";
 @import "./componentes/notificacoes.css";
+@import "./componentes/comunicacao-ti.css";
 @import "./componentes/componentes-comuns.css";
+@import "./componentes/cedro-segment-nav.css";
 @import "./componentes/fundo-laboratorio.css";
 
 @import "./paginas/paginas.css";

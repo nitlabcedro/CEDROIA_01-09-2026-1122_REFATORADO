@@ -14,6 +14,7 @@ export const TABELAS_SUPABASE = {
   SETORES: "setores",
   SOLICITACOES_TI: "solicitacoes_ti",
   PERGUNTAS_TI: "perguntas_ti",
+  MENSAGENS_TI: "mensagens_ti",
   OBJETOS_STORAGE: "storage.objects",
 } as const;
 
@@ -25,4 +26,5 @@ export const BUCKETS_SUPABASE = {
 export const RELACOES_SUPABASE = {
   ETAPAS_DO_FLUXO: `steps:${TABELAS_SUPABASE.ETAPAS_APROVACAO}(*)`,
   PERGUNTAS_TI: `questions:${TABELAS_SUPABASE.PERGUNTAS_TI}(*)`,
+  MENSAGENS_TI: `messages:${TABELAS_SUPABASE.MENSAGENS_TI}(*)`,
 } as const;

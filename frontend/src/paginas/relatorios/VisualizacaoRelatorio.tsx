@@ -25,6 +25,7 @@ import {
   ExternalLink } from
 "lucide-react";
 import { IARecord, StatusAuditoria, ApprovalWorkflow, ApprovalStep, ApprovalConfig, SolicitacaoInformacoesTI } from "@/tipos";
+import { IconeIA } from "@/componentes/comuns/IconeIA";
 import { listarInteracoesTI } from "@/servicos/interacoes-ti";
 import { obterUltimoParecerLimpo } from "@/utilitarios/pareceres";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
@@ -362,7 +363,10 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
         </button>
 
         <div className="relatorio-detalhes__titulo-linha">
-          <h1 className="relatorio-detalhes__titulo">{record.nomeFerramenta}</h1>
+          <div className="relatorio-detalhes__identidade">
+            <IconeIA nome={record.nomeFerramenta} tamanho={40} />
+            <h1 className="relatorio-detalhes__titulo">{record.nomeFerramenta}</h1>
+          </div>
           <div className={`relatorio-detalhes__status ${getStatusColor()}`}>
             <div className="relatorio-status__ponto" />
             <span>{statusGeral}</span>
@@ -489,10 +493,11 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
       </section>
 
       <nav
-        className="relatorio-detalhes__abas-segmento"
+        className="cedro-segment-nav cedro-segment-nav--largo"
         data-estrutura={ESTRUTURA_ABAS_RELATORIO_SEGMENTADO}
-        aria-label="Seções do relatório">
-        <div className="relatorio-detalhes__abas-track" role="presentation">
+        aria-label="Seções do relatório"
+      >
+        <div className="cedro-segment-nav__grupo cedro-segment-nav__grupo--rolagem" role="tablist">
           {ABAS_RELATORIO_IA.map((tab) => {
             const isActive = activeTab === tab.id;
             const Icone = ICONES_ABAS_RELATORIO[tab.id];
@@ -503,8 +508,9 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relatorio-detalhes__aba-segmento ${isActive ? "relatorio-detalhes__aba-segmento--ativa" : ""}`}>
-                <Icone size={15} className="relatorio-detalhes__aba-icone" aria-hidden="true" />
+                className={`cedro-segment-nav__item ${isActive ? "cedro-segment-nav__item--ativo" : ""}`}
+              >
+                <Icone size={15} className="cedro-segment-nav__item-icone" aria-hidden="true" />
                 {tab.label}
               </button>
             );

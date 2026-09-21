@@ -1,3 +1,14 @@
+.administracao__identidade-lista {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.administracao__identidade-lista .administracao__grupo-15 {
+  min-width: 0;
+}
+
 .pagina-administracao {
   display: flex;
   flex-direction: column;
@@ -3330,6 +3341,8 @@
   align-items: flex-start;
   gap: 0.625rem;
   font-size: .75rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .administracao__grupo-27 {
@@ -3371,6 +3384,10 @@
 }
 
 .administracao__texto-7 {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   font-weight: 400;
   color: #334155;
   line-height: 1.5;
@@ -6099,15 +6116,12 @@
 @media (max-width: 560px) {
   #administracao-conteudo.pagina-administracao { gap: 16px; padding: 10px 0 28px; }
   #administracao-conteudo .administracao-toolbar { gap: 10px; padding: 10px; }
-  #administracao-conteudo .administracao-toolbar__abas {
+  #administracao-conteudo .administracao-toolbar .cedro-segment-nav {
     width: 100%;
     margin-inline: auto;
     box-sizing: border-box;
-    flex-direction: column;
-    align-items: stretch;
   }
   #administracao-conteudo .administracao-toolbar__status { width: 100%; }
-  #administracao-conteudo .administracao-toolbar__abas button,
   #administracao-conteudo .administracao-toolbar__status button { width: 100%; min-width: 0; }
   #administracao-conteudo .administracao-usuarios-toolbar { grid-template-columns: 1fr; width: 100%; }
   #administracao-conteudo .administracao-usuarios-toolbar > * { width: 100%; min-width: 0; }

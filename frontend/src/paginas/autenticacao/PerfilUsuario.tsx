@@ -29,10 +29,15 @@ import {
   CheckCircle2,
   X } from
 "lucide-react";
-import { getSectors } from "@/servicos/armazenamento";
-import { obterCargosDoSetor } from "@/servicos/setores";
+import { obterCargosDoSetor, obterSetoresAtivos } from "@/servicos/setores";
 import { usuarioEhAdmin } from "@/utilitarios/permissoes";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
+import {
+  obterAtribuicoesPerfil,
+  obterCargoPrincipal,
+  obterRotuloNivelAcesso,
+  obterRotuloStatusPerfil,
+} from "@/utilitarios/perfil-usuario";
 
 export const UserProfileView: React.FC = () => {
   const { user, profile, refreshProfile, signOut } = useAuth();
@@ -46,6 +51,7 @@ export const UserProfileView: React.FC = () => {
   });
   const [message, setMessage] = useState<{type: "success" | "error";text: string;} | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [avatarMessage, setAvatarMessage] = useState<{type: "success" | "error";text: string;} | null>(null);
   const [sectors, setSectors] = useState<string[]>([]);
   const [avatarPreview, setAvatarPreview] = useState<string>(profile?.avatar_url || "");
   const [cargosDisponiveis, setCargosDisponiveis] = useState<string[]>([]);
@@ -88,10 +94,13 @@ export const UserProfileView: React.FC = () => {
 
   useEffect(() => {
     const fetchSectors = async () => {
-      const list = await getSectors();
-      setSectors(list);
+      const list = await obterSetoresAtivos();
+      setSectors(list.map((setor) => setor.name));
     };
-    fetchSectors();
+    fetchSectors().catch((erro) => {
+      console.error("Erro ao carregar setores ativos no perfil:", erro);
+      setSectors([]);
+    });
   }, []);
 
   // Sincroniza os dados locais com o perfil global da sessão de maneira reativa e otimista
@@ -107,12 +116,7 @@ export const UserProfileView: React.FC = () => {
       });
       setAvatarPreview(profile.avatar_url || "");
 
-      const sList = (profile.setor || "").split(";").map((s) => s.trim()).filter(Boolean);
-      const cList = (profile.cargo || "").split(";").map((c) => c.trim()).filter(Boolean);
-      const list = sList.length > 0 ? sList.map((sec, idx) => ({
-        setor: sec,
-        cargo: cList[idx] || "Colaborador"
-      })) : [{ setor: "", cargo: "" }];
+      const list = obterAtribuicoesPerfil(profile.setor, profile.cargo);
       setEditCombos(list);
 
       // Se o campo de contato na tabela profiles estiver vazio no banco de dados e tivermos o email do usuario
@@ -138,9 +142,23 @@ export const UserProfileView: React.FC = () => {
     }
   }, [user?.id]);
 
+  useEffect(() => {
+    if (avatarMessage?.type !== "success") return;
+    const timeout = window.setTimeout(() => setAvatarMessage(null), 3500);
+    return () => window.clearTimeout(timeout);
+  }, [avatarMessage]);
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (uploading) return;
+
+    const avatarAnterior = {
+      preview: avatarPreview,
+      url: formData.avatar_url,
+    };
+    let localPreviewUrl: string | null = null;
+
     try {
-      setMessage(null);
+      setAvatarMessage(null);
 
       if (!user) {
         throw new Error("Usuário não encontrado para atualizar a foto.");
@@ -152,20 +170,14 @@ export const UserProfileView: React.FC = () => {
         return;
       }
 
-      const localPreviewUrl = URL.createObjectURL(file);
+      setUploading(true);
+      localPreviewUrl = URL.createObjectURL(file);
 
       setAvatarPreview(localPreviewUrl);
       setFormData((prev) => ({
         ...prev,
         avatar_url: localPreviewUrl
       }));
-
-      // Atualiza o contexto global do perfil de forma instantânea/otimista
-      refreshProfile({ avatar_url: localPreviewUrl }, true).catch((err) => {
-        console.error("Erro ao atualizar o avatar de forma otimista:", err);
-      });
-
-      setUploading(true);
 
       // Conversão do arquivo selecionado para Base64
       const reader = new FileReader();
@@ -222,11 +234,17 @@ export const UserProfileView: React.FC = () => {
         console.error("Erro ao atualizar perfil após upload:", err);
       });
 
-      setMessage({ type: "success", text: "Foto atualizada com sucesso." });
+      setAvatarMessage({ type: "success", text: "Foto atualizada com sucesso." });
     } catch (err: unknown) {
       console.error("Erro ao atualizar foto:", err);
-      setMessage({ type: "error", text: obterMensagemErroUsuario(err, "perfil") });
+      setAvatarPreview(avatarAnterior.preview);
+      setFormData((prev) => ({
+        ...prev,
+        avatar_url: avatarAnterior.url,
+      }));
+      setAvatarMessage({ type: "error", text: "Não foi possível atualizar a foto. Tente novamente." });
     } finally {
+      if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
       setUploading(false);
       e.target.value = "";
     }
@@ -397,26 +415,23 @@ export const UserProfileView: React.FC = () => {
               
               <div className="perfil__grupo-5">
                 <div className="perfil__grupo-6">
-                  {avatarSrc ?
                   <div className="perfil__grupo-7">
+                    {avatarSrc ?
                       <img
-                      src={avatarSrc}
-                      alt="Avatar Usuário"
-                      className="perfil__imagem"
-                      referrerPolicy="no-referrer" />
-                    
+                        src={avatarSrc}
+                        alt="Avatar Usuário"
+                        className="perfil__imagem"
+                        referrerPolicy="no-referrer" /> :
 
-                      {uploading &&
-                    <div className="perfil__grupo-8">
-                          <Loader2 className="perfil__icone-loader2" />
-                        </div>
+                      <User size={48} className="perfil__icone-user" />
                     }
-                    </div> :
-                  uploading ?
-                  <Loader2 className="perfil__icone-loader2-2" /> :
-
-                  <User size={48} className="perfil__icone-user" />
-                  }
+                    {uploading &&
+                    <div className="perfil__avatar-upload-overlay" role="status" aria-live="polite">
+                        <Loader2 className="perfil__icone-loader2" />
+                        <span>Enviando...</span>
+                      </div>
+                    }
+                  </div>
                 </div>
               </div>
               <motion.label
@@ -437,15 +452,14 @@ export const UserProfileView: React.FC = () => {
                 
               </motion.label>
 
-              {uploading &&
-              <div className="perfil__grupo-enviando-foto">
-                  <p className="perfil__descricao-enviando-foto">
-                    Enviando foto...
-                  </p>
-                  <p className="perfil__descricao-aguarde-alguns-segundos-ate-a-">
-                    Aguarde alguns segundos até a imagem ser salva no perfil.
-                  </p>
-                </div>
+              {avatarMessage &&
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className={`perfil__avatar-feedback perfil__avatar-feedback--${avatarMessage.type}`}
+                role={avatarMessage.type === "error" ? "alert" : "status"}>
+                  {avatarMessage.text}
+                </motion.div>
               }
             </motion.div>
 
@@ -459,22 +473,21 @@ export const UserProfileView: React.FC = () => {
                   whileHover={{ scale: 1.05 }}
                   className="perfil__elemento">
                   
-                  {profile?.role === "admin" ? "Administrador" : "Colaborador"}
+                  {obterCargoPrincipal(profile?.cargo) || "Cargo não informado"}
                 </motion.span>
                 <motion.span
                   whileHover={{ scale: 1.05 }}
                   className="perfil__elemento-ativo">
                   
-                  Ativo
+                  {obterRotuloStatusPerfil(profile?.status)}
                 </motion.span>
               </div>
               
               <div className="perfil__grupo-10">
                 {(() => {
-                  const sectors = (formData.setor || "").split(";").map((s) => s.trim()).filter(Boolean);
-                  const cargos = (formData.cargo || "").split(";").map((c) => c.trim()).filter(Boolean);
+                  const atribuicoes = obterAtribuicoesPerfil(formData.setor, formData.cargo);
 
-                  if (sectors.length === 0) {
+                  if (atribuicoes.length === 0) {
                     return (
                       <span className="perfil__texto-nenhuma-atribuicao-declarada">
                         Nenhuma atribuição declarada
@@ -482,16 +495,15 @@ export const UserProfileView: React.FC = () => {
 
                   }
 
-                  return sectors.map((sec, idx) => {
-                    const carg = cargos[idx] || "Colaborador";
+                  return atribuicoes.map((atribuicao, idx) => {
                     return (
                       <motion.div
                         key={idx}
                         whileHover={{ scale: 1.03, y: -1 }}
                         className="perfil__elemento-2">
                         
-                        <span className="perfil__texto">{sec}</span>
-                        <span className="perfil__texto-2">{carg}</span>
+                        <span className="perfil__texto">{atribuicao.setor}</span>
+                        <span className="perfil__texto-2">{atribuicao.cargo || "Cargo não informado"}</span>
                       </motion.div>);
 
                   });
@@ -580,7 +592,7 @@ export const UserProfileView: React.FC = () => {
                   <div>
                     <p className="perfil__descricao-usuario-desde">Nível de acesso</p>
                     <span className="perfil__nivel-acesso">
-                      {profile?.role === "admin" ? "Administrador" : "Colaborador"}
+                      {obterRotuloNivelAcesso(profile?.role)}
                     </span>
                   </div>
                 </motion.div>
@@ -712,10 +724,9 @@ export const UserProfileView: React.FC = () => {
 
                     <div className="perfil__grupo-17">
                         {(() => {
-                        const sList = (profile?.setor || "").split(";").map((s) => s.trim()).filter(Boolean);
-                        const cList = (profile?.cargo || "").split(";").map((c) => c.trim()).filter(Boolean);
+                        const atribuicoes = obterAtribuicoesPerfil(profile?.setor, profile?.cargo);
 
-                        if (sList.length === 0) {
+                        if (atribuicoes.length === 0) {
                           return (
                             <span className="perfil__texto-nenhuma-atribuicao-declarada-2">
                                 Nenhuma atribuição declarada
@@ -723,12 +734,11 @@ export const UserProfileView: React.FC = () => {
 
                         }
 
-                        return sList.map((sec, idx) => {
-                          const carg = cList[idx] || "Colaborador";
+                        return atribuicoes.map((atribuicao, idx) => {
                           return (
                             <div key={idx} className="perfil__grupo-18">
-                                <span className="perfil__texto-3">{sec}</span>
-                                <span className="perfil__texto-4">{carg}</span>
+                                <span className="perfil__texto-3">{atribuicao.setor}</span>
+                                <span className="perfil__texto-4">{atribuicao.cargo || "Cargo não informado"}</span>
                               </div>);
 
                         });

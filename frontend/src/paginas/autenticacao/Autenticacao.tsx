@@ -1,14 +1,19 @@
 import { CHAVES_ARMAZENAMENTO_LOCAL } from "@/constantes/armazenamento-local";
 import { DOMINIO_EMAIL_INSTITUCIONAL } from "@/constantes/institucional";
-import { TABELAS_SUPABASE } from "@/constantes/supabase";
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/servicos/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle, Mail, Lock, User, Loader2, Building, Briefcase, Eye, EyeOff, KeyRound, CheckCircle2 } from "lucide-react";
-import { getSectors } from "@/servicos/armazenamento";
-import { obterCargosDoSetor } from "@/servicos/setores";
+import { obterSetoresAtivos } from "@/servicos/setores";
 import { useAuth } from "@/contextos/ContextoAutenticacao";
 import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
+import {
+  criarMetadataCadastro,
+  manterCargoAoTrocarSetor,
+  podeEnviarCadastro,
+  validarAtribuicaoCadastro,
+  type SetorCadastro,
+} from "@/utilitarios/cadastro-usuario";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 
 interface AuthProps {
@@ -25,8 +30,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
   const [combos, setCombos] = useState<Array<{setor: string;cargo: string;}>>([
   { setor: "", cargo: "" }]
   );
-  const [cargosPorSetor, setCargosPorSetor] = useState<Record<string, string[]>>({});
-  const [sectors, setSectors] = useState<string[]>([]);
+  const [sectors, setSectors] = useState<SetorCadastro[]>([]);
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [message, setMessage] = useState<{type: "success" | "error";text: string;} | null>(
     mensagemInicial ? { type: "success", text: mensagemInicial } : null,
@@ -36,7 +40,10 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
   const paginaAutenticacaoRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    getSectors().then(setSectors);
+    obterSetoresAtivos().then(setSectors).catch((erro) => {
+      console.error("Erro ao carregar setores ativos para cadastro:", erro);
+      setSectors([]);
+    });
     try {
       const savedEmail = localStorage.getItem(CHAVES_ARMAZENAMENTO_LOCAL.EMAIL_LEMBRADO);
       if (savedEmail) {
@@ -61,13 +68,6 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
 
     return () => window.cancelAnimationFrame(frame);
   }, [mode]);
-
-  const fetchCargosParaSetor = async (sectorName: string) => {
-    if (!sectorName || cargosPorSetor[sectorName]) return;
-    const cargos = await obterCargosDoSetor(sectorName);
-    setCargosPorSetor((prev) => ({ ...prev, [sectorName]: cargos }));
-  };
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,89 +136,26 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
           return;
         }
 
-        const validCombos = combos.filter((c) => c.setor && c.cargo);
-        if (validCombos.length === 0) {
-          setMessage({ type: "error", text: "Por favor, adicione pelo menos uma atribuição de setor e cargo / função." });
+        const atribuicao = combos[0];
+        const erroAtribuicao = validarAtribuicaoCadastro(atribuicao, sectors);
+        if (erroAtribuicao) {
+          setMessage({ type: "error", text: erroAtribuicao });
           setLoading(false);
           return;
         }
 
-        const finalSetor = validCombos.map((c) => c.setor.trim()).join("; ");
-        const finalCargo = validCombos.map((c) => c.cargo.trim()).join("; ");
+        const metadata = criarMetadataCadastro({
+          fullName,
+          setor: atribuicao.setor,
+          cargo: atribuicao.cargo,
+        }, sectors);
 
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email: cleanEmail,
           password: cleanPassword,
-          options: { data: { full_name: fullName } }
+          options: { data: metadata }
         });
         if (error) throw error;
-
-        const userId = data.user?.id;
-
-        if (!userId) {
-          throw new Error("Usuário não retornado após cadastro.");
-        }
-
-        const { data: existingProfile, error: existingProfileError } = await supabase.
-        from(TABELAS_SUPABASE.PERFIS).
-        select("id, role").
-        eq("id", userId).
-        maybeSingle();
-
-        if (existingProfileError) {
-          console.error("Erro ao verificar perfil existente:", existingProfileError);
-          throw existingProfileError;
-        }
-
-        if (existingProfile) {
-          const { error: updateProfileError } = await supabase.
-          from(TABELAS_SUPABASE.PERFIS).
-          update({
-            full_name: fullName,
-            setor: finalSetor,
-            cargo: finalCargo,
-            contato: cleanEmail,
-            updated_at: new Date().toISOString()
-          }).
-          eq("id", userId);
-
-          if (updateProfileError) {
-            console.error("Erro ao atualizar perfil existente:", updateProfileError);
-            throw updateProfileError;
-          }
-        } else {
-          const { error: insertProfileError } = await supabase.
-          from(TABELAS_SUPABASE.PERFIS).
-          insert({
-            id: userId,
-            full_name: fullName,
-            setor: finalSetor,
-            cargo: finalCargo,
-            role: "user",
-            contato: cleanEmail,
-            updated_at: new Date().toISOString()
-          });
-
-          if (insertProfileError) {
-            console.error("Erro ao criar perfil:", insertProfileError);
-            throw insertProfileError;
-          }
-        }
-
-        // Forçar a atualização do perfil em memória e no banco de dados para evitar atrasos na interface
-        try {
-          await refreshProfile({
-            id: userId,
-            full_name: fullName,
-            setor: finalSetor,
-            cargo: finalCargo,
-            role: "user",
-            status: "Autorizado",
-            contato: cleanEmail
-          }, false);
-        } catch (rfErr) {
-          console.warn("Aviso ao sincronizar perfil recém-criado:", rfErr);
-        }
 
         setMessage({ type: "success", text: "Cadastro realizado! Faça login para continuar." });
         setMode("login");
@@ -343,14 +280,16 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
                           required
                           placeholder="Selecione o setor..."
                           value={combo.setor}
-                          options={sectors}
+                          options={sectors.map((setor) => setor.name)}
                           size="lg"
                           className="autenticacao-dropdown"
                           onChange={(sec) => {
                             const newCombos = [...combos];
-                            newCombos[index] = { setor: sec, cargo: "" };
+                            newCombos[index] = {
+                              setor: sec,
+                              cargo: manterCargoAoTrocarSetor(combo.cargo, sec, sectors),
+                            };
                             setCombos(newCombos);
-                            fetchCargosParaSetor(sec);
                           }}
                           icon={<Building size={18} strokeWidth={2} />}
                         />
@@ -360,7 +299,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
                           required
                           placeholder={combo.setor ? "Selecione o cargo..." : "Selecione o setor primeiro"}
                           value={combo.cargo}
-                          options={cargosPorSetor[combo.setor] || []}
+                          options={sectors.find((setor) => setor.name === combo.setor)?.cargos || []}
                           size="lg"
                           className="autenticacao-dropdown"
                           onChange={(carg) => {
@@ -373,14 +312,6 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
                         />
                       </div>
                     ))}
-
-                    <button
-                      type="button"
-                      onClick={() => setCombos([...combos, { setor: "", cargo: "" }])}
-                      className="autenticacao-signup__adicionar"
-                    >
-                      + Adicionar outro cargo/setor
-                    </button>
                   </div>
                 </motion.div>
               )}
@@ -470,7 +401,12 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
               )}
 
               <motion.div variants={fieldVariants}>
-                <button id="btnEnviarAutenticacao" type="submit" disabled={loading} className="autenticacao-submit">
+                <button
+                  id="btnEnviarAutenticacao"
+                  type="submit"
+                  disabled={loading || (mode === "signup" && !podeEnviarCadastro(combos[0], sectors))}
+                  className="autenticacao-submit"
+                >
                   {loading ? (
                     <Loader2 className="autenticacao-submit__loader" size={18} />
                   ) : (
