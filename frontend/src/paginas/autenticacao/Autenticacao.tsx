@@ -2,6 +2,12 @@ import { CHAVES_ARMAZENAMENTO_LOCAL } from "@/constantes/armazenamento-local";
 import { DOMINIO_EMAIL_INSTITUCIONAL } from "@/constantes/institucional";
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/servicos/supabase";
+import {
+  guardarAtribuicoesPerfilPendentes,
+  persistirAtribuicoesPerfil,
+  removerAtribuicoesPerfilPendentes,
+  sincronizarAtribuicoesPerfilPendentes,
+} from "@/servicos/persistencia-perfil";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle, Mail, Lock, User, Loader2, Building, Briefcase, Eye, EyeOff, KeyRound, CheckCircle2 } from "lucide-react";
 import { obterSetoresAtivos } from "@/servicos/setores";
@@ -10,8 +16,9 @@ import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
 import {
   criarMetadataCadastro,
   manterCargoAoTrocarSetor,
-  podeEnviarCadastro,
-  validarAtribuicaoCadastro,
+  podeEnviarAtribuicoesCadastro,
+  serializarAtribuicoesCadastro,
+  validarAtribuicoesCadastro,
   type SetorCadastro,
 } from "@/utilitarios/cadastro-usuario";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
@@ -108,10 +115,11 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
         // Carrega o perfil fresco imediatamente após login bem-sucedido
         if (authData?.user?.id) {
           try {
-            await refreshProfile(undefined, false, authData.user.id);
+            await sincronizarAtribuicoesPerfilPendentes(authData.user.id);
           } catch (pError) {
             console.error("Erro ao sincronizar perfil pós-login:", pError);
           }
+          await refreshProfile(undefined, false, authData.user.id);
         }
 
         // Persistir/remover e-mail conforme checkbox "Lembrar-me"
@@ -136,26 +144,43 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
           return;
         }
 
-        const atribuicao = combos[0];
-        const erroAtribuicao = validarAtribuicaoCadastro(atribuicao, sectors);
+        const erroAtribuicao = validarAtribuicoesCadastro(combos, sectors);
         if (erroAtribuicao) {
           setMessage({ type: "error", text: erroAtribuicao });
           setLoading(false);
           return;
         }
 
+        const atribuicaoPrincipal = combos[0];
+        const atribuicoesSerializadas = serializarAtribuicoesCadastro(combos, sectors);
         const metadata = criarMetadataCadastro({
           fullName,
-          setor: atribuicao.setor,
-          cargo: atribuicao.cargo,
+          setor: atribuicaoPrincipal.setor,
+          cargo: atribuicaoPrincipal.cargo,
         }, sectors);
 
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: cleanEmail,
           password: cleanPassword,
           options: { data: metadata }
         });
         if (error) throw error;
+
+        const userId = data.user?.id;
+        if (!userId) {
+          throw new Error("Usuário não retornado após cadastro.");
+        }
+
+        guardarAtribuicoesPerfilPendentes(userId, atribuicoesSerializadas);
+
+        if (data.session) {
+          await persistirAtribuicoesPerfil(userId, atribuicoesSerializadas, {
+            full_name: fullName.trim(),
+            contato: cleanEmail,
+          });
+          removerAtribuicoesPerfilPendentes(userId);
+          await refreshProfile(undefined, false, userId);
+        }
 
         setMessage({ type: "success", text: "Cadastro realizado! Faça login para continuar." });
         setMode("login");
@@ -265,11 +290,12 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
                   <div className="autenticacao-signup__atribuicoes">
                     {combos.map((combo, index) => (
                       <div key={index} className="autenticacao-signup__atribuicao" style={{ zIndex: combos.length - index }}>
-                        {combos.length > 1 && (
+                        {index > 0 && (
                           <button
                             type="button"
                             onClick={() => setCombos(combos.filter((_, i) => i !== index))}
                             className="autenticacao-signup__remover"
+                            aria-label={`Remover atribuição ${index + 1}`}
                           >
                             Remover setor/cargo
                           </button>
@@ -280,7 +306,11 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
                           required
                           placeholder="Selecione o setor..."
                           value={combo.setor}
-                          options={sectors.map((setor) => setor.name)}
+                          options={sectors
+                            .map((setor) => setor.name)
+                            .filter((setor) => setor === combo.setor || !combos.some((item, itemIndex) => (
+                              itemIndex !== index && item.setor === setor
+                            )))}
                           size="lg"
                           className="autenticacao-dropdown"
                           onChange={(sec) => {
@@ -299,7 +329,10 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
                           required
                           placeholder={combo.setor ? "Selecione o cargo..." : "Selecione o setor primeiro"}
                           value={combo.cargo}
-                          options={sectors.find((setor) => setor.name === combo.setor)?.cargos || []}
+                          options={(sectors.find((setor) => setor.name === combo.setor)?.cargos || [])
+                            .filter((cargo) => cargo === combo.cargo || !combos.some((item, itemIndex) => (
+                              itemIndex !== index && item.cargo === cargo
+                            )))}
                           size="lg"
                           className="autenticacao-dropdown"
                           onChange={(carg) => {
@@ -312,6 +345,15 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
                         />
                       </div>
                     ))}
+
+                    <button
+                      type="button"
+                      onClick={() => setCombos([...combos, { setor: "", cargo: "" }])}
+                      className="autenticacao-signup__adicionar"
+                      disabled={sectors.length === 0 || combos.length >= sectors.length}
+                    >
+                      + Adicionar outro cargo/setor
+                    </button>
                   </div>
                 </motion.div>
               )}
@@ -404,7 +446,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
                 <button
                   id="btnEnviarAutenticacao"
                   type="submit"
-                  disabled={loading || (mode === "signup" && !podeEnviarCadastro(combos[0], sectors))}
+                  disabled={loading || (mode === "signup" && !podeEnviarAtribuicoesCadastro(combos, sectors))}
                   className="autenticacao-submit"
                 >
                   {loading ? (

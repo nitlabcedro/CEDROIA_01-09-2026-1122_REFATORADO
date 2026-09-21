@@ -175,10 +175,11 @@
 }
 .autenticacao-campo__erro { margin: 0 2px; color: #9b2c2c; font-size: 11px; line-height: 1.4; }
 
-.autenticacao-signup__atribuicao { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 14px; background: rgba(246, 250, 247, 0.88); border: 1px solid rgba(52, 102, 72, 0.14); border-radius: 13px; }
+.autenticacao-signup__atribuicao { position: relative; display: flex; width: 100%; min-width: 0; flex-direction: column; gap: 12px; padding: 14px; background: rgba(246, 250, 247, 0.88); border: 1px solid rgba(52, 102, 72, 0.14); border-radius: 13px; }
 .autenticacao-signup__remover { align-self: flex-end; padding: 4px 8px; color: #ffb0b0; background: rgba(133, 31, 31, 0.16); border: 1px solid rgba(255, 130, 130, 0.22); border-radius: 7px; font-size: 9px; font-weight: 750; cursor: pointer; }
 .autenticacao-signup__adicionar { width: 100%; min-height: 39px; color: #4f8e2d; background: rgba(117, 192, 67, 0.045); border: 1px dashed rgba(93, 158, 55, 0.55); border-radius: 9px; font-size: 11px; font-weight: 750; cursor: pointer; }
 .autenticacao-signup__adicionar:hover { background: rgba(117, 192, 67, 0.09); }
+.autenticacao-signup__adicionar:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .autenticacao-card .autenticacao-dropdown .menu-suspenso__rotulo { margin-bottom: 7px; color: #263f33; font-size: 12px; font-weight: 650; text-transform: none; }
 .autenticacao-card .autenticacao-dropdown .menu-suspenso__obrigatorio { color: var(--auth-verde); }

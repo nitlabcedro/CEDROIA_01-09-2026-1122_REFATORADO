@@ -51,11 +51,63 @@ export function validarAtribuicaoCadastro(
   return null;
 }
 
+export function validarDuplicidadesAtribuicoesCadastro(
+  atribuicoes: AtribuicaoCadastro[],
+): string | null {
+  const setores = atribuicoes.map(({ setor }) => setor.trim()).filter(Boolean);
+  if (new Set(setores).size !== setores.length) {
+    return "Não é permitido selecionar o mesmo setor mais de uma vez.";
+  }
+
+  const cargos = atribuicoes.map(({ cargo }) => cargo.trim()).filter(Boolean);
+  if (new Set(cargos).size !== cargos.length) {
+    return "Não é permitido selecionar o mesmo cargo mais de uma vez.";
+  }
+
+  return null;
+}
+
+export function validarAtribuicoesCadastro(
+  atribuicoes: AtribuicaoCadastro[],
+  setores: SetorCadastro[],
+): string | null {
+  if (atribuicoes.length === 0) {
+    return "Adicione pelo menos uma atribuição de setor e cargo.";
+  }
+
+  for (const atribuicao of atribuicoes) {
+    const erro = validarAtribuicaoCadastro(atribuicao, setores);
+    if (erro) return erro;
+  }
+
+  return validarDuplicidadesAtribuicoesCadastro(atribuicoes);
+}
+
+export function serializarAtribuicoesCadastro(
+  atribuicoes: AtribuicaoCadastro[],
+  setores: SetorCadastro[],
+): { setor: string; cargo: string } {
+  const erro = validarAtribuicoesCadastro(atribuicoes, setores);
+  if (erro) throw new Error(erro);
+
+  return {
+    setor: atribuicoes.map(({ setor }) => setor.trim()).join("; "),
+    cargo: atribuicoes.map(({ cargo }) => cargo.trim()).join("; "),
+  };
+}
+
 export function podeEnviarCadastro(
   atribuicao: AtribuicaoCadastro,
   setores: SetorCadastro[],
 ): boolean {
   return validarAtribuicaoCadastro(atribuicao, setores) === null;
+}
+
+export function podeEnviarAtribuicoesCadastro(
+  atribuicoes: AtribuicaoCadastro[],
+  setores: SetorCadastro[],
+): boolean {
+  return validarAtribuicoesCadastro(atribuicoes, setores) === null;
 }
 
 export function manterCargoAoTrocarSetor(

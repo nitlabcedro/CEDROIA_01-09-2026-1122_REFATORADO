@@ -3,6 +3,7 @@ import { TABELAS_SUPABASE } from "@/constantes/supabase";
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contextos/ContextoAutenticacao";
 import { requisicaoApi } from "@/servicos/api";
+import { persistirAtribuicoesPerfil } from "@/servicos/persistencia-perfil";
 import { supabase } from "@/servicos/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
@@ -32,11 +33,14 @@ import {
 import { obterCargosDoSetor, obterSetoresAtivos } from "@/servicos/setores";
 import { usuarioEhAdmin } from "@/utilitarios/permissoes";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
+import { validarDuplicidadesAtribuicoesCadastro } from "@/utilitarios/cadastro-usuario";
 import {
-  obterAtribuicoesPerfil,
+  contarAtribuicoesPerfil,
   obterCargoPrincipal,
   obterRotuloNivelAcesso,
   obterRotuloStatusPerfil,
+  resolverAtribuicoesPerfil,
+  serializarAtribuicoesPerfil,
 } from "@/utilitarios/perfil-usuario";
 
 export const UserProfileView: React.FC = () => {
@@ -107,17 +111,18 @@ export const UserProfileView: React.FC = () => {
   useEffect(() => {
     if (profile) {
       const defaultContato = profile.contato || user?.email || "";
+      const metadata = user?.user_metadata as { setor?: string; cargo?: string } | undefined;
+      const atribuicoes = resolverAtribuicoesPerfil(profile, metadata);
+      const serializadas = serializarAtribuicoesPerfil(atribuicoes);
       setFormData({
         full_name: profile.full_name || "",
-        cargo: profile.cargo || "",
-        setor: profile.setor || "",
+        cargo: serializadas.cargo || profile.cargo || "",
+        setor: serializadas.setor || profile.setor || "",
         contato: defaultContato,
         avatar_url: profile.avatar_url || ""
       });
       setAvatarPreview(profile.avatar_url || "");
-
-      const list = obterAtribuicoesPerfil(profile.setor, profile.cargo);
-      setEditCombos(list);
+      setEditCombos(atribuicoes.length > 0 ? atribuicoes : [{ setor: "", cargo: "" }]);
 
       // Se o campo de contato na tabela profiles estiver vazio no banco de dados e tivermos o email do usuario
       if (!profile.contato && user?.email) {
@@ -259,38 +264,56 @@ export const UserProfileView: React.FC = () => {
     setMessage(null);
 
     const isCurrentUserAdmin = usuarioEhAdmin(profile);
+    const metadata = user?.user_metadata as { setor?: string; cargo?: string } | undefined;
+    const atribuicoesCarregadas = resolverAtribuicoesPerfil({
+      setor: formData.setor || profile?.setor,
+      cargo: formData.cargo || profile?.cargo,
+    }, metadata);
     let updatedFormData = { ...formData };
 
     if (isCurrentUserAdmin) {
-      const validCombos = editCombos.filter((c) => c.setor && c.cargo);
-      if (validCombos.length === 0) {
+      const possuiAtribuicaoIncompleta = editCombos.some((c) => !c.setor.trim() || !c.cargo.trim());
+      if (editCombos.length === 0 || possuiAtribuicaoIncompleta) {
         setMessage({ type: "error", text: "Por favor, adicione pelo menos uma atribuição de setor e cargo / função." });
         setLoading(false);
         return;
       }
 
-      const finalSetor = validCombos.map((c) => c.setor.trim()).join("; ");
-      const finalCargo = validCombos.map((c) => c.cargo.trim()).join("; ");
+      const erroDuplicidade = validarDuplicidadesAtribuicoesCadastro(editCombos);
+      if (erroDuplicidade) {
+        setMessage({ type: "error", text: erroDuplicidade });
+        setLoading(false);
+        return;
+      }
 
       updatedFormData = {
         ...formData,
-        setor: finalSetor,
-        cargo: finalCargo
+        ...serializarAtribuicoesPerfil(editCombos),
+      };
+    } else {
+      updatedFormData = {
+        ...formData,
+        ...serializarAtribuicoesPerfil(atribuicoesCarregadas),
       };
     }
 
     try {
-      const { error } = await supabase.
-      from(TABELAS_SUPABASE.PERFIS).
-      upsert({
-        id: user.id,
+      const atribuicoesPersistidas = await persistirAtribuicoesPerfil(
+        user.id,
+        updatedFormData,
+        {
+          full_name: updatedFormData.full_name,
+          contato: updatedFormData.contato,
+          avatar_url: updatedFormData.avatar_url,
+        },
+      );
+
+      await refreshProfile({
         ...updatedFormData,
-        updated_at: new Date().toISOString()
+        setor: atribuicoesPersistidas.setor,
+        cargo: atribuicoesPersistidas.cargo,
       });
 
-      if (error) throw error;
-
-      await refreshProfile(updatedFormData);
       setMessage({ type: "success", text: "Perfil atualizado com sucesso!" });
       setTimeout(() => setMessage(null), 5000);
     } catch (error: unknown) {
@@ -353,6 +376,11 @@ export const UserProfileView: React.FC = () => {
 
   const isCurrentUserAdmin = usuarioEhAdmin(profile);
   const avatarSrc = avatarPreview || "";
+  const atribuicoesExibidas = resolverAtribuicoesPerfil(
+    { setor: formData.setor || profile?.setor, cargo: formData.cargo || profile?.cargo },
+    user?.user_metadata as { setor?: string; cargo?: string } | undefined,
+  );
+  const contagemAtribuicoes = contarAtribuicoesPerfil(atribuicoesExibidas);
 
   const itemVariants = {
     hidden: { opacity: 0, y: 6 },
@@ -483,31 +511,21 @@ export const UserProfileView: React.FC = () => {
                 </motion.span>
               </div>
               
-              <div className="perfil__grupo-10">
-                {(() => {
-                  const atribuicoes = obterAtribuicoesPerfil(formData.setor, formData.cargo);
-
-                  if (atribuicoes.length === 0) {
-                    return (
-                      <span className="perfil__texto-nenhuma-atribuicao-declarada">
-                        Nenhuma atribuição declarada
-                      </span>);
-
-                  }
-
-                  return atribuicoes.map((atribuicao, idx) => {
-                    return (
-                      <motion.div
-                        key={idx}
-                        whileHover={{ scale: 1.03, y: -1 }}
-                        className="perfil__elemento-2">
-                        
-                        <span className="perfil__texto">{atribuicao.setor}</span>
-                        <span className="perfil__texto-2">{atribuicao.cargo || "Cargo não informado"}</span>
-                      </motion.div>);
-
-                  });
-                })()}
+              <div className="perfil__grupo-10" data-contagem-pares={contagemAtribuicoes.pares} data-contagem-setores={contagemAtribuicoes.setores} data-contagem-cargos={contagemAtribuicoes.cargos}>
+                {atribuicoesExibidas.length === 0 ?
+                  <span className="perfil__texto-nenhuma-atribuicao-declarada">
+                    Nenhuma atribuição declarada
+                  </span> :
+                  atribuicoesExibidas.map((atribuicao, idx) => (
+                    <motion.div
+                      key={`${atribuicao.setor}-${atribuicao.cargo}-${idx}`}
+                      whileHover={{ scale: 1.03, y: -1 }}
+                      className={`perfil__elemento-2${idx === 0 ? " perfil__elemento-2--principal" : " perfil__elemento-2--adicional"}`}>
+                      <span className="perfil__texto">{atribuicao.setor}</span>
+                      <span className="perfil__texto-2">{atribuicao.cargo || "Cargo não informado"}</span>
+                    </motion.div>
+                  ))
+                }
               </div>
             </div>
           </div>
@@ -666,7 +684,7 @@ export const UserProfileView: React.FC = () => {
                         <div key={index} className="perfil__grupo-16">
                               <div className="perfil__grupo-atribuicao">
                                 <span className="perfil__texto-atribuicao">Atribuição #{index + 1}</span>
-                                {editCombos.length > 1 &&
+                                {index > 0 &&
                             <button
                               type="button"
                               onClick={() => {
@@ -684,7 +702,11 @@ export const UserProfileView: React.FC = () => {
                               <CustomDropdown
                             placeholder="Selecione o setor..."
                             value={combo.setor}
-                            options={sectors}
+                            options={sectors.filter((setor) => (
+                              setor === combo.setor || !editCombos.some((item, itemIndex) => (
+                                itemIndex !== index && item.setor === setor
+                              ))
+                            ))}
                             onChange={(sec) => {
                               const newCombos = [...editCombos];
                               newCombos[index] = { setor: sec, cargo: "" };
@@ -699,7 +721,11 @@ export const UserProfileView: React.FC = () => {
                               <CustomDropdown
                             placeholder={combo.setor ? "Selecione o cargo..." : "Selecione o setor primeiro"}
                             value={combo.cargo}
-                            options={cargosPorSetor[combo.setor] || []}
+                            options={(cargosPorSetor[combo.setor] || []).filter((cargo) => (
+                              cargo === combo.cargo || !editCombos.some((item, itemIndex) => (
+                                itemIndex !== index && item.cargo === cargo
+                              ))
+                            ))}
                             onChange={(carg) => {
                               const newCombos = [...editCombos];
                               newCombos[index].cargo = carg;
@@ -716,33 +742,25 @@ export const UserProfileView: React.FC = () => {
                         <button
                         type="button"
                         onClick={() => setEditCombos([...editCombos, { setor: "", cargo: "" }])}
-                        className="perfil__botao-adicionar-outro-cargo-setor">
+                        className="perfil__botao-adicionar-outro-cargo-setor"
+                        disabled={sectors.length === 0 || editCombos.length >= sectors.length}>
                         
                           + Adicionar outro Cargo/Setor
                         </button>
                       </> :
 
-                    <div className="perfil__grupo-17">
-                        {(() => {
-                        const atribuicoes = obterAtribuicoesPerfil(profile?.setor, profile?.cargo);
-
-                        if (atribuicoes.length === 0) {
-                          return (
-                            <span className="perfil__texto-nenhuma-atribuicao-declarada-2">
+                    <div className="perfil__grupo-17" data-contagem-pares={contagemAtribuicoes.pares} data-contagem-setores={contagemAtribuicoes.setores} data-contagem-cargos={contagemAtribuicoes.cargos}>
+                        {atribuicoesExibidas.length === 0 ?
+                          <span className="perfil__texto-nenhuma-atribuicao-declarada-2">
                                 Nenhuma atribuição declarada
-                              </span>);
-
-                        }
-
-                        return atribuicoes.map((atribuicao, idx) => {
-                          return (
-                            <div key={idx} className="perfil__grupo-18">
+                              </span> :
+                          atribuicoesExibidas.map((atribuicao, idx) => (
+                            <div key={`${atribuicao.setor}-${atribuicao.cargo}-${idx}`} className={`perfil__grupo-18${idx === 0 ? " perfil__grupo-18--principal" : " perfil__grupo-18--adicional"}`}>
                                 <span className="perfil__texto-3">{atribuicao.setor}</span>
                                 <span className="perfil__texto-4">{atribuicao.cargo || "Cargo não informado"}</span>
-                              </div>);
-
-                        });
-                      })()}
+                              </div>
+                          ))
+                        }
                       </div>
                     }
                   </motion.div>

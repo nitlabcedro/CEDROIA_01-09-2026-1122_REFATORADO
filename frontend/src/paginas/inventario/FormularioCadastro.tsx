@@ -16,9 +16,13 @@ import {
   StatusAuditoria,
   IARecord, TiposIA, ObjetivosIA, EtapaProcesso, StatusUso } from
 "@/tipos";
-import { generateId, getGlobalRecords, getSectors } from "@/servicos/armazenamento";
-import { obterCargosDoSetor } from "@/servicos/setores";
+import { generateId, getGlobalRecords } from "@/servicos/armazenamento";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
+import {
+  definirSetorInicialSolicitacao,
+  obterCargoVinculadoAoSetor,
+  obterSetoresVinculadosPerfil,
+} from "@/utilitarios/perfil-usuario";
 
 import { useAuth } from "@/contextos/ContextoAutenticacao";
 
@@ -239,11 +243,10 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
   const [activeSection, setActiveSection] = useState(0);
   const [showTypeIAPopup, setShowTypeIAPopup] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [sectors, setSectors] = useState<string[]>([]);
-  const [cargosDisponiveis, setCargosDisponiveis] = useState<string[]>([]);
   const [outroActive, setOutroActive] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [savingStep, setSavingStep] = useState("");
+  const setoresVinculados = obterSetoresVinculadosPerfil(profile?.setor);
 
   useEffect(() => {
     if (!showTypeIAPopup) return;
@@ -256,27 +259,6 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
     window.addEventListener("keydown", fecharPopupComEscape);
     return () => window.removeEventListener("keydown", fecharPopupComEscape);
   }, [showTypeIAPopup]);
-
-  useEffect(() => {
-    const fetchSectors = async () => {
-      const list = await getSectors();
-      setSectors(list);
-    };
-    fetchSectors();
-  }, []);
-
-  useEffect(() => {
-    const currentSector = formData.unidadeSetor;
-    if (!currentSector) {
-      setCargosDisponiveis([]);
-      return;
-    }
-
-    const loadCargos = async () => {
-      setCargosDisponiveis(await obterCargosDoSetor(currentSector));
-    };
-    loadCargos();
-  }, [formData.unidadeSetor]);
 
   useEffect(() => {
     if (initialData) {
@@ -302,10 +284,20 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
               delete restored.observacoesGeraisOriginais;
               const restoredName = String(restored.nomeFerramenta || "");
               const presets = ["ChatGPT", "Google Gemini", "Microsoft Copilot", "Claude", "Grok"];
+              const setorRestaurado = definirSetorInicialSolicitacao(
+                setoresVinculados,
+                restored.unidadeSetor,
+              );
               setFormData((prev) => ({
                 ...prev,
                 ...restored,
                 id: restored.id || generateId(records),
+                unidadeSetor: setorRestaurado,
+                cargo: obterCargoVinculadoAoSetor(
+                  setorRestaurado,
+                  profile.setor,
+                  profile.cargo,
+                ) || restored.cargo || "",
                 dataRegistro: restored.dataRegistro || new Date().toISOString().split("T")[0]
               }));
               setOutroActive(Boolean(restoredName && !presets.includes(restoredName)));
@@ -319,10 +311,12 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
           console.warn("Não foi possível restaurar o rascunho local:", draftError);
         }
 
-        const sList = (profile.setor || "").split(";").map((s) => s.trim()).filter(Boolean);
-        const cList = (profile.cargo || "").split(";").map((c) => c.trim()).filter(Boolean);
-        const defaultSetor = sList[0] || "";
-        const defaultCargo = cList[0] || "";
+        const defaultSetor = definirSetorInicialSolicitacao(setoresVinculados);
+        const defaultCargo = obterCargoVinculadoAoSetor(
+          defaultSetor,
+          profile.setor,
+          profile.cargo,
+        );
 
         setFormData((prev) => ({
           ...prev,
@@ -337,36 +331,47 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
       };
       fetchAndSetId();
     }
-  }, [initialData, profile, isInitialized, existingRecords]);
+  }, [initialData, profile, isInitialized, existingRecords, setoresVinculados.join(";")]);
 
   useEffect(() => {
     if (initialData || !profile || !isInitialized) return;
 
-    const sList = (profile.setor || "").split(";").map((s) => s.trim()).filter(Boolean);
-    const cList = (profile.cargo || "").split(";").map((c) => c.trim()).filter(Boolean);
-    const defaultSetor = sList[0] || "";
-    const defaultCargo = cList[0] || "";
+    const defaultSetor = definirSetorInicialSolicitacao(
+      setoresVinculados,
+      formData.unidadeSetor,
+    );
+    const defaultCargo = obterCargoVinculadoAoSetor(
+      defaultSetor,
+      profile.setor,
+      profile.cargo,
+    );
 
     setFormData((prev) => ({
       ...prev,
-      unidadeSetor: prev.unidadeSetor || defaultSetor,
+      unidadeSetor: defaultSetor,
       responsavelPreenchimento: profile.full_name || prev.responsavelPreenchimento || "",
-      cargo: prev.cargo || defaultCargo,
+      cargo: defaultCargo || prev.cargo,
       dataRegistro: prev.dataRegistro || new Date().toISOString().split("T")[0]
     }));
-  }, [initialData, profile, isInitialized]);
+  }, [initialData, profile, isInitialized, setoresVinculados.join(";")]);
 
   const isProfileIncompleteForStep1 = (() => {
     if (!profile || !profile.full_name || profile.full_name.trim() === "") return true;
-    const sList = (profile.setor || "").split(";").map((s) => s.trim()).filter(Boolean);
-    const cList = (profile.cargo || "").split(";").map((c) => c.trim()).filter(Boolean);
-    return sList.length === 0 || cList.length === 0;
+    return setoresVinculados.length === 0 ||
+      setoresVinculados.every((setor) => !obterCargoVinculadoAoSetor(
+        setor,
+        profile.setor,
+        profile.cargo,
+      ));
   })();
 
-  const isStep1Incomplete = !formData.unidadeSetor ||
+  const isSetorSolicitacaoInvalido = !formData.unidadeSetor ||
   formData.unidadeSetor.trim() === "" ||
   formData.unidadeSetor.trim() === "Não definido" ||
   formData.unidadeSetor.trim() === "Nao definido" ||
+  !setoresVinculados.includes(formData.unidadeSetor.trim());
+
+  const isStep1Incomplete = isSetorSolicitacaoInvalido ||
   !formData.responsavelPreenchimento ||
   formData.responsavelPreenchimento.trim() === "" ||
   !formData.cargo ||
@@ -390,6 +395,14 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
 
   const updateField = (field: keyof IARecord, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const selecionarSetorSolicitacao = (setor: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      unidadeSetor: setor,
+      cargo: obterCargoVinculadoAoSetor(setor, profile?.setor, profile?.cargo),
+    }));
   };
 
   const handleArrayToggle = (field: "tipoIA" | "objetivos" | "areaAvaliadora", value: any) => {
@@ -447,6 +460,10 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
     }
 
     // Rule 5: Não permitir salvar a solicitação se a Etapa 1 estiver incompleta
+    if (isSetorSolicitacaoInvalido) {
+      alert("Selecione o setor responsável pela solicitação.");
+      return;
+    }
     if (isStep1Incomplete || isProfileIncompleteForStep1) {
       alert("Complete seu perfil para continuar. Informe seu cargo/função antes de abrir uma solicitação de IA.");
       return;
@@ -489,6 +506,8 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
     try {
       await onSave({
         ...formData,
+        unidadeSetor: cleanSector,
+        cargo: obterCargoVinculadoAoSetor(cleanSector, profile?.setor, profile?.cargo) || formData.cargo || "",
         nomeFerramenta: cleanNome,
         tipoIA: cleanTipoIA,
         tipoIAOutro: cleanTipoIAOutro,
@@ -537,6 +556,10 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
   };
 
   const handleStepNavigation = (targetIndex: number) => {
+    if (isSetorSolicitacaoInvalido) {
+      alert("Selecione o setor responsável pela solicitação.");
+      return;
+    }
     if (isStep1Incomplete || isProfileIncompleteForStep1) {
       alert("Complete seu perfil para continuar. Informe seu cargo/função antes de abrir uma solicitação de IA.");
       return;
@@ -640,6 +663,23 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
 
             {activeSection === 0 && (
               <div className="nova-solicitacao__fase nova-solicitacao__fase--solucao">
+                <div className="nova-solicitacao__setor-solicitacao">
+                  <InputGroup label="Setor da solicitação" required badge={<BadgePerfil />}>
+                    <CustomDropdown
+                      placeholder="Selecione o setor responsável..."
+                      value={formData.unidadeSetor || ""}
+                      options={setoresVinculados}
+                      onChange={selecionarSetorSolicitacao}
+                      icon={<Database size={17} aria-hidden="true" />}
+                      size="lg"
+                      required
+                    />
+                  </InputGroup>
+                  <p className="nova-solicitacao__campo-ajuda">
+                    A solicitação ficará vinculada somente ao setor selecionado.
+                  </p>
+                </div>
+
                 <p className="nova-solicitacao__instrucao-solucao">
                   Estas são as inteligências artificiais disponíveis para a escolha do solicitante. Selecione uma das opções abaixo ou marque <strong>“Outro”</strong> para digitar uma ferramenta diferente.
                 </p>
@@ -820,6 +860,10 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
               <button
                 type="button"
                 onClick={() => {
+                  if (isSetorSolicitacaoInvalido) {
+                    alert("Selecione o setor responsável pela solicitação.");
+                    return;
+                  }
                   if (isStep1Incomplete || isProfileIncompleteForStep1) {
                     alert("Complete seu perfil para continuar. Informe seu cargo/função antes de abrir uma solicitação de IA.");
                     return;
@@ -831,7 +875,6 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
                   setActiveSection((section) => section + 1);
                 }}
                 disabled={
-                  isStep1Incomplete ||
                   isProfileIncompleteForStep1 ||
                   (activeSection === 0 && isStep2Incomplete)
                 }

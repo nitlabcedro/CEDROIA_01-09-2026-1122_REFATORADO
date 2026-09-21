@@ -2161,6 +2161,26 @@
   font-weight: 800;
 }
 
+.nova-solicitacao__setor-solicitacao {
+  width: min(100%, 620px);
+  min-width: 0;
+  margin: 0 0 24px;
+  padding: 16px;
+  background: #f7faf8;
+  border: 1px solid #dce7df;
+  border-radius: 12px;
+}
+
+.nova-solicitacao__setor-solicitacao .menu-suspenso,
+.nova-solicitacao__setor-solicitacao .menu-suspenso__controle {
+  width: 100%;
+  min-width: 0;
+}
+
+.nova-solicitacao__setor-solicitacao .nova-solicitacao__campo-ajuda {
+  margin: 8px 0 0;
+}
+
 .nova-solicitacao__instrucao-solucao {
   max-width: 980px;
   margin: -6px 0 22px;

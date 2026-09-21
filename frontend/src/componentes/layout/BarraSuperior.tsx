@@ -9,7 +9,7 @@ import { Bell, UserCircle, ChevronDown, X, CheckCircle2, Eye, LogOut, ArrowRight
 import { UserProfile, IARecord } from "@/tipos";
 import { SystemAlert, saveAlertInteraction } from "@/utilitarios/alertas";
 import type { NavegarPara } from "@/hooks/useAplicacao";
-import { obterCargoPrincipal } from "@/utilitarios/perfil-usuario";
+import { obterCargoPrincipal, obterSetorPrincipal } from "@/utilitarios/perfil-usuario";
 
 interface TopbarProps {
   profile: UserProfile | null;
@@ -201,7 +201,9 @@ export const Topbar: React.FC<TopbarProps> = ({
               </span>
               {isCurrentUserAdmin && <span className="barra-superior__perfil-admin">ADMIN</span>}
             </span>
-            <span className="barra-superior__perfil-cargo">{profile?.cargo || ""}</span>
+            <span className="barra-superior__perfil-cargo">
+              {obterCargoPrincipal(profile?.cargo) || ""}
+            </span>
           </span>
 
           <ChevronDown size={14} className="barra-superior__perfil-seta" />
@@ -232,11 +234,11 @@ export const Topbar: React.FC<TopbarProps> = ({
             <dl className="barra-superior__perfil-popover-detalhes">
               <div>
                 <dt>Cargo</dt>
-                <dd>{profile?.cargo || "Não informado"}</dd>
+                <dd>{obterCargoPrincipal(profile?.cargo) || "Não informado"}</dd>
               </div>
               <div>
                 <dt>Setor</dt>
-                <dd>{profile?.setor || "Não informado"}</dd>
+                <dd>{obterSetorPrincipal(profile?.setor) || "Não informado"}</dd>
               </div>
             </dl>
 

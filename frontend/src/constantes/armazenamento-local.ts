@@ -13,6 +13,7 @@ export const CHAVES_ARMAZENAMENTO_LOCAL = {
   SAUDE_SISTEMA: "system_health",
   MODO_DESEMPENHO: "system_performance_mode",
   RASCUNHO_SOLICITACAO_PREFIXO: "cedro_nova_solicitacao_draft_",
+  ATRIBUICOES_PERFIL_PENDENTES_PREFIXO: "cedro_profile_assignments_pending_",
 } as const;
 
 export const EVENTOS_APLICACAO = {
