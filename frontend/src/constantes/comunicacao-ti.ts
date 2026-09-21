@@ -1,0 +1,7 @@
+export const LIMITE_MENSAGEM_COMUNICACAO_TI = 1000;
+export const MAXIMO_PERGUNTAS_BLOCO_TI = 10;
+export const LIMITE_PERGUNTA_BLOCO_TI = 1000;
+export const LIMITE_RESPOSTA_BLOCO_TI = 1000;
+
+export const MENSAGEM_LIMITE_COMUNICACAO_TI =
+  `A mensagem pode ter no máximo ${LIMITE_MENSAGEM_COMUNICACAO_TI} caracteres.`;

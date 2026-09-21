@@ -4,16 +4,16 @@
  */
 
 import { criarConfiguracaoAprovacaoPadrao } from "@/constantes/fluxo-aprovacao";
-import { identificarMarcaIA } from "@/utilitarios/inteligencia-artificial";
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
+import { IconeIA } from "@/componentes/comuns/IconeIA";
 import {
   CheckCircle2, XCircle, Users, LayoutGrid, Search,
   Filter, MoreHorizontal, ShieldCheck, ShieldX,
   Database, ArrowUpRight, AlertTriangle, Activity,
   ChevronLeft, ChevronRight, Calendar, ArrowRight,
   User, Check, X, Shield, RefreshCw, FolderLock, Trash2, SlidersHorizontal, Edit,
-  Building2, KeyRound, Aperture, Sparkles, Copy, Asterisk, Orbit, Bot } from
+  Building2, KeyRound } from
 "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -25,6 +25,7 @@ import {
   ApprovalWorkflow } from
 "@/tipos";
 import { getSectors, deleteRecord } from "@/servicos/armazenamento";
+import { TextoExibicaoFluxoAprovacao } from "@/componentes/aprovacoes/TextoExibicaoFluxoAprovacao";
 import { obterUltimoParecerLimpo as getCleanLastOpinion } from "@/utilitarios/pareceres";
 import SystemControls from "./ControlesSistema";
 import SectorsManager from "./GerenciadorSetores";
@@ -37,18 +38,6 @@ import {
 import "@/estilos/paginas/administracao-referencia.css";
 import "@/estilos/paginas/administracao-usuarios-referencia.css";
 import "@/estilos/paginas/administracao-historico-usuario-referencia.css";
-
-
-function IconeIAHistoricoUsuario({ nome }: { nome?: string }) {
-  const marca = identificarMarcaIA(nome);
-
-  if (marca === "chatgpt") return <Aperture size={27} strokeWidth={2.05} />;
-  if (marca === "gemini") return <Sparkles size={26} strokeWidth={2} />;
-  if (marca === "copilot") return <Copy size={25} strokeWidth={2} />;
-  if (marca === "claude") return <Asterisk size={27} strokeWidth={2.1} />;
-  if (marca === "grok") return <Orbit size={27} strokeWidth={2} />;
-  return <Bot size={26} strokeWidth={2} />;
-}
 
 const STATUS_REDEFINICAO_ADMIN: StatusUso[] = [
   StatusUso.EM_AVALIACAO,
@@ -582,30 +571,33 @@ export default function AdminPanel({
 
       {/* 3. Navigation Tabs */}
       <div className="administracao-filtros administracao__administracao-filtros-estrutura administracao-toolbar">
-        <div className="cedro-abas administracao-abas administracao-toolbar__abas">
-          {[
-          { id: "approvals", label: "Cadastro de IAs" },
-          { id: "users", label: "Usuários" }].
-          map((tab) =>
-          <button
-            key={tab.id}
-            data-aba={tab.id}
-            onClick={() => {
-              setActiveTab(tab.id as AdminTab);
-              setSelectedSector(null);
-              setSelectedUser(null);
-              setIsConfiguringSectors(false);
-            }}
-            className={`cedro-aba ${activeTab === tab.id ? "cedro-aba--ativa" : ""} administracao__botao ${
-            activeTab === tab.id ?
-            "administracao__botao-2" :
-            "administracao__botao-3"}`
-            }>
-            
+        <nav className="cedro-segment-nav" aria-label="Seções da administração">
+          <div className="cedro-segment-nav__grupo cedro-segment-nav__grupo--dupla" role="tablist">
+            {[
+            { id: "approvals", label: "Cadastro de IAs" },
+            { id: "users", label: "Usuários" }].
+            map((tab) =>
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              data-aba={tab.id}
+              aria-selected={activeTab === tab.id}
+              onClick={() => {
+                setActiveTab(tab.id as AdminTab);
+                setSelectedSector(null);
+                setSelectedUser(null);
+                setIsConfiguringSectors(false);
+              }}
+              className={`cedro-segment-nav__item${
+                activeTab === tab.id ? " cedro-segment-nav__item--ativo" : ""
+              }`}
+            >
               {tab.label}
             </button>
-          )}
-        </div>
+            )}
+          </div>
+        </nav>
 
         {/* Global Toolbar specific to Current View */}
         {activeTab === "approvals" &&
@@ -739,10 +731,11 @@ export default function AdminPanel({
                         
                         {/* LEFT SECTION (Identity) */}
                         <div className="administracao__grupo-13 administracao-ia-card__identidade">
-                          {/* Identicon block representing system / IA */}
-                          <div className="administracao__grupo-14 administracao-ia-card__icone">
-                            <Database size={24} />
-                          </div>
+                          <IconeIA
+                            nome={record.nomeFerramenta}
+                            tamanho={36}
+                            className="administracao__grupo-14 administracao-ia-card__icone"
+                          />
 
                           <div className="administracao__grupo-15">
                             <div className="administracao__grupo-16">
@@ -968,9 +961,9 @@ export default function AdminPanel({
                   }
                           <div className="administracao__grupo-ultimo-parecer">
                             <p className="administracao__descricao-ultimo-parecer">Último Parecer</p>
-                            <span className="administracao__texto-7">
+                            <TextoExibicaoFluxoAprovacao as="span" className="administracao__texto-7">
                               &ldquo;{getCleanLastOpinion(lastParecer.message || lastParecer.action)}&rdquo;
-                            </span>
+                            </TextoExibicaoFluxoAprovacao>
                             {lastParecer.user &&
                     <span className="administracao__texto-por-em">
                                 — por {lastParecer.user} em {new Date(lastParecer.date).toLocaleDateString()}
@@ -1216,17 +1209,20 @@ export default function AdminPanel({
                   "administracao__grupo-55"}`
                   }></div>
 
-                          <div className="administracao__grupo-15">
-                            <h4
+                          <div className="administracao__identidade-lista">
+                            <IconeIA nome={record.nomeFerramenta} tamanho={28} />
+                            <div className="administracao__grupo-15">
+                              <h4
                       onClick={() => onViewRecord(record)}
                       className="administracao__titulo-item">
                       
-                              {record.nomeFerramenta}
-                            </h4>
-                            <div className="administracao__grupo-56">
-                              <span className="administracao__texto-12"><User size={12} /> {record.responsavelPreenchimento}</span>
-                              <span className="administracao__texto-12"><Database size={12} /> {record.fornecedor}</span>
-                              <span>ID: {record.id}</span>
+                                {record.nomeFerramenta}
+                              </h4>
+                              <div className="administracao__grupo-56">
+                                <span className="administracao__texto-12"><User size={12} /> {record.responsavelPreenchimento}</span>
+                                <span className="administracao__texto-12"><Database size={12} /> {record.fornecedor}</span>
+                                <span>ID: {record.id}</span>
+                              </div>
                             </div>
                           </div>
 
@@ -1667,9 +1663,11 @@ export default function AdminPanel({
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.2, delay: Math.min(index * 0.035, 0.18) }}
                         className={`administracao-historico-usuario__registro administracao-historico-usuario__registro--${statusClass}`}>
-                        <div className="administracao-historico-usuario__ia-icone" aria-hidden="true">
-                          <IconeIAHistoricoUsuario nome={record.nomeFerramenta} />
-                        </div>
+                        <IconeIA
+                          nome={record.nomeFerramenta}
+                          tamanho={36}
+                          className="administracao-historico-usuario__ia-icone"
+                        />
 
                         <div className="administracao-historico-usuario__registro-conteudo">
                           <h4>{record.nomeFerramenta}</h4>
@@ -1744,9 +1742,11 @@ export default function AdminPanel({
               <div className="administracao__grupo-77">
                 {/* Header */}
                 <div className="administracao__grupo-78">
-                  <div className="administracao__grupo-79">
-                    <FolderLock size={24} />
-                  </div>
+                  <IconeIA
+                    nome={viewFlowRecord.nomeFerramenta}
+                    tamanho={36}
+                    className="administracao__grupo-79"
+                  />
                   <div className="administracao__grupo-visualizar-fluxo-de-aprovacao">
                     <h3 className="administracao__titulo-bloco-visualizar-fluxo-de-aprovacao">
                       Visualizar Fluxo de Aprovação

@@ -139,32 +139,28 @@
   border-radius: 9999px;
 }
 
-.perfil__grupo-8 {
+.perfil__avatar-upload-overlay {
   position: absolute;
-  top: 0rem;
-  right: 0rem;
-  bottom: 0rem;
-  left: 0rem;
+  inset: 0;
   border-radius: 9999px;
-  background-color: rgba(255, 255, 255, 0.45);
-  backdrop-filter: none;
+  background-color: rgba(8, 39, 17, 0.62);
+  backdrop-filter: blur(1.5px);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0.35rem;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
 }
 
 .perfil__icone-loader2 {
   animation: cedro-girar 1s linear infinite;
-  color: #075618;
-  width: 1.75rem;
-  height: 1.75rem;
-}
-
-.perfil__icone-loader2-2 {
-  animation: cedro-girar 1s linear infinite;
-  color: #075618;
-  width: 2rem;
-  height: 2rem;
+  color: white;
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
 .perfil__icone-user {
@@ -204,31 +200,30 @@
   display: none;
 }
 
-.perfil__grupo-enviando-foto {
-  margin-top: 0.75rem;
-  border-radius: .75rem;
-  border-width: 1px;
-  border-style: solid;
-  border-color: #fde68a;
-  background-color: #fffbeb;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
+.perfil__avatar-feedback {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  left: 50%;
+  z-index: 4;
+  width: max-content;
+  max-width: 15rem;
+  transform: translateX(-50%);
+  padding: 0.4rem 0.65rem;
+  border: 1px solid #cfe2d3;
+  border-radius: 9999px;
+  background: #f4faf5;
+  box-shadow: 0 5px 14px rgba(16, 62, 27, 0.09);
+  color: #176328;
+  font-size: 0.67rem;
+  font-weight: 700;
+  line-height: 1.25;
   text-align: center;
 }
 
-.perfil__descricao-enviando-foto {
-  font-size: .75rem;
-  font-weight: 700;
-  color: #92400e;
-}
-
-.perfil__descricao-aguarde-alguns-segundos-ate-a- {
-  margin-top: 0.25rem;
-  font-size: 11px;
-  font-weight: 500;
-  color: #b45309;
+.perfil__avatar-feedback--error {
+  border-color: #f1c9c5;
+  background: #fff7f6;
+  color: #a22b22;
 }
 
 .perfil__perfil-identidade-estrutura {

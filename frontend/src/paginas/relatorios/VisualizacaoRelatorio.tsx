@@ -3,15 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { criarConfiguracaoAprovacaoPadrao, ETAPAS_APROVACAO_OFICIAIS } from "@/constantes/fluxo-aprovacao";
+import { ETAPAS_APROVACAO_OFICIAIS } from "@/constantes/fluxo-aprovacao";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Download,
   AlertTriangle,
   Activity,
-  Edit,
-  Clipboard,
   FileText,
   Info,
   Target,
@@ -23,13 +21,11 @@ import {
   Users,
   Cpu,
   Lock,
-  ChevronRight,
-  TrendingUp,
   FileCheck2,
-  Bookmark,
   ExternalLink } from
 "lucide-react";
 import { IARecord, StatusAuditoria, ApprovalWorkflow, ApprovalStep, ApprovalConfig, SolicitacaoInformacoesTI } from "@/tipos";
+import { IconeIA } from "@/componentes/comuns/IconeIA";
 import { listarInteracoesTI } from "@/servicos/interacoes-ti";
 import { obterUltimoParecerLimpo } from "@/utilitarios/pareceres";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
@@ -40,6 +36,15 @@ import {
   type VarianteStatusGeral,
 } from "@/utilitarios/status-solicitacao";
 import { montarDadosRelatorioPdf } from "./pdf/dadosRelatorioPdf";
+import {
+  ABAS_RELATORIO_IA,
+  ESTRUTURA_ABAS_RELATORIO_SEGMENTADO,
+  ESTRUTURA_FLUXO_APROVACAO_CARD,
+  ESTRUTURA_FLUXO_APROVACAO_HORIZONTAL,
+  obterRotuloEtapaFluxo,
+  type AbaRelatorioId,
+} from "./relatorioVisao.util";
+import "./RelatorioDetalhes.css";
 import "./RelatorioPdfPainel.css";
 
 
@@ -52,7 +57,15 @@ interface ReportViewProps {
   approvalConfig?: ApprovalConfig;
 }
 
-type TabType = "visao-geral" | "finalidade-uso" | "nit" | "ti" | "relatorio";
+type TabType = AbaRelatorioId;
+
+const ICONES_ABAS_RELATORIO: Record<TabType, React.ComponentType<{ size?: number; className?: string }>> = {
+  "visao-geral": Info,
+  "finalidade-uso": Target,
+  nit: ShieldCheck,
+  ti: Cpu,
+  relatorio: FileText,
+};
 
 // helper to format comment text
 const formatComment = (commentRaw?: string) => {
@@ -323,48 +336,6 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
     };
   };
 
-  const getWorkflowSteps = () => {
-    if (approvalConfig?.steps && approvalConfig.steps.length > 0) {
-      return approvalConfig.steps;
-    }
-    return criarConfiguracaoAprovacaoPadrao().steps.map((step) => ({
-      ...step,
-      userId: "",
-      userName: "",
-    }));
-
-  };
-
-  const getActiveStepDef = () => {
-    return getWorkflowSteps().find((s) => s.stepNumber === currentStepNum);
-  };
-
-  const getEtapaAtualText = () => {
-    if (!workflow) {
-      if (statusGeral === "Aprovada") return "Homologado";
-      if (statusGeral === "Em análise" || statusGeral === "Em teste") return "Triagem Inicial NIT";
-      if (statusGeral === "Cancelada") return "Cancelada";
-      return "Cadastro Concluído";
-    }
-    if (isWfFinished) {
-      if (statusGeral === "Aprovada") return "Homologado (Concluído)";
-      if (statusGeral === "Cancelada") return "Cancelada";
-      return "Declinado / Não Aprovado";
-    }
-    const def = getActiveStepDef();
-    return def ? `${currentStepNum}. ${def.roleName}` : `Etapa ${currentStepNum}`;
-  };
-
-  const getResponsavelAtualText = () => {
-    if (!workflow) return record.quemValida || "Comitê de Governança do Laboratório";
-    if (isWfFinished) {
-      return "Processo Finalizado";
-    }
-    const wfStep = workflow.steps?.find((s) => s.stepNumber === currentStepNum);
-    const def = getActiveStepDef();
-    return wfStep?.assignedUserName || def?.userName || record.quemValida || "Aguardando definição";
-  };
-
   const mapVarianteCss = (variante: VarianteStatusGeral) => {
     switch (variante) {
       case "aprovada": return "aprovado";
@@ -375,92 +346,37 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
     }
   };
 
-  const getStatusIcon = (variante: VarianteStatusGeral) => {
-    switch (variante) {
-      case "aprovada":
-        return <CheckCircle2 className="relatorio__icone-checkcircle2" />;
-      case "teste":
-        return <TrendingUp className="relatorio__icone-trendingup" />;
-      case "cancelada":
-        return <AlertTriangle className="relatorio__icone-alerttriangle-2" />;
-      case "negada":
-        return <ShieldAlert className="relatorio__icone-shieldalert-2" />;
-      default:
-        return <Activity className="relatorio__icone-activity" />;
-    }
-  };
-
-  const getStatusGradientClass = (status: StatusGeral) => {
-    switch (status) {
-      case "Aprovada": return "relatorio__grupo-22";
-      case "Em teste": return "relatorio__grupo-25";
-      case "Não aprovada": return "relatorio__grupo-27";
-      case "Cancelada": return "relatorio__grupo-26";
-      default: return "relatorio__grupo-24";
-    }
-  };
-
   const getStatusCssVariant = () => mapVarianteCss(obterVarianteStatus(statusGeral));
 
   const getStatusColor = () =>
     `relatorio-status relatorio-status--${getStatusCssVariant()}`;
 
   return (
-    <div id="relatorio-conteudo" data-componente="pagina-relatorio" className="pagina-relatorio relatorio-container cedro-page-premium">
-      {/* 1. Cabeçalho da IA */}
-      <div className="relatorio-cabecalho relatorio__relatorio-cabecalho-estrutura">
-        {/* Back Link */}
-        <div>
-          <button
-            onClick={onBack}
-            className="grupo-interativo relatorio__botao-voltar-ao-inventario">
-            
-            <ArrowLeft size={14} className="relatorio__icone-arrowleft" />
-            Voltar para Minhas IAs
-          </button>
-        </div>
+    <div
+      id="relatorio-conteudo"
+      data-componente="pagina-relatorio"
+      className="pagina-relatorio relatorio-container cedro-page-premium relatorio-detalhes">
+      <header className="relatorio-detalhes__cabecalho">
+        <button type="button" onClick={onBack} className="relatorio-detalhes__voltar">
+          <ArrowLeft size={14} aria-hidden="true" />
+          Voltar para Minhas IAs
+        </button>
 
-        {/* Title, Badge status y acciones */}
-        <div className="relatorio__grupo-3">
-          <div className="relatorio__grupo-4">
-            <div className="relatorio__grupo-5">
-              <h1 className="relatorio__titulo-principal">
-                {record.nomeFerramenta}
-              </h1>
-              {/* Status Badge */}
-              <div className={`relatorio__grupo-6 ${getStatusColor()}`}>
-                <div className="relatorio-status__ponto" />
-                <span>{statusGeral}</span>
-              </div>
-            </div>
-
+        <div className="relatorio-detalhes__titulo-linha">
+          <div className="relatorio-detalhes__identidade">
+            <IconeIA nome={record.nomeFerramenta} tamanho={40} />
+            <h1 className="relatorio-detalhes__titulo">{record.nomeFerramenta}</h1>
           </div>
-
-          {/* Action Buttons Toolbar */}
-          <div className="relatorio-acoes relatorio__relatorio-acoes-estrutura">
-            {/* {onEdit &&
-            <button
-              onClick={() => onEdit(record)}
-              className="relatorio__botao-editar-cadastro">
-              
-                <Edit size={14} />
-                Editar cadastro
-              </button>
-            } */}
-
-            {(statusGeral === "Em análise" || statusGeral === "Em teste") &&
-            <div className="relatorio__grupo-em-aprovacao">
-                <Activity size={14} className="relatorio__icone-activity-2" />
-                <span>{statusGeral}</span>
-              </div>
-            }
-
-
-
-
+          <div className={`relatorio-detalhes__status ${getStatusColor()}`}>
+            <div className="relatorio-status__ponto" />
+            <span>{statusGeral}</span>
           </div>
         </div>
-      </div>
+
+        <p className="relatorio-detalhes__setor">
+          Setor: <strong>{record.unidadeSetor || "—"}</strong>
+        </p>
+      </header>
 
       {/* Justificativa de Indeferimento */}
       {(statusGeral === "Não aprovada" || deniedSteps.length > 0) &&
@@ -541,266 +457,140 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
         </section>
       }
 
-      {/* 2. Resumo executivo */}
-      <section className="relatorio__secao-resumo-executivo">
-        <div className="relatorio__cabecalho-bloco">
-          <div className="relatorio__icone-bloco relatorio__icone-bloco--verde-claro">
-            <Clipboard size={18} />
-          </div>
-          <div>
-            <p className="relatorio__descricao-resumo-executivo">
-              Resumo executivo
-            </p>
-            <h2 className="relatorio__titulo-secao-visao-rapida-da-solicitacao">
-              Visão rápida da solicitação
-            </h2>
-          </div>
-        </div>
-
-        <div className="relatorio__grupo-finalidade-da-ia">
-          {/* Card 1: Finalidade da IA */}
-          <div className="relatorio__grupo-finalidade-da-ia-2 relatorio__cartao-relatorio">
-            <div className="relatorio__cabecalho-card">
-              <div className="relatorio__icone-bloco relatorio__icone-bloco--verde">
-                <Target size={18} />
-              </div>
-              <span className="relatorio__texto-finalidade-da-ia">Finalidade da IA</span>
-            </div>
-            <div className="relatorio__grupo-parecer-final-consolidado">
-              <p className="relatorio__descricao-4">
-                {record.descricaoAtividade || "Nenhuma descrição de atividade registrada."}
-              </p>
-            </div>
-            <div className="relatorio__grupo-setor-ativa">
-              <span>Setor: {record.unidadeSetor}</span>
-              {statusGeral === "Aprovada" && <span className="relatorio__texto-ativa">Ativa</span>}
-            </div>
-          </div>
-
-          {/* Card 2: Status da Avaliação */}
-          <div className="relatorio__grupo-20 relatorio__cartao-relatorio">
-            {/* Top decorative gradient line linked to status */}
-            <div className={`relatorio__grupo-21 ${getStatusGradientClass(statusGeral)}`} />
-
-            <div className="relatorio__grupo-status-da-avaliacao">
-              <div className="relatorio__cabecalho-card relatorio__cabecalho-card--status">
-                <div className="relatorio__icone-bloco relatorio__icone-bloco--alerta">
-                  <ShieldCheck size={18} />
-                </div>
-                <div className="relatorio__grupo-resumo-executivo">
-                  <span className="relatorio__texto-finalidade-da-ia">Status da Avaliação</span>
-                  <span className="relatorio__texto-6">
-                  <span className={`relatorio__texto-7 relatorio-status__pulso relatorio-status__pulso--${getStatusCssVariant()}`} />
-                    <span className={`relatorio__texto-8 relatorio-status__ponto relatorio-status__ponto--${getStatusCssVariant()}`} />
-                  </span>
-                </div>
-              </div>
-
-              <div className={`relatorio__grupo-28 relatorio-status relatorio-status--${getStatusCssVariant()}`}>
-                <div className="relatorio__grupo-15">
-                  {getStatusIcon(obterVarianteStatus(statusGeral))}
-                  <span className="relatorio__texto-9">
-                    {statusGeral}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Situação atual da aprovação */}
-      <section className="relatorio__secao-situacao-da-aprovacao">
-        <div className="relatorio__cabecalho-bloco">
-          <div className="relatorio__icone-bloco relatorio__icone-bloco--verde-claro">
-            <FileCheck2 size={18} />
-          </div>
-          <div>
-          <p className="relatorio__descricao-resumo-executivo">
-            Situação da aprovação
-          </p>
-          <h2 className="relatorio__titulo-secao-visao-rapida-da-solicitacao">
-            Etapas de aprovação
-          </h2>
-          </div>
-        </div>
-
-
-
-        {/* Dynamic Stepper */}
-        <div className="relatorio__grupo-29">
-          <div className="relatorio__grupo-30">
+      <section
+        className="relatorio-detalhes__fluxo-card"
+        data-estrutura={ESTRUTURA_FLUXO_APROVACAO_CARD}
+        aria-labelledby="relatorio-etapas-titulo">
+        <h2 id="relatorio-etapas-titulo" className="relatorio-detalhes__fluxo-titulo">
+          Etapas de aprovação
+        </h2>
+        <div className="relatorio-detalhes__fluxo-scroll">
+          <ol
+            className="relatorio-detalhes__fluxo"
+            data-estrutura={ESTRUTURA_FLUXO_APROVACAO_HORIZONTAL}>
             {getEffectiveWorkflowSteps().map((step) => {
               const details = getStepStatusDetails(step);
               const signerName = step.assignedUserName || "Aprovação livre";
 
               return (
-                <div
+                <li
                   key={step.stepNumber}
-                  className={`relatorio__grupo-31 relatorio-etapa relatorio-etapa--${details.variante}`}>
-                  
-                  <div>
-                    <div className="relatorio__grupo-32">
-                      <div className="relatorio__grupo-33">
-                        <div className="relatorio__grupo-34 relatorio-etapa__icone">
-                          {details.iconSymbol}
-                        </div>
-                        <span className="relatorio__texto-etapa">
-                          Etapa {step.stepNumber}
-                        </span>
-                      </div>
-                      <span className="relatorio__texto-10 relatorio-etapa__badge">
-                        {details.badgeText}
-                      </span>
-                    </div>
-                    
-                    <p className="relatorio__descricao-5">
-                      {step.roleName}
-                    </p>
+                  className={`relatorio-detalhes__fluxo-etapa relatorio-detalhes__fluxo-etapa--${details.variante}`}>
+                  <div className="relatorio-detalhes__fluxo-circulo" aria-hidden="true">
+                    {details.iconSymbol}
                   </div>
-
-                  <div className="relatorio__grupo-responsavel">
-                    <span className="relatorio__texto-responsavel">Responsável</span>
-                    <span className="relatorio__texto-11">
-                      {signerName}
-                    </span>
-                  </div>
-                </div>);
-
+                  <span className="relatorio-detalhes__fluxo-nome">
+                    {obterRotuloEtapaFluxo(step.stepNumber)}
+                  </span>
+                  <span className="relatorio-detalhes__fluxo-badge">{details.badgeText}</span>
+                  <span className="relatorio-detalhes__fluxo-resp-label">Responsável</span>
+                  <span className="relatorio-detalhes__fluxo-resp-nome">{signerName}</span>
+                </li>
+              );
             })}
-          </div>
+          </ol>
         </div>
       </section>
 
+      <nav
+        className="cedro-segment-nav cedro-segment-nav--largo"
+        data-estrutura={ESTRUTURA_ABAS_RELATORIO_SEGMENTADO}
+        aria-label="Seções do relatório"
+      >
+        <div className="cedro-segment-nav__grupo cedro-segment-nav__grupo--rolagem" role="tablist">
+          {ABAS_RELATORIO_IA.map((tab) => {
+            const isActive = activeTab === tab.id;
+            const Icone = ICONES_ABAS_RELATORIO[tab.id];
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveTab(tab.id)}
+                className={`cedro-segment-nav__item ${isActive ? "cedro-segment-nav__item--ativo" : ""}`}
+              >
+                <Icone size={15} className="cedro-segment-nav__item-icone" aria-hidden="true" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
-
-      {/* 5. Navegação por Abas - hidden on print */}
-      <div className="cedro-abas relatorio-abas relatorio__relatorio-abas-estrutura">
-        {[
-        { id: "visao-geral", label: "Resumo", icon: Info },
-        { id: "finalidade-uso", label: "Uso da IA", icon: Target },
-        { id: "nit", label: "NIT", icon: ShieldCheck },
-        { id: "ti", label: "TI", icon: Cpu },
-        { id: "relatorio", label: "Relatório", icon: FileText }].map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as TabType)}
-              className={`cedro-aba ${isActive ? "cedro-aba--ativa" : ""} relatorio__botao ${
-              isActive ?
-              "relatorio__botao-2" :
-              "relatorio__botao-3"}`
-              }>
-              
-              <tab.icon size={14} className={isActive ? "relatorio__elemento-2" : "relatorio__elemento-3"} />
-              {tab.label}
-            </button>);
-
-        })}
-      </div>
-
-      {/* 6. Conteúdo Dinâmico das Abas */}
-      <div className="relatorio__grupo-35">
+      <div className="relatorio-detalhes__conteudo-abas relatorio__grupo-35">
         
         {/* TAB 1: RESUMO / VISÃO GERAL */}
         {activeTab === "visao-geral" &&
-        <div className="relatorio__grupo-36">
-            <div className="relatorio__grupo-resumo-da-ficha-tecnica">
-              <div className="relatorio__cabecalho-bloco relatorio__cabecalho-bloco--sem-fundo">
-                <div className="relatorio__icone-bloco relatorio__icone-bloco--verde">
-                  <Info size={18} />
+        <div className="relatorio-detalhes__ficha">
+            <h2 className="relatorio-detalhes__ficha-titulo">Ficha técnica</h2>
+
+            <div className="relatorio-detalhes__ficha-grade">
+              <section className="relatorio-detalhes__ficha-bloco" aria-labelledby="relatorio-ficha-identidade">
+                <h3 id="relatorio-ficha-identidade" className="relatorio-detalhes__ficha-bloco-titulo">
+                  Identidade
+                </h3>
+                <div className="relatorio-detalhes__linha">
+                  <span className="relatorio-detalhes__linha-label">Nome da ferramenta</span>
+                  <p className="relatorio-detalhes__linha-valor">{record.nomeFerramenta || "Não preenchido"}</p>
                 </div>
-                <div>
-                  <h3 className="relatorio__titulo-bloco-resumo-da-ficha-tecnica">
-                    Resumo da Ficha Técnica
-                  </h3>
-                  <p className="relatorio__subtitulo-ficha-tecnica">
-                    Visão geral das informações principais desta IA
+                <div className="relatorio-detalhes__linha">
+                  <span className="relatorio-detalhes__linha-label">Descrição da atividade</span>
+                  <p className="relatorio-detalhes__linha-valor">{record.descricaoAtividade || "Não preenchido"}</p>
+                </div>
+                <div
+                  className={`relatorio-detalhes__linha ${
+                    !record.fornecedor || record.fornecedor.toLowerCase() === "interno" ?
+                    "relatorio-detalhes__linha--ultima" :
+                    ""}`
+                  }>
+                  <span className="relatorio-detalhes__linha-label">Tipo de IA</span>
+                  <div className="relatorio-detalhes__linha-valor">
+                    <div className="relatorio-detalhes__chips">
+                      {record.tipoIA && record.tipoIA.length > 0 ?
+                        record.tipoIA.map((t, idx) =>
+                          <span key={idx} className="relatorio-detalhes__chip">{t}</span>
+                        ) :
+                        <span>Não preenchido</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+                {record.fornecedor && record.fornecedor.toLowerCase() !== "interno" &&
+                  <div className="relatorio-detalhes__linha relatorio-detalhes__linha--ultima">
+                    <span className="relatorio-detalhes__linha-label">Fornecedor</span>
+                    <p className="relatorio-detalhes__linha-valor">{record.fornecedor}</p>
+                  </div>
+                }
+              </section>
+
+              <section className="relatorio-detalhes__ficha-bloco" aria-labelledby="relatorio-ficha-solicitacao">
+                <h3
+                  id="relatorio-ficha-solicitacao"
+                  className="relatorio-detalhes__ficha-bloco-titulo relatorio-detalhes__ficha-bloco-titulo--azul">
+                  Solicitação
+                </h3>
+                <div className="relatorio-detalhes__linha">
+                  <span className="relatorio-detalhes__linha-label">Solicitante</span>
+                  <p className="relatorio-detalhes__linha-valor">{record.responsavelPreenchimento || "Não preenchido"}</p>
+                </div>
+                <div className="relatorio-detalhes__linha">
+                  <span className="relatorio-detalhes__linha-label">Setor requisitante</span>
+                  <p className="relatorio-detalhes__linha-valor">{record.unidadeSetor || "Não preenchido"}</p>
+                </div>
+                <div className="relatorio-detalhes__linha">
+                  <span className="relatorio-detalhes__linha-label">Responsável técnico</span>
+                  <p className="relatorio-detalhes__linha-valor">
+                    {record.responsavelPreenchimento || "Não preenchido"}
+                    {record.cargo ? ` · ${record.cargo}` : ""}
                   </p>
                 </div>
-              </div>
-              <div className="relatorio__grupo-avaliador-coordenador-nit-etap">
-                <span>Avaliador: Coordenador NIT (Etapa 1)</span>
-              </div>
+                <div className="relatorio-detalhes__linha relatorio-detalhes__linha--ultima">
+                  <span className="relatorio-detalhes__linha-label">Data de cadastro</span>
+                  <p className="relatorio-detalhes__linha-valor">{record.dataRegistro || "Não preenchido"}</p>
+                </div>
+              </section>
             </div>
-
-            <div className={`relatorio__grupo-37 ${isAdmin ? "relatorio__grupo-39" : "relatorio__grupo-40"} relatorio__grupo-38`}>
-              {/* Card 1 — O que é esta IA? */}
-              <div className="relatorio__grupo-identidade">
-                <div className="relatorio__grupo-identidade-o-que-e-esta-ia">
-                  <div className="relatorio__icone-bloco relatorio__icone-bloco--verde relatorio__icone-bloco--card">
-                    <Cpu size={18} />
-                  </div>
-                  <div className="relatorio__grupo-titulos-card">
-                    <span className="relatorio__texto-identidade">Identidade</span>
-                    <h4 className="relatorio__titulo-item-o-que-e-esta-ia">O que é esta IA?</h4>
-                  </div>
-                </div>
-                <div className="relatorio__grupo-nome-da-ferramenta">
-                  <div>
-                    <span className="relatorio__texto-nome-da-ferramenta">Nome da Ferramenta</span>
-                    <p className="relatorio__descricao-6">{record.nomeFerramenta || "Não preenchido"}</p>
-                  </div>
-                  <div>
-                    <span className="relatorio__texto-nome-da-ferramenta">Descrição da Atividade</span>
-                    <p className="relatorio__descricao-7">
-                      {record.descricaoAtividade || "Não preenchido"}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="relatorio__texto-nome-da-ferramenta">Tipo de Inteligência Artificial</span>
-                    <div className="relatorio__grupo-41">
-                      {record.tipoIA && record.tipoIA.length > 0 ?
-                    record.tipoIA.map((t, idx) =>
-                    <span key={idx} className="relatorio__texto-12">
-                            {t}
-                          </span>
-                    ) :
-
-                    <span className="relatorio__texto-nao-preenchido">Não preenchido</span>
-                    }
-                    </div>
-                  </div>
-                  {record.fornecedor && record.fornecedor.toLowerCase() !== "interno" &&
-                <div>
-                      <span className="relatorio__texto-nome-da-ferramenta">Fornecedor da Solução</span>
-                      <p className="relatorio__descricao-8">{record.fornecedor}</p>
-                    </div>
-                }
-                </div>
-              </div>
-
-              {/* Card 2 — Quem solicitou? */}
-              <div className="relatorio__grupo-identidade">
-                <div className="relatorio__grupo-identidade-o-que-e-esta-ia">
-                  <div className="relatorio__icone-bloco relatorio__icone-bloco--azul relatorio__icone-bloco--card">
-                    <Users size={18} />
-                  </div>
-                  <div className="relatorio__grupo-titulos-card">
-                    <span className="relatorio__texto-identidade relatorio__texto-identidade--azul">Identificação do solicitante</span>
-                    <h4 className="relatorio__titulo-item-o-que-e-esta-ia">Quem solicitou?</h4>
-                  </div>
-                </div>
-                <div className="relatorio__grupo-setor-requisitante">
-                  <div>
-                    <span className="relatorio__texto-nome-da-ferramenta">Setor Requisitante</span>
-                    <p className="relatorio__descricao-9">{record.unidadeSetor || "Não preenchido"}</p>
-                  </div>
-                  <div>
-                    <span className="relatorio__texto-nome-da-ferramenta">Responsável Técnico</span>
-                    <p className="relatorio__descricao-10">{record.responsavelPreenchimento || "Não preenchido"}</p>
-                    <p className="relatorio__descricao-11">{record.cargo || "Moderação"}</p>
-                  </div>
-                  <div>
-                    <span className="relatorio__texto-data-de-cadastro">Data de Cadastro</span>
-                    <p className="relatorio__descricao-8">{record.dataRegistro || "Não preenchido"}</p>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
           </div>
         }
 

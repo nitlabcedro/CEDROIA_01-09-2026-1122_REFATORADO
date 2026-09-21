@@ -3,6 +3,22 @@
  * A migração visual dos toasts será feita aqui, sem voltar a poluir Aplicacao.tsx.
  */
 
+.notificacao-ti__grupo-informacoes-solicitadas-pela-t,
+.notificacao-ti__grupo-8,
+.notificacao-ti__elemento,
+.notificacao-ti__grupo-responda-todas-as-perguntas-vo {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.notificacao-ti__descricao-2,
+.notificacao-ti__campo-texto-digite-sua-resposta {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+  max-width: 100%;
+}
+
 /* === INICIO ESTRUTURA MIGRADA DO JSX ===
    Regras estruturais migradas do JSX para CSS dedicado.
    Não adicionar utilitários no JSX; evoluir estes seletores semanticamente.

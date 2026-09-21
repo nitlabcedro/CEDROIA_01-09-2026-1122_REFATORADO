@@ -402,11 +402,6 @@
 .painel-grafico::before,
 .painel-grafico-status::before { display: none !important; }
 
-.cartao-acao__item {
-  padding: 9px 10px !important;
-  border-radius: 9px !important;
-}
-
 /* ------------------------------------------------------------
    7. INVENTÁRIO
    ------------------------------------------------------------ */

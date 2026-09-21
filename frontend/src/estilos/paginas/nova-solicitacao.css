@@ -2209,18 +2209,12 @@
 }
 
 .nova-solicitacao__ia-icone {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 48px;
   height: 48px;
   flex: 0 0 48px;
-  color: #0a5f1e;
-  background: #e9f5e8;
+  background: #f6f8f6;
+  border-color: #e0e6e1;
   border-radius: 999px;
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: -.02em;
 }
 
 .nova-solicitacao__ia-check {

@@ -7,6 +7,7 @@ import { ETAPAS_APROVACAO_OFICIAIS } from "@/constantes/fluxo-aprovacao";
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Search, Eye, ArrowUpDown, AlertTriangle, CheckCircle2, PlusCircle, Database, FileSpreadsheet, ChevronLeft, ChevronRight, RotateCcw, ClipboardList, ShieldCheck, MoreVertical, Pencil, XCircle } from "lucide-react";
+import { IconeIA } from "@/componentes/comuns/IconeIA";
 import { IARecord, ApprovalWorkflow } from "@/tipos";
 import {
   obterStatusGeralDoRegistro,
@@ -623,15 +624,18 @@ export default function Inventory({
               <div className="inventario__texto-8">{getStatusBadge(record)}</div>
             </div>
 
-            <div className="inventario__grupo-6">
-              <h3 className="inventario__titulo-bloco">
-                {record.nomeFerramenta}
-              </h3>
-              {record.fornecedor && record.fornecedor.toLowerCase().trim() !== "interno" &&
-            <p className="inventario__descricao-2">
-                  {record.fornecedor}
-                </p>
-            }
+            <div className="inventario__identidade-mobile">
+              <IconeIA nome={record.nomeFerramenta} tamanho={32} />
+              <div className="inventario__grupo-6">
+                <h3 className="inventario__titulo-bloco">
+                  {record.nomeFerramenta}
+                </h3>
+                {record.fornecedor && record.fornecedor.toLowerCase().trim() !== "interno" &&
+              <p className="inventario__descricao-2">
+                    {record.fornecedor}
+                  </p>
+              }
+              </div>
             </div>
 
             <div className="inventario__grupo-setor">
@@ -766,15 +770,18 @@ export default function Inventory({
                     </span>
                   </td>
                   <td className="inventario__celula-2">
-                    <div className="inventario__grupo-13">
-                      <span className="inventario__texto-14">
-                        {record.nomeFerramenta}
-                      </span>
-                      {record.fornecedor && record.fornecedor.toLowerCase().trim() !== "interno" &&
-                    <span className="inventario__texto-15">
-                          {record.fornecedor}
+                    <div className="inventario__identidade-tabela">
+                      <IconeIA nome={record.nomeFerramenta} tamanho={28} />
+                      <div className="inventario__grupo-13">
+                        <span className="inventario__texto-14">
+                          {record.nomeFerramenta}
                         </span>
-                    }
+                        {record.fornecedor && record.fornecedor.toLowerCase().trim() !== "interno" &&
+                      <span className="inventario__texto-15">
+                            {record.fornecedor}
+                          </span>
+                      }
+                      </div>
                     </div>
                   </td>
                   <td className="inventario__celula-3">

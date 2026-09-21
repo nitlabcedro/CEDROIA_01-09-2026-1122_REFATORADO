@@ -5,7 +5,9 @@ export const ROTAS_API = {
   WORKFLOW_DECIDE: "/api/workflow/decide",
   WORKFLOW_RESET_STATUS: "/api/workflow/reset-status",
   TI_INTERACOES_PENDENTES: "/api/workflow/ti-interactions/pending",
+  TI_INTERACOES_PENDENTES_RESPONSAVEL: "/api/workflow/ti-interactions/pending-ti",
   TI_INTERACOES_SOLICITAR: "/api/workflow/ti-interactions/request",
+  TI_INTERACOES_BLOCOS: "/api/workflow/ti-interactions/blocks",
   ADMIN_ATUALIZAR_ROLE: "/api/admin/update-role",
   ADMIN_EXCLUIR_USUARIO: "/api/admin/delete-user",
   AVATAR_UPLOAD: "/api/avatar/upload",
@@ -19,3 +21,15 @@ export const rotaRascunhoInteracaoTI = (solicitacaoId: string) =>
 
 export const rotaEnviarInteracaoTI = (solicitacaoId: string) =>
   `/api/workflow/ti-interactions/${encodeURIComponent(solicitacaoId)}/submit`;
+
+export const rotaMensagemInteracaoTI = (solicitacaoId: string) =>
+  `/api/workflow/ti-interactions/${encodeURIComponent(solicitacaoId)}/message`;
+
+export const rotaEncerrarInteracaoTI = (solicitacaoId: string) =>
+  `/api/workflow/ti-interactions/${encodeURIComponent(solicitacaoId)}/close-round`;
+
+export const rotaRespostaBlocoTI = (solicitacaoId: string, perguntaId: string) =>
+  `/api/workflow/ti-interactions/${encodeURIComponent(solicitacaoId)}/questions/${encodeURIComponent(perguntaId)}`;
+
+export const rotaFinalizarBlocoTI = (solicitacaoId: string) =>
+  `/api/workflow/ti-interactions/${encodeURIComponent(solicitacaoId)}/finalize`;

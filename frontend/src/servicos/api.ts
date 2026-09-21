@@ -4,7 +4,8 @@ interface AmbienteFrontend {
   VITE_API_URL?: string;
 }
 
-const variaveisAmbiente = (import.meta as ImportMeta & { env: AmbienteFrontend }).env;
+const variaveisAmbiente =
+  (import.meta as ImportMeta & { env?: AmbienteFrontend }).env || {};
 const URL_BASE_API = (variaveisAmbiente.VITE_API_URL || "").replace(/\/$/, "");
 
 export async function requisicaoApi(

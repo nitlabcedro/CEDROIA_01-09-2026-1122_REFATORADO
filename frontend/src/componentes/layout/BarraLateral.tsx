@@ -25,6 +25,7 @@ import {
 import { UserProfile } from "@/tipos";
 import MarcaCedroIA from "@/componentes/layout/MarcaCedroIA";
 import type { NavegarPara } from "@/hooks/useAplicacao";
+import { obterCargoPrincipal } from "@/utilitarios/perfil-usuario";
 
 interface SidebarProps {
   isSidebarOpen?: boolean;
@@ -408,7 +409,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {profile?.full_name || "Usuário Cedro"}
               </span>
               <span className="barra-lateral__perfil-papel">
-                {admin ? "Administrador" : "Colaborador"}
+                {obterCargoPrincipal(profile?.cargo) || "Cargo não informado"}
               </span>
             </div>
           }
