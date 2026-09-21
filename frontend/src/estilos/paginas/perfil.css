@@ -40,7 +40,7 @@
   justify-content: space-between;
   gap: 1.5rem;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .perfil__grupo-2 {
@@ -1229,6 +1229,8 @@
 
 #perfil-conteudo .perfil-cabecalho {
   min-height: 172px;
+  height: auto;
+  overflow: visible;
   padding: 18px 30px !important;
   border: 1px solid rgba(4, 74, 24, 0.44);
   border-radius: 17px;
@@ -1318,6 +1320,13 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 5px;
+  max-height: none;
+  overflow: visible;
+}
+
+#perfil-conteudo .perfil__elemento-2--adicional .perfil__texto,
+#perfil-conteudo .perfil__elemento-2--adicional .perfil__texto-2 {
+  font-weight: 650;
 }
 
 #perfil-conteudo .perfil__elemento-2 {
@@ -1595,6 +1604,11 @@
   border-color: #8db297;
   background: #f3f8f4;
   color: #075618;
+}
+
+#perfil-conteudo .perfil__botao-adicionar-outro-cargo-setor:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 #perfil-conteudo .perfil__elemento-url-da-foto-de-perfil {

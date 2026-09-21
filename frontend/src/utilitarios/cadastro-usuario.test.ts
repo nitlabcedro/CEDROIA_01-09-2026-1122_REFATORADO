@@ -5,13 +5,17 @@ import {
   criarMetadataCadastro,
   manterCargoAoTrocarSetor,
   normalizarSetoresAtivos,
+  podeEnviarAtribuicoesCadastro,
   podeEnviarCadastro,
+  serializarAtribuicoesCadastro,
   validarAtribuicaoCadastro,
+  validarAtribuicoesCadastro,
 } from "./cadastro-usuario";
 
 const setores = normalizarSetoresAtivos([
   { name: "NIT", cargos: ["Gerente", "Coordenador"], status: "Ativo" },
   { name: "TI", cargos: ["Desenvolvedor"], status: "Ativo" },
+  { name: "RH", cargos: ["Gerente", "Analista"], status: "Ativo" },
   { name: "Inativo", cargos: ["Gerente"], status: "Inativo" },
 ]);
 
@@ -62,5 +66,55 @@ describe("cadastro de usuário", () => {
     assert.equal("role" in metadata, false);
     assert.equal(Object.values(metadata).includes("Geral"), false);
     assert.equal(Object.values(metadata).includes("Colaborador"), false);
+  });
+
+  it("valida e serializa uma ou várias atribuições preservando a principal", () => {
+    assert.equal(
+      podeEnviarAtribuicoesCadastro([{ setor: "NIT", cargo: "Gerente" }], setores),
+      true,
+    );
+
+    const atribuicoes = [
+      { setor: "NIT", cargo: "Coordenador" },
+      { setor: "TI", cargo: "Desenvolvedor" },
+    ];
+
+    assert.equal(validarAtribuicoesCadastro(atribuicoes, setores), null);
+    assert.deepEqual(serializarAtribuicoesCadastro(atribuicoes, setores), {
+      setor: "NIT; TI",
+      cargo: "Coordenador; Desenvolvedor",
+    });
+  });
+
+  it("impede setor ou cargo duplicado", () => {
+    assert.equal(
+      validarAtribuicoesCadastro([
+        { setor: "NIT", cargo: "Gerente" },
+        { setor: "NIT", cargo: "Coordenador" },
+      ], setores),
+      "Não é permitido selecionar o mesmo setor mais de uma vez.",
+    );
+
+    assert.equal(
+      validarAtribuicoesCadastro([
+        { setor: "NIT", cargo: "Gerente" },
+        { setor: "RH", cargo: "Gerente" },
+      ], setores),
+      "Não é permitido selecionar o mesmo cargo mais de uma vez.",
+    );
+  });
+
+  it("volta a uma atribuição válida após remover o item adicional", () => {
+    const atribuicoes = [
+      { setor: "NIT", cargo: "Coordenador" },
+      { setor: "TI", cargo: "Desenvolvedor" },
+    ];
+
+    const semAdicional = atribuicoes.filter((_, indice) => indice !== 1);
+    assert.equal(validarAtribuicoesCadastro(semAdicional, setores), null);
+    assert.deepEqual(serializarAtribuicoesCadastro(semAdicional, setores), {
+      setor: "NIT",
+      cargo: "Coordenador",
+    });
   });
 });

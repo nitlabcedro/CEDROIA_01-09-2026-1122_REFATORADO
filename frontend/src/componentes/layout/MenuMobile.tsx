@@ -18,6 +18,7 @@ import type { LucideIcon } from "lucide-react";
 
 import type { UserProfile } from "@/tipos";
 import MarcaCedroIA from "@/componentes/layout/MarcaCedroIA";
+import { obterCargoPrincipal, obterSetorPrincipal } from "@/utilitarios/perfil-usuario";
 import type { NavegarPara } from "@/hooks/useAplicacao";
 
 interface MenuMobileProps {
@@ -245,8 +246,16 @@ export default function MenuMobile({
                   </div>
                   <div className="menu-mobile__usuario-dados">
                     <p className="menu-mobile__usuario-nome">{profile?.full_name || "Usuário Cedro"}</p>
-                    {profile?.cargo && <p className="menu-mobile__usuario-cargo">{profile.cargo}</p>}
-                    {profile?.setor && <p className="menu-mobile__usuario-setor">{profile.setor}</p>}
+                    {obterCargoPrincipal(profile?.cargo) && (
+                      <p className="menu-mobile__usuario-cargo">
+                        {obterCargoPrincipal(profile?.cargo)}
+                      </p>
+                    )}
+                    {obterSetorPrincipal(profile?.setor) && (
+                      <p className="menu-mobile__usuario-setor">
+                        {obterSetorPrincipal(profile?.setor)}
+                      </p>
+                    )}
                   </div>
                 </button>
               </footer>

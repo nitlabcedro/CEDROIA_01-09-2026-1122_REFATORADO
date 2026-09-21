@@ -1,4 +1,5 @@
 import { IARecord, ApprovalWorkflow, UserProfile, StatusUso, StatusAuditoria } from "@/tipos";
+import { obterCargoPrincipal, obterSetorPrincipal } from "./perfil-usuario";
 import { obterStatusGeralDoRegistro } from "./status-solicitacao";
 
 export interface SystemAlert {
@@ -72,7 +73,14 @@ export const generateSystemAlerts = (
   }
 
   // 2. Profile completion
-  if (profile && (!profile.setor || !profile.cargo || !profile.full_name)) {
+  if (
+    profile
+    && (
+      !obterSetorPrincipal(profile.setor)
+      || !obterCargoPrincipal(profile.cargo)
+      || !profile.full_name?.trim()
+    )
+  ) {
     const alertId = `profile-incomplete-${profile.id || "currentUser"}`;
     const saved = savedStates[alertId];
     alerts.push({

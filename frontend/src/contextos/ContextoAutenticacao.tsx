@@ -2,9 +2,11 @@ import { TABELAS_SUPABASE } from "@/constantes/supabase";
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { liberarBloqueioAutenticacaoApi } from "@/servicos/autenticacao-api";
+import { sincronizarAtribuicoesPerfilPendentes } from "@/servicos/persistencia-perfil";
 import { supabase } from "@/servicos/supabase";
 import { UserProfile } from "@/tipos";
 import { invalidarSessaoNavegacao } from "@/utilitarios/historico-navegacao";
+import { mesclarAtualizacaoPerfil, mesclarPerfilBuscado } from "@/utilitarios/perfil-usuario";
 import {
   DURACAO_PADRAO_RECUPERACAO_MS,
   aplicarEventoAutenticacao,
@@ -88,6 +90,12 @@ export const AuthProvider: React.FC<{children: React.ReactNode;}> = ({ children 
 
     const promise = (async () => {
       try {
+        try {
+          await sincronizarAtribuicoesPerfilPendentes(userId);
+        } catch (syncError) {
+          console.error("Erro ao sincronizar atribuições pendentes do perfil:", syncError);
+        }
+
         const { data, error } = await supabase.
         from(TABELAS_SUPABASE.PERFIS).
         select("*").
@@ -99,16 +107,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode;}> = ({ children 
         }
 
         if (data && !recuperacaoSenhaRef.current) {
-          setProfile((prev) => {
-            if (!prev) return data;
-            // Mantém o preview de blob local temporário se ele estiver ativo
-            const keepBlob = prev.avatar_url?.startsWith("blob:") ? prev.avatar_url : null;
-            return {
-              ...prev,
-              ...data,
-              avatar_url: keepBlob || data.avatar_url
-            };
-          });
+          setProfile((prev) => mesclarPerfilBuscado(prev, data as UserProfile));
         } else if (!recuperacaoSenhaRef.current) {
           setProfile(null);
         }
@@ -309,10 +308,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode;}> = ({ children 
 
   const refreshProfile = async (updatedFields?: Partial<UserProfile>, skipFetch?: boolean, explicitUserId?: string) => {
     if (updatedFields) {
-      setProfile((prev) => {
-        if (!prev) return updatedFields as UserProfile;
-        return { ...prev, ...updatedFields };
-      });
+      setProfile((prev) => mesclarAtualizacaoPerfil(prev, updatedFields));
     }
     const targetUserId = explicitUserId || user?.id;
     if (targetUserId && !skipFetch) await fetchProfile(targetUserId);
