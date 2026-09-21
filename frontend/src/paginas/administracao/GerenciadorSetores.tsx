@@ -478,6 +478,7 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
       if (ok) {
         setSuccessMsg(`Setor "${sName}" atualizado com sucesso.`);
         setIsModalOpen(false);
+        await fetchSectorsList();
         if (onRefresh) onRefresh();
       } else {
         setErrorMsg("Erro ao persistir mudanças no banco.");
