@@ -275,17 +275,43 @@ async function obterUsuarioAutenticado(req: Request) {
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !user) throw new Error("UNAUTHORIZED");
 
-  const { data: profile } = await supabaseAdmin
-    .from(TABELAS_SUPABASE.PERFIS)
-    .select("role, full_name")
-    .eq("id", user.id)
-    .maybeSingle();
+  let profile: { role?: string | null; full_name?: string | null } | null = null;
+  let profileError: { message?: string } | null = null;
+
+  for (let tentativa = 0; tentativa < 2; tentativa += 1) {
+    const resultado = await supabaseAdmin
+      .from(TABELAS_SUPABASE.PERFIS)
+      .select("role, full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+    profile = resultado.data;
+    profileError = resultado.error;
+    if (!profileError) break;
+  }
+
+  if (profileError) {
+    console.error("Erro ao obter perfil para autorização das interações TI:", profileError.message);
+    throw new Error("PROFILE_LOOKUP_FAILED");
+  }
 
   return {
     user,
     role: profile?.role?.toLowerCase().trim() || "user",
     fullName: profile?.full_name || user.email || "Usuário",
   };
+}
+
+export function usuarioPodeConsultarInteracoesTI(dados: {
+  userId: string;
+  role?: string | null;
+  ownerId?: string | null;
+  ownerIdLegado?: string | null;
+  responsavelTiId?: string | null;
+}): boolean {
+  return papelEhAdmin(dados.role)
+    || dados.ownerId === dados.userId
+    || dados.ownerIdLegado === dados.userId
+    || dados.responsavelTiId === dados.userId;
 }
 
 export function adaptarMensagensLegadasTI(row: any) {
@@ -555,7 +581,7 @@ export async function listarInteracoesTI(req: Request, res: Response) {
       .eq("ia_record_id", recordId)
       .maybeSingle();
 
-    let podeVisualizar = registro.owner_id === user.id || papelEhAdmin(role);
+    let responsavelTiId: string | null = null;
     if (workflow) {
       const { data: stepTI } = await supabaseAdmin
         .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
@@ -563,8 +589,16 @@ export async function listarInteracoesTI(req: Request, res: Response) {
         .eq("workflow_id", workflow.id)
         .eq("step_number", 2)
         .maybeSingle();
-      podeVisualizar = podeVisualizar || stepTI?.assigned_user_id === user.id;
+      responsavelTiId = stepTI?.assigned_user_id || null;
     }
+
+    const podeVisualizar = usuarioPodeConsultarInteracoesTI({
+      userId: user.id,
+      role,
+      ownerId: registro.owner_id,
+      ownerIdLegado: registro.data?.ownerId || registro.data?.userId,
+      responsavelTiId,
+    });
 
     if (!podeVisualizar) return res.status(403).json({ error: "Sem permissão para consultar estas interações." });
 
@@ -600,6 +634,9 @@ export async function listarInteracoesTI(req: Request, res: Response) {
     });
   } catch (error: any) {
     if (error?.message === "UNAUTHORIZED") return res.status(401).json({ error: "Não autorizado." });
+    if (error?.message === "PROFILE_LOOKUP_FAILED") {
+      return res.status(503).json({ error: "Não foi possível validar suas permissões neste momento." });
+    }
     if (erroModoInteracaoInconsistente(error)) {
       console.error("Inconsistência no modo da comunicação TI:", error.code);
       return res.status(500).json({ error: "Foi detectada uma inconsistência nesta comunicação com a TI." });

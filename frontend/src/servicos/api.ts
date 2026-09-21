@@ -1,4 +1,7 @@
-import { supabase } from "./supabase";
+import {
+  obterAccessTokenParaApi,
+  registrarFalhaAutenticacaoApi,
+} from "@/servicos/autenticacao-api";
 
 interface AmbienteFrontend {
   VITE_API_URL?: string;
@@ -15,9 +18,7 @@ export async function requisicaoApi(
   const headers = new Headers(opcoes.headers);
 
   if (!headers.has("Authorization")) {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-
+    const token = await obterAccessTokenParaApi();
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
     }
@@ -27,8 +28,25 @@ export async function requisicaoApi(
     headers.set("Content-Type", "application/json");
   }
 
-  return fetch(`${URL_BASE_API}${rota}`, {
+  const executarFetch = () => fetch(`${URL_BASE_API}${rota}`, {
     ...opcoes,
     headers,
   });
+
+  let response = await executarFetch();
+
+  if (response.status === 401 && !headers.get("X-Auth-Retry")) {
+    const tokenRenovado = await obterAccessTokenParaApi({ forcarRenovacao: true });
+    if (tokenRenovado) {
+      headers.set("Authorization", `Bearer ${tokenRenovado}`);
+      headers.set("X-Auth-Retry", "1");
+      response = await executarFetch();
+    }
+  }
+
+  if (response.status === 401) {
+    registrarFalhaAutenticacaoApi();
+  }
+
+  return response;
 }

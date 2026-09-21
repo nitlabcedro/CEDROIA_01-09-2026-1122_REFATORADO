@@ -784,12 +784,15 @@ export default function Inventory({
                       </div>
                     </div>
                   </td>
-                  <td className="inventario__celula-3">
-                    <span className="inventario__texto-16">
+                  <td className="inventario__celula-3 inventario__celula-setor">
+                    <span
+                      className="inventario__texto-16 inventario__texto-setor"
+                      title={record.unidadeSetor || "Não informado"}
+                    >
                       {record.unidadeSetor}
                     </span>
                   </td>
-                  <td className="inventario__celula-3">
+                  <td className="inventario__celula-3 inventario__celula-status">
                     {getStatusBadge(record)}
                   </td>
                   <td className="inventario__celula-3">

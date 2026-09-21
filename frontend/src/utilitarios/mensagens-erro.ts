@@ -70,6 +70,14 @@ export function obterMensagemErroUsuario(
   );
   if (mensagemFuncional) return mensagemFuncional;
 
+  if (
+    mensagem.includes("sem permissão para consultar estas interações")
+    || mensagem.includes("forbidden")
+    || mensagem.includes("erro http 403")
+  ) {
+    return "Você não possui permissão para acessar esta comunicação.";
+  }
+
   if (indicaSenhaIgualAtual(erro, mensagem)) {
     return "A nova senha deve ser diferente da senha atual.";
   }

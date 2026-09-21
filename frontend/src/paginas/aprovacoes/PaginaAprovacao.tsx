@@ -148,6 +148,7 @@ export default function ApprovalPage({
   // Custom states for interactive analysis form
   const [analysisModal, setAnalysisModal] = useState<{isOpen: boolean;record: IARecord | null;}>({ isOpen: false, record: null });
   const [auditComment, setAuditComment] = useState("");
+  const [salvandoDecisaoEtapa, setSalvandoDecisaoEtapa] = useState(false);
 
   const [interacoesTi, setInteracoesTi] = useState<SolicitacaoInformacoesTI[]>([]);
   const [carregandoInteracoesTi, setCarregandoInteracoesTi] = useState(false);
@@ -1666,7 +1667,8 @@ export default function ApprovalPage({
 
           };
 
-          const handleDecisionSubmit = (status: StatusAuditoria) => {
+          const handleDecisionSubmit = async (status: StatusAuditoria) => {
+            if (salvandoDecisaoEtapa) return;
             if (currentStepNum === 2 && possuiSolicitacaoTiPendente) {
               setErroInteracoesTi("Aguarde o solicitante responder todas as perguntas antes de concluir a Etapa 2 — TI.");
               return;
@@ -1706,14 +1708,20 @@ export default function ApprovalPage({
               "Recusado.");
             }
 
-            onUpdateStatus(record.id, status, finalComment, extraFields);
-
-            setAnalysisModal({
-              isOpen: false,
-              record: null
-            });
-
-            setAuditComment("");
+            setSalvandoDecisaoEtapa(true);
+            setErroInteracoesTi("");
+            try {
+              await onUpdateStatus(record.id, status, finalComment, extraFields);
+              setAnalysisModal({
+                isOpen: false,
+                record: null
+              });
+              setAuditComment("");
+            } catch (error) {
+              setErroInteracoesTi(obterMensagemErroUsuario(error, "aprovacao"));
+            } finally {
+              setSalvandoDecisaoEtapa(false);
+            }
           };
 
           return (
@@ -2259,6 +2267,7 @@ export default function ApprovalPage({
                     <button
                       id="btnCancelarAprovacao"
                       onClick={() => setAnalysisModal({ isOpen: false, record: null })}
+                      disabled={salvandoDecisaoEtapa}
                       className="botao-aprovacao botao-aprovacao--cancelar">
                       
                       Cancelar
@@ -2267,7 +2276,7 @@ export default function ApprovalPage({
                         <button
                         id="btnNegarEtapa"
                         onClick={() => handleDecisionSubmit(StatusAuditoria.NEGADO)}
-                        disabled={possuiSolicitacaoTiPendente}
+                        disabled={possuiSolicitacaoTiPendente || salvandoDecisaoEtapa}
                         className="botao-aprovacao botao-aprovacao--negar">
                         
                           <XCircle size={14} /> Negar Etapa
@@ -2275,7 +2284,7 @@ export default function ApprovalPage({
                         <button
                         id="btnAprovarEtapa"
                         onClick={() => handleDecisionSubmit(StatusAuditoria.APROVADO)}
-                        disabled={possuiSolicitacaoTiPendente}
+                        disabled={possuiSolicitacaoTiPendente || salvandoDecisaoEtapa}
                         className="botao-aprovacao botao-aprovacao--aprovar">
                         
                           <CheckCircle2 size={14} /> Aprovar Etapa
@@ -2574,7 +2583,7 @@ export default function ApprovalPage({
                           <button
                           id="btnNegarEtapaMobile"
                           onClick={() => handleDecisionSubmit(StatusAuditoria.NEGADO)}
-                          disabled={possuiSolicitacaoTiPendente}
+                          disabled={possuiSolicitacaoTiPendente || salvandoDecisaoEtapa}
                           className="botao-aprovacao botao-aprovacao--negar botao-aprovacao--mobile">
                           
                             <XCircle size={16} /> Negar etapa
@@ -2582,7 +2591,7 @@ export default function ApprovalPage({
                           <button
                           id="btnAprovarEtapaMobile"
                           onClick={() => handleDecisionSubmit(StatusAuditoria.APROVADO)}
-                          disabled={possuiSolicitacaoTiPendente}
+                          disabled={possuiSolicitacaoTiPendente || salvandoDecisaoEtapa}
                           className="botao-aprovacao botao-aprovacao--aprovar botao-aprovacao--mobile">
                           
                             <CheckCircle2 size={16} /> Aprovar etapa
@@ -2591,6 +2600,7 @@ export default function ApprovalPage({
                         <button
                         id="btnCancelarAprovacaoMobile"
                         onClick={() => setAnalysisModal({ isOpen: false, record: null })}
+                        disabled={salvandoDecisaoEtapa}
                         className="botao-aprovacao botao-aprovacao--cancelar-mobile">
                         
                           Cancelar

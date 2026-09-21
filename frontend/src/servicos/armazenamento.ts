@@ -8,6 +8,11 @@ import { CHAVES_ARMAZENAMENTO_LOCAL } from "@/constantes/armazenamento-local";
 import { usuarioEhAdmin } from "@/utilitarios/permissoes";
 import { supabase } from "./supabase";
 import {
+  carregarSetoresGestaoDoSupabase,
+  persistirSetoresGestaoNoSupabase,
+  type MapaDetalhesSetor,
+} from "./setores-gestao";
+import {
   IARecord,
   StatusAuditoria,
   StatusUso,
@@ -666,7 +671,7 @@ export interface SectorMetadataDetail {
   cargos?: string[];
 }
 
-type SectorDetailsMap = Record<string, SectorMetadataDetail>;
+type SectorDetailsMap = MapaDetalhesSetor;
 
 let sectorsCache: string[] | null = null;
 let sectorsCacheEm = 0;
@@ -700,6 +705,19 @@ export const getSectors = async (): Promise<string[]> => {
 
   sectorsRequest = (async () => {
     try {
+      const oficial = await carregarSetoresGestaoDoSupabase();
+      if (oficial && oficial.nomes.length > 0) {
+        localStorage.setItem(SECTORS_STORAGE_KEY, JSON.stringify(oficial.nomes));
+        localStorage.setItem(SECTOR_DETAILS_STORAGE_KEY, JSON.stringify(oficial.detalhes));
+        sectorsCache = oficial.nomes;
+        sectorsCacheEm = Date.now();
+        return [...oficial.nomes];
+      }
+    } catch {
+      // O fallback abaixo mantém a tela funcional quando o backend está indisponível.
+    }
+
+    try {
       const { data, error } = await supabase
         .from(TABELAS_SUPABASE.REGISTROS_IA)
         .select("data")
@@ -718,7 +736,7 @@ export const getSectors = async (): Promise<string[]> => {
         return [...sectors];
       }
     } catch {
-      // O fallback abaixo mantém a tela funcional quando o backend está indisponível.
+      // Mantém fallback legado quando a tabela oficial e a metadata estão indisponíveis.
     }
 
     const localSectors = readLocalSectors();
@@ -744,6 +762,12 @@ export const saveSectors = async (sectors: string[], details?: SectorDetailsMap)
   }
 
   try {
+    const persistidoOficial = await persistirSetoresGestaoNoSupabase(sectors, sectorDetails);
+    if (!persistidoOficial) {
+      console.error("Erro ao salvar setores na tabela oficial do Supabase.");
+      return false;
+    }
+
     const payload = {
       id: SECTORS_METADATA_ID,
       unidade_setor: "METADATA",
@@ -752,6 +776,7 @@ export const saveSectors = async (sectors: string[], details?: SectorDetailsMap)
       data_registro: new Date().toISOString().split('T')[0],
       utiliza_ia: "Não",
       status_uso: "Em uso",
+      status: "Aprovado",
       data: {
         sectors,
         details: sectorDetails
@@ -764,8 +789,7 @@ export const saveSectors = async (sectors: string[], details?: SectorDetailsMap)
       .upsert(payload);
 
     if (error) {
-      console.error("Erro ao salvar config de setores no Supabase:", error);
-      return false;
+      console.warn("Setores salvos na tabela oficial; espelho METADATA-SECTORS não atualizado:", error);
     }
     return true;
   } catch (err) {

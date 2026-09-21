@@ -1,6 +1,7 @@
 import { TABELAS_SUPABASE } from "@/constantes/supabase";
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
+import { liberarBloqueioAutenticacaoApi } from "@/servicos/autenticacao-api";
 import { supabase } from "@/servicos/supabase";
 import { UserProfile } from "@/tipos";
 import { invalidarSessaoNavegacao } from "@/utilitarios/historico-navegacao";
@@ -230,6 +231,9 @@ export const AuthProvider: React.FC<{children: React.ReactNode;}> = ({ children 
 
     // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        liberarBloqueioAutenticacaoApi();
+      }
       const recuperacaoAtualizada = aplicarEventoAutenticacao(
         event,
         recuperacaoSenhaRef.current,

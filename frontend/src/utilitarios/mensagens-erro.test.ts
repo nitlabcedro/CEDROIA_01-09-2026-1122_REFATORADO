@@ -72,6 +72,16 @@ describe("mensagens de erro destinadas ao usuário", () => {
     );
   });
 
+  it("distingue falta de permissão na comunicação de erro genérico do chat", () => {
+    assert.equal(
+      obterMensagemErroUsuario(
+        new Error("Sem permissão para consultar estas interações."),
+        "chat",
+      ),
+      "Você não possui permissão para acessar esta comunicação.",
+    );
+  });
+
   it("traduz senha igual à atual na redefinição", () => {
     const mensagemEsperada = "A nova senha deve ser diferente da senha atual.";
     const porCodigo = obterMensagemErroUsuario(

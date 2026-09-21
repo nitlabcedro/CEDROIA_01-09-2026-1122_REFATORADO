@@ -32,6 +32,15 @@ function obterEtapasOficiaisComResponsaveis(rows: any[] | null | undefined) {
   });
 }
 
+export function garantirGravacaoSupabase(
+  resultado: { error?: { message?: string } | null },
+  contexto: string,
+) {
+  if (resultado?.error) {
+    throw new Error(`${contexto}: ${resultado.error.message || "Falha ao gravar no banco."}`);
+  }
+}
+
 export async function obterConfiguracaoWorkflow(req: Request, res: Response) {
   try {
     const supabaseAdmin = obterClienteSupabase();
@@ -321,7 +330,7 @@ export async function inicializarWorkflow(req: Request, res: Response) {
         statusUso: "Em avaliação",
       };
 
-      await supabaseAdmin
+      const { error: registroInitError } = await supabaseAdmin
         .from(TABELAS_SUPABASE.REGISTROS_IA)
         .update({
           data: updatedData,
@@ -329,6 +338,7 @@ export async function inicializarWorkflow(req: Request, res: Response) {
           updated_at: new Date().toISOString()
         })
         .eq("id", recordId);
+      garantirGravacaoSupabase({ error: registroInitError }, "Não foi possível atualizar o registro da solicitação");
     }
 
     return res.json({ success: true, workflowId: wfData.id });
@@ -394,13 +404,14 @@ async function garantirEtapasWorkflowSincronizadas(supabaseAdmin: any, wfData: a
       for (const tStep of templateSteps) {
         const existingMatch = existingSteps?.find((s: any) => Number(s.step_number) === tStep.step_number);
         if (existingMatch && !existingMatch.assigned_user_id && tStep.assigned_user_id) {
-          await supabaseAdmin
+          const { error: assignError } = await supabaseAdmin
             .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
             .update({
               assigned_user_id: tStep.assigned_user_id,
               assigned_user_name: tStep.assigned_user_name || null,
             })
             .eq("id", existingMatch.id);
+          garantirGravacaoSupabase({ error: assignError }, "Não foi possível atribuir o responsável da etapa");
         }
       }
     }
@@ -422,10 +433,11 @@ async function garantirEtapasWorkflowSincronizadas(supabaseAdmin: any, wfData: a
     }
 
     if (validCurrentStep !== Number(wfData.current_step)) {
-      await supabaseAdmin
+      const { error: currentStepError } = await supabaseAdmin
         .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
         .update({ current_step: validCurrentStep })
         .eq("id", wfData.id);
+      garantirGravacaoSupabase({ error: currentStepError }, "Não foi possível corrigir a etapa atual do fluxo");
       wfData.current_step = validCurrentStep;
     }
 
@@ -446,7 +458,7 @@ async function garantirEtapasWorkflowSincronizadas(supabaseAdmin: any, wfData: a
           .in("id", staleIds);
 
         if (repairError) {
-          console.warn("Não foi possível reparar status de etapas anteriores:", repairError.message);
+          throw new Error(`Não foi possível reparar status de etapas anteriores: ${repairError.message}`);
         } else {
           stalePreviousSteps.forEach((step: any) => {
             step.status = "aprovado";
@@ -458,7 +470,7 @@ async function garantirEtapasWorkflowSincronizadas(supabaseAdmin: any, wfData: a
     return finalSteps || [];
   } catch (err) {
     console.error("Erro em ensureWorkflowStepsSynced:", err);
-    return [];
+    throw err;
   }
 }
 
@@ -546,6 +558,7 @@ export async function decidirWorkflow(req: Request, res: Response) {
 
       if (stepsInsertErr) {
         console.error("Erro ao inserir etapas automáticas:", stepsInsertErr);
+        return res.status(500).json({ error: `Erro ao salvar as etapas do fluxo: ${stepsInsertErr.message}` });
       }
     }
 
@@ -575,10 +588,11 @@ export async function decidirWorkflow(req: Request, res: Response) {
       if (fallbackStep) {
         currentStepData = fallbackStep;
         wfData.current_step = fallbackStep.step_number;
-        await supabaseAdmin
+        const { error: currentStepFixError } = await supabaseAdmin
           .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
           .update({ current_step: fallbackStep.step_number })
           .eq("id", wfData.id);
+        garantirGravacaoSupabase({ error: currentStepFixError }, "Não foi possível atualizar a etapa atual do fluxo");
       } else {
         return res.status(404).json({ error: "Etapa atual não encontrada no workflow" });
       }
@@ -595,23 +609,25 @@ export async function decidirWorkflow(req: Request, res: Response) {
       if (cfgStep?.assigned_user_id) {
         currentStepData.assigned_user_id = cfgStep.assigned_user_id;
         currentStepData.assigned_user_name = cfgStep.assigned_user_name;
-        await supabaseAdmin
+        const { error: assignCfgError } = await supabaseAdmin
           .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
           .update({
             assigned_user_id: cfgStep.assigned_user_id,
             assigned_user_name: cfgStep.assigned_user_name,
           })
           .eq("id", currentStepData.id);
+        garantirGravacaoSupabase({ error: assignCfgError }, "Não foi possível atribuir o responsável da etapa");
       } else if (papelEhAdmin(role) || papelEhCoordenadorNit(role)) {
         currentStepData.assigned_user_id = user.id;
         currentStepData.assigned_user_name = fullName;
-        await supabaseAdmin
+        const { error: assignAdminError } = await supabaseAdmin
           .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
           .update({
             assigned_user_id: user.id,
             assigned_user_name: fullName,
           })
           .eq("id", currentStepData.id);
+        garantirGravacaoSupabase({ error: assignAdminError }, "Não foi possível atribuir o responsável da etapa");
       }
     }
 
@@ -661,10 +677,11 @@ export async function decidirWorkflow(req: Request, res: Response) {
     // Na Etapa 2, etapa + workflow são atualizados juntos pela RPC após uma
     // segunda validação de pendência sob o mesmo lock usado pelo chat.
     if (Number(wfData.current_step) !== 2) {
-      await supabaseAdmin
+      const { error: stepDecisionError } = await supabaseAdmin
         .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
         .update(stepUpdatePayload)
         .eq("id", currentStepData.id);
+      garantirGravacaoSupabase({ error: stepDecisionError }, "Não foi possível registrar a decisão da etapa");
     }
 
     // 6. Contar total de etapas e calcular regras de fluxo dinamicamente
@@ -754,24 +771,27 @@ export async function decidirWorkflow(req: Request, res: Response) {
             "RPC de decisão segura da TI indisponível. Revise documentacao/SUPABASE_TI_CHAT.sql:",
             rpcError?.message || rpcError,
           );
-          await supabaseAdmin
+          const { error: stepLegacyError } = await supabaseAdmin
             .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
             .update(stepUpdatePayload)
             .eq("id", currentStepData.id);
-          await supabaseAdmin
+          garantirGravacaoSupabase({ error: stepLegacyError }, "Não foi possível registrar a decisão da etapa");
+          const { error: workflowLegacyError } = await supabaseAdmin
             .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
             .update(workflowUpdatePayload)
             .eq("id", wfData.id);
+          garantirGravacaoSupabase({ error: workflowLegacyError }, "Não foi possível atualizar o fluxo de aprovação");
         } else {
           const erroMapeado = mapearErroRpcInteracaoTI(rpcError);
           return res.status(erroMapeado.status).json({ error: erroMapeado.mensagem });
         }
       }
     } else {
-      await supabaseAdmin
+      const { error: workflowDecisionError } = await supabaseAdmin
         .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
         .update(workflowUpdatePayload)
         .eq("id", wfData.id);
+      garantirGravacaoSupabase({ error: workflowDecisionError }, "Não foi possível atualizar o fluxo de aprovação");
     }
 
     // 7. Atualizar o registro da IA no banco
@@ -843,10 +863,11 @@ export async function decidirWorkflow(req: Request, res: Response) {
         updatedData.dataAprovacao = currentDateStr;
       }
 
-      await supabaseAdmin
+      const { error: recordDecisionError } = await supabaseAdmin
         .from(TABELAS_SUPABASE.REGISTROS_IA)
         .update(updatePayload)
         .eq("id", recordId);
+      garantirGravacaoSupabase({ error: recordDecisionError }, "Não foi possível atualizar o registro da solicitação");
     }
 
     let responseMessage = "";
@@ -1016,6 +1037,10 @@ export async function redefinirStatusWorkflow(req: Request, res: Response) {
         .select("id")
         .single();
 
+      if (newWfErr || !newWf) {
+        return res.status(500).json({ error: `Não foi possível criar o fluxo de aprovação: ${newWfErr?.message || "Erro desconhecido"}` });
+      }
+
       if (newWf) {
         const { data: configRows } = await supabaseAdmin
           .from(TABELAS_SUPABASE.CONFIGURACAO_APROVACAO)
@@ -1036,7 +1061,8 @@ export async function redefinirStatusWorkflow(req: Request, res: Response) {
               decided_at: null,
             }));
 
-        await supabaseAdmin.from(TABELAS_SUPABASE.ETAPAS_APROVACAO).insert(stepsToInsert);
+        const { error: stepsResetInsertErr } = await supabaseAdmin.from(TABELAS_SUPABASE.ETAPAS_APROVACAO).insert(stepsToInsert);
+        garantirGravacaoSupabase({ error: stepsResetInsertErr }, "Não foi possível criar as etapas do fluxo");
       }
     }
 

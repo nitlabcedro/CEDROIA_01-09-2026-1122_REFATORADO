@@ -935,7 +935,7 @@ s-estrutura {
 .inventario__cabecalho-coluna-setor {
   transition-property: all;
   transition-duration: 150ms;
-  min-width: 140px;
+  min-width: 0;
 }
 
 .inventario__cabecalho-coluna-status {
@@ -944,7 +944,7 @@ s-estrutura {
   padding-top: 1.125rem;
   padding-bottom: 1.125rem;
   letter-spacing: -0.025em;
-  min-width: 140px;
+  white-space: nowrap;
 }
 
 .inventario__cabecalho-coluna-etapa-atual {
@@ -1055,6 +1055,23 @@ s-estrutura {
   padding-right: 1rem;
   padding-top: 1rem;
   padding-bottom: 1rem;
+  white-space: nowrap;
+}
+
+.inventario__celula-setor {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.inventario__texto-setor {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inventario__celula-status {
   white-space: nowrap;
 }
 
@@ -1880,18 +1897,20 @@ s-estrutura {
   background: #fbfdfb;
 }
 
+/* Distribuicao proporcional: o setor recebe a maior fatia e as demais colunas
+   ficam no minimo necessario para o conteudo nao colidir. */
 .pagina-inventario .inventario-tabela th:nth-child(1),
 .pagina-inventario .inventario-tabela td:nth-child(1) { width: 12%; }
 .pagina-inventario .inventario-tabela th:nth-child(2),
-.pagina-inventario .inventario-tabela td:nth-child(2) { width: 15%; }
+.pagina-inventario .inventario-tabela td:nth-child(2) { width: 13%; }
 .pagina-inventario .inventario-tabela th:nth-child(3),
-.pagina-inventario .inventario-tabela td:nth-child(3) { width: 9%; }
+.pagina-inventario .inventario-tabela td:nth-child(3) { width: 24%; }
 .pagina-inventario .inventario-tabela th:nth-child(4),
 .pagina-inventario .inventario-tabela td:nth-child(4) { width: 13%; }
 .pagina-inventario .inventario-tabela th:nth-child(5),
-.pagina-inventario .inventario-tabela td:nth-child(5) { width: 20%; }
+.pagina-inventario .inventario-tabela td:nth-child(5) { width: 11%; }
 .pagina-inventario .inventario-tabela th:nth-child(6),
-.pagina-inventario .inventario-tabela td:nth-child(6) { width: 16%; }
+.pagina-inventario .inventario-tabela td:nth-child(6) { width: 12%; }
 .pagina-inventario .inventario-tabela th:nth-child(7),
 .pagina-inventario .inventario-tabela td:nth-child(7) { width: 15%; text-align: right; }
 
@@ -1937,6 +1956,18 @@ s-estrutura {
   border-radius: 6px;
   font-size: 11px;
   font-weight: 750;
+}
+
+/* O chip de setor precisa ser um bloco em linha para que o ellipsis funcione:
+   text-overflow nao se aplica a containers flex. */
+.pagina-inventario .inventario__texto-setor {
+  display: inline-block;
+  max-width: 100%;
+  line-height: 23px;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pagina-inventario .inventario-status {
