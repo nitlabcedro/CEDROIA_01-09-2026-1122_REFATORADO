@@ -30,6 +30,8 @@ import { obterUltimoParecerLimpo as getCleanLastOpinion } from "@/utilitarios/pa
 import SystemControls from "./ControlesSistema";
 import SectorsManager from "./GerenciadorSetores";
 import { AdminDropdownPortal } from "./AdminDropdownPortal";
+import { ModalEditarAtribuicoesUsuario } from "./ModalEditarAtribuicoesUsuario";
+import type { AtribuicaoCadastro } from "@/utilitarios/cadastro-usuario";
 import {
   obterStatusGeralDoRegistro,
   STATUS_GERAIS_OFICIAIS,
@@ -62,6 +64,7 @@ interface AdminPanelProps {
   onViewRecord: (record: IARecord) => void;
   onEditRecord?: (record: IARecord) => void;
   onDeleteRecord?: (id: string) => void;
+  onUpdateUserAssignments?: (userId: string, atribuicoes: AtribuicaoCadastro[]) => Promise<void>;
   onUpdateUserRole?: (userId: string, newRole: "admin" | "moderator" | "user") => void;
   onDeleteUser?: (userId: string) => void;
   approvalConfig?: ApprovalConfig;
@@ -87,6 +90,7 @@ export default function AdminPanel({
   onViewRecord,
   onEditRecord,
   onDeleteRecord,
+  onUpdateUserAssignments,
   onUpdateUserRole,
   onDeleteUser,
   approvalConfig,
@@ -184,6 +188,7 @@ export default function AdminPanel({
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [editingAssignmentsUser, setEditingAssignmentsUser] = useState<UserProfile | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const extraFiltersButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -1332,6 +1337,14 @@ export default function AdminPanel({
                               </div>
 
                               <div className="administracao__grupo-64">
+                                {isCurrentUserAdmin && onUpdateUserAssignments && userProfile && userProfile.id !== currentUserId &&
+                        <button
+                          type="button"
+                          onClick={() => setEditingAssignmentsUser(userProfile)}
+                          className="administracao__botao-editar-atribuicoes">
+                          <Edit size={13} /> Editar setor/cargo
+                        </button>
+                        }
                                 {onUpdateUserRole && userProfile &&
                         <button
                           disabled={updatingUserId === userProfile.id}
@@ -1433,6 +1446,16 @@ export default function AdminPanel({
                                 <td className="administracao__celula-4">
                                   <div className="administracao__grupo-69">
                                     
+                                    {isCurrentUserAdmin && onUpdateUserAssignments && userProfile && userProfile.id !== currentUserId &&
+                              <button
+                                type="button"
+                                onClick={() => setEditingAssignmentsUser(userProfile)}
+                                className="administracao__botao-editar-atribuicoes"
+                                title="Editar setor e cargo">
+                                <Edit size={13} /> Editar setor/cargo
+                              </button>
+                              }
+
                                     {/* Permission Adjusters if Handler is provided */}
                                     {onUpdateUserRole && userProfile &&
                               <div className="administracao__grupo-70">
@@ -1719,6 +1742,13 @@ export default function AdminPanel({
         }
 
         </div>
+
+      {editingAssignmentsUser && onUpdateUserAssignments &&
+      <ModalEditarAtribuicoesUsuario
+        usuario={editingAssignmentsUser}
+        onClose={() => setEditingAssignmentsUser(null)}
+        onSave={onUpdateUserAssignments} />
+      }
 
       {/* ==================== HISTÓRICO E FLUXO VISUAL DE APROVAÇÃO (READ-ONLY) ==================== */}
       <AnimatePresence>

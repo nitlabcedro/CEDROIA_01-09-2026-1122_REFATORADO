@@ -41,6 +41,7 @@ import {
   UserProfile,
 } from "@/tipos";
 import { generateSystemAlerts } from "@/utilitarios/alertas";
+import type { AtribuicaoCadastro } from "@/utilitarios/cadastro-usuario";
 import {
   criarUrlNavegacao,
   interpretarUrlNavegacao,
@@ -1845,6 +1846,45 @@ export function useAplicacao() {
     }
   };
 
+  const handleUpdateUserAssignments = async (
+    userId: string,
+    atribuicoes: AtribuicaoCadastro[],
+  ) => {
+    const response = await requisicaoApi(ROTAS_API.ADMIN_ATUALIZAR_ATRIBUICOES, {
+      method: "POST",
+      body: JSON.stringify({ userId, atribuicoes }),
+    });
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(result?.error || "Não foi possível atualizar setor/cargo.");
+    }
+    if (!result?.profile?.id) {
+      throw new Error("Resposta inesperada do servidor.");
+    }
+
+    const mesclarAtribuicoes = (perfilAtual: UserProfile) =>
+      perfilAtual.id === userId
+        ? {
+            ...perfilAtual,
+            setor: result.profile.setor,
+            cargo: result.profile.cargo,
+          }
+        : perfilAtual;
+
+    setProfiles((atuais) => {
+      const atualizados = atuais.map(mesclarAtribuicoes);
+      seedProfilesCache(atualizados);
+      return atualizados;
+    });
+    setProfilesCatalog((atuais) => atuais.map(mesclarAtribuicoes));
+    addToast({
+      title: "Atribuições atualizadas",
+      message: "Setor e cargo do usuário foram atualizados.",
+      type: "success",
+    });
+  };
+
   const handleUpdateUserRole = async (userId: string, newRole: "admin" | "moderator" | "user") => {
     // Check if it's a real GUID/UUID (Fallback names are not UUIDs)
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
@@ -1993,6 +2033,7 @@ export function useAplicacao() {
     handleSaveApprovalConfig,
     handleUpdateStatus,
     handleResetStatus,
+    handleUpdateUserAssignments,
     handleUpdateUserRole,
     handleDeleteUser,
     refreshRecords,

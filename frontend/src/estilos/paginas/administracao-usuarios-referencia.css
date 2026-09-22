@@ -360,6 +360,7 @@
 }
 
 #administracao-conteudo .administracao-usuarios-painel .administracao__botao-alternar-permissao-administrad,
+#administracao-conteudo .administracao-usuarios-painel .administracao__botao-editar-atribuicoes,
 #administracao-conteudo .administracao-usuarios-painel .administracao__botao-historico-2,
 #administracao-conteudo .administracao-usuarios-painel .administracao__botao-deletar-conta-permanentemente {
   min-height: 36px;
@@ -384,6 +385,7 @@
 }
 
 #administracao-conteudo .administracao-usuarios-painel .administracao__botao-alternar-permissao-administrad:hover,
+#administracao-conteudo .administracao-usuarios-painel .administracao__botao-editar-atribuicoes:hover,
 #administracao-conteudo .administracao-usuarios-painel .administracao__botao-historico-2:hover,
 #administracao-conteudo .administracao-usuarios-painel .administracao__botao-deletar-conta-permanentemente:hover {
   background: #f8faf9;
@@ -405,6 +407,12 @@
 
 #administracao-conteudo .administracao-usuarios-painel .administracao__botao-historico-2 {
   min-width: 96px;
+}
+
+#administracao-conteudo .administracao-usuarios-painel .administracao__botao-editar-atribuicoes {
+  color: #12672c;
+  background: #f5faf6;
+  border-color: #c9ddce;
 }
 
 #administracao-conteudo .administracao-usuarios-painel .administracao__botao-deletar-conta-permanentemente {
@@ -508,6 +516,169 @@
   font-size: 12px;
 }
 
+/* Modal de vínculos administrativos */
+.administracao-atribuicoes-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.administracao-atribuicoes-modal__fundo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  background: rgba(17, 31, 21, .52);
+  border: 0;
+}
+
+.administracao-atribuicoes-modal__painel {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: min(760px, calc(100vh - 40px));
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #dce5df;
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(18, 38, 24, .22);
+}
+
+.administracao-atribuicoes-modal__cabecalho,
+.administracao-atribuicoes-modal__acoes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+}
+
+.administracao-atribuicoes-modal__cabecalho {
+  border-bottom: 1px solid #e6ece8;
+}
+
+.administracao-atribuicoes-modal__cabecalho h2,
+.administracao-atribuicoes-modal__cabecalho p {
+  margin: 0;
+}
+
+.administracao-atribuicoes-modal__cabecalho h2 {
+  color: #1d2c22;
+  font-size: 18px;
+}
+
+.administracao-atribuicoes-modal__cabecalho p {
+  margin-top: 4px;
+  color: #77847c;
+  font-size: 12px;
+}
+
+.administracao-atribuicoes-modal__cabecalho button,
+.administracao-atribuicoes-modal__remover {
+  display: grid;
+  place-items: center;
+  color: #647169;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.administracao-atribuicoes-modal__conteudo {
+  display: grid;
+  gap: 12px;
+  padding: 20px 22px;
+}
+
+.administracao-atribuicoes-modal__par {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px;
+  align-items: end;
+  gap: 12px;
+  padding: 14px;
+  background: #f8faf9;
+  border: 1px solid #e2e9e4;
+  border-radius: 12px;
+}
+
+.administracao-atribuicoes-modal__par label {
+  display: block;
+  margin-bottom: 6px;
+  color: #536158;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.administracao-atribuicoes-modal__remover {
+  width: 36px;
+  height: 36px;
+  color: #bb3041;
+  border: 1px solid #efc6cc;
+  border-radius: 8px;
+}
+
+.administracao-atribuicoes-modal__adicionar {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #11672b;
+  background: #f3faf5;
+  border: 1px dashed #a9cdb2;
+  border-radius: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.administracao-atribuicoes-modal__erro {
+  margin: 0;
+  padding: 10px 12px;
+  color: #a52738;
+  background: #fff3f4;
+  border: 1px solid #f1c3ca;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.administracao-atribuicoes-modal__acoes {
+  justify-content: flex-end;
+  border-top: 1px solid #e6ece8;
+}
+
+.administracao-atribuicoes-modal__acoes button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border: 1px solid #d7e0da;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.administracao-atribuicoes-modal__acoes button:last-child {
+  color: #fff;
+  background: #0b6728;
+  border-color: #0b6728;
+}
+
+.administracao-atribuicoes-modal button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.administracao-atribuicoes-modal__spinner {
+  animation: administracao-atribuicoes-girar .8s linear infinite;
+}
+
+@keyframes administracao-atribuicoes-girar {
+  to { transform: rotate(360deg); }
+}
+
 /* Mobile cards */
 @media (max-width: 1023px) {
   #administracao-conteudo .administracao-toolbar {
@@ -563,6 +734,18 @@
 
   #administracao-conteudo .administracao-usuarios-filtros-extras {
     flex-wrap: wrap;
+  }
+
+  .administracao-atribuicoes-modal__par {
+    grid-template-columns: 1fr 36px;
+  }
+
+  .administracao-atribuicoes-modal__par > div {
+    grid-column: 1 / -1;
+  }
+
+  .administracao-atribuicoes-modal__remover {
+    grid-column: 2;
   }
 }
 
