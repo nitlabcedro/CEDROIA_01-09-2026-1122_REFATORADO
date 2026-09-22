@@ -58,6 +58,7 @@ import {
   rotaPrivadaBloqueada,
 } from "@/utilitarios/historico-navegacao";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
+import { aplicarPapelNaListaPerfis } from "@/utilitarios/perfil-usuario";
 import { useNotifications } from "./useNotificacoes";
 
 export interface OpcoesNavegarPara {
@@ -1938,7 +1939,14 @@ export function useAplicacao() {
       
       if (result.success && result.profile) {
         console.log(`✅ Alteração persistida via API para ${userId}`);
-        setProfiles(prev => prev.map(p => p.id === userId ? result.profile : p));
+        // O cache de perfis precisa receber o papel novo antes do refreshRecords,
+        // senão getProfiles devolve a entrada antiga e o botão volta ao rótulo anterior.
+        setProfiles(prev => {
+          const atualizados = aplicarPapelNaListaPerfis(prev, userId, newRole);
+          seedProfilesCache(atualizados);
+          return atualizados;
+        });
+        setProfilesCatalog(prev => aplicarPapelNaListaPerfis(prev, userId, newRole));
       } else {
         throw new Error("Resposta inesperada do servidor.");
       }
