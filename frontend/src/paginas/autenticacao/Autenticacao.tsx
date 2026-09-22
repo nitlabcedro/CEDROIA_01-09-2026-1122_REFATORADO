@@ -151,12 +151,10 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
           return;
         }
 
-        const atribuicaoPrincipal = combos[0];
         const atribuicoesSerializadas = serializarAtribuicoesCadastro(combos, sectors);
         const metadata = criarMetadataCadastro({
           fullName,
-          setor: atribuicaoPrincipal.setor,
-          cargo: atribuicaoPrincipal.cargo,
+          atribuicoes: combos,
         }, sectors);
 
         const { data, error } = await supabase.auth.signUp({
@@ -329,10 +327,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
                           required
                           placeholder={combo.setor ? "Selecione o cargo..." : "Selecione o setor primeiro"}
                           value={combo.cargo}
-                          options={(sectors.find((setor) => setor.name === combo.setor)?.cargos || [])
-                            .filter((cargo) => cargo === combo.cargo || !combos.some((item, itemIndex) => (
-                              itemIndex !== index && item.cargo === cargo
-                            )))}
+                          options={sectors.find((setor) => setor.name === combo.setor)?.cargos || []}
                           size="lg"
                           className="autenticacao-dropdown"
                           onChange={(carg) => {

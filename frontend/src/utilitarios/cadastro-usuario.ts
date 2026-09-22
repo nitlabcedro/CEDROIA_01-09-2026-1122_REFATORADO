@@ -9,8 +9,16 @@ export interface AtribuicaoCadastro {
   cargo: string;
 }
 
-interface DadosMetadataCadastro extends AtribuicaoCadastro {
+interface DadosMetadataCadastro {
   fullName: string;
+  atribuicoes: AtribuicaoCadastro[];
+}
+
+export interface MetadataCadastro {
+  full_name: string;
+  setor: string;
+  cargo: string;
+  atribuicoes: AtribuicaoCadastro[];
 }
 
 export function normalizarSetoresAtivos(dados: unknown): SetorCadastro[] {
@@ -57,11 +65,6 @@ export function validarDuplicidadesAtribuicoesCadastro(
   const setores = atribuicoes.map(({ setor }) => setor.trim()).filter(Boolean);
   if (new Set(setores).size !== setores.length) {
     return "Não é permitido selecionar o mesmo setor mais de uma vez.";
-  }
-
-  const cargos = atribuicoes.map(({ cargo }) => cargo.trim()).filter(Boolean);
-  if (new Set(cargos).size !== cargos.length) {
-    return "Não é permitido selecionar o mesmo cargo mais de uma vez.";
   }
 
   return null;
@@ -123,13 +126,23 @@ export function manterCargoAoTrocarSetor(
 export function criarMetadataCadastro(
   dados: DadosMetadataCadastro,
   setores: SetorCadastro[],
-): { full_name: string; setor: string; cargo: string } {
-  const erroAtribuicao = validarAtribuicaoCadastro(dados, setores);
+): MetadataCadastro {
+  const erroAtribuicao = validarAtribuicoesCadastro(dados.atribuicoes, setores);
   if (erroAtribuicao) throw new Error(erroAtribuicao);
+
+  const atribuicoes = dados.atribuicoes.map((item) => ({
+    setor: item.setor.trim(),
+    cargo: item.cargo.trim(),
+  }));
+  const principal = atribuicoes[0];
+  if (!principal) {
+    throw new Error("Adicione pelo menos uma atribuição de setor e cargo.");
+  }
 
   return {
     full_name: dados.fullName.trim(),
-    setor: dados.setor.trim(),
-    cargo: dados.cargo.trim(),
+    setor: principal.setor,
+    cargo: principal.cargo,
+    atribuicoes,
   };
 }

@@ -714,11 +714,7 @@ export const UserProfileView: React.FC = () => {
                               <CustomDropdown
                             placeholder={combo.setor ? "Selecione o cargo..." : "Selecione o setor primeiro"}
                             value={combo.cargo}
-                            options={(cargosPorSetor[combo.setor] || []).filter((cargo) => (
-                              cargo === combo.cargo || !editCombos.some((item, itemIndex) => (
-                                itemIndex !== index && item.cargo === cargo
-                              ))
-                            ))}
+                            options={cargosPorSetor[combo.setor] || []}
                             onChange={(carg) => {
                               const newCombos = [...editCombos];
                               newCombos[index].cargo = carg;
