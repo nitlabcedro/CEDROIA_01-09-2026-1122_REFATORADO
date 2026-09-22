@@ -75,6 +75,7 @@ export default function Aplicacao() {
     handleSaveApprovalConfig,
     handleUpdateStatus,
     handleResetStatus,
+    handleUpdateUserAssignments,
     handleUpdateUserRole,
     handleDeleteUser,
     refreshRecords,
@@ -212,6 +213,7 @@ export default function Aplicacao() {
       onViewRecord={handleView}
       onEditRecord={handleEdit}
       onDeleteRecord={handleDelete}
+      onUpdateUserAssignments={handleUpdateUserAssignments}
       onUpdateUserRole={handleUpdateUserRole}
       onDeleteUser={handleDeleteUser}
       approvalConfig={approvalConfig}

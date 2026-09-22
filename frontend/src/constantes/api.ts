@@ -8,6 +8,7 @@ export const ROTAS_API = {
   TI_INTERACOES_PENDENTES_RESPONSAVEL: "/api/workflow/ti-interactions/pending-ti",
   TI_INTERACOES_SOLICITAR: "/api/workflow/ti-interactions/request",
   TI_INTERACOES_BLOCOS: "/api/workflow/ti-interactions/blocks",
+  ADMIN_ATUALIZAR_ATRIBUICOES: "/api/admin/update-assignments",
   ADMIN_ATUALIZAR_ROLE: "/api/admin/update-role",
   ADMIN_EXCLUIR_USUARIO: "/api/admin/delete-user",
   AVATAR_UPLOAD: "/api/avatar/upload",
