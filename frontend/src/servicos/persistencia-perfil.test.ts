@@ -43,6 +43,20 @@ describe("upsert resiliente de public.perfis", () => {
     assert.doesNotMatch(fontePersistenciaPerfil, /sector_locked/);
   });
 
+  it("G) o payload de upsert usa apenas id (conflito/insert) e colunas de UPDATE permitidas", () => {
+    assert.match(fontePersistenciaPerfil, /id:\s*userId/);
+    assert.match(fontePersistenciaPerfil, /setor:\s*normalizadas\.setor/);
+    assert.match(fontePersistenciaPerfil, /cargo:\s*normalizadas\.cargo/);
+    assert.match(fontePersistenciaPerfil, /updated_at:\s*new Date\(\)\.toISOString\(\)/);
+    assert.match(fontePersistenciaPerfil, /campos\.full_name/);
+    assert.match(fontePersistenciaPerfil, /campos\.contato/);
+    assert.match(fontePersistenciaPerfil, /campos\.avatar_url/);
+    assert.doesNotMatch(fontePersistenciaPerfil, /status:/);
+    assert.doesNotMatch(fontePersistenciaPerfil, /authorized_by/);
+    assert.doesNotMatch(fontePersistenciaPerfil, /authorized_at/);
+    assert.doesNotMatch(fontePersistenciaPerfil, /last_seen/);
+  });
+
   it("inclui avatar_url somente quando informado nos complementares", () => {
     assert.match(
       fontePersistenciaPerfil,
