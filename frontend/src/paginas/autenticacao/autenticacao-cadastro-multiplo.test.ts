@@ -22,14 +22,17 @@ describe("cadastro com múltiplas atribuições", () => {
     assert.match(autenticacao, /setCombos\(combos\.filter\(\(_,\s*i\) => i !== index\)\)/);
   });
 
-  it("remove setores e cargos já escolhidos das opções adicionais", () => {
+  it("remove setores já escolhidos das opções adicionais e permite o mesmo cargo em outro setor", () => {
     assert.match(autenticacao, /itemIndex !== index && item\.setor === setor/);
-    assert.match(autenticacao, /itemIndex !== index && item\.cargo === cargo/);
+    assert.doesNotMatch(autenticacao, /itemIndex !== index && item\.cargo === cargo/);
     assert.match(autenticacao, /validarAtribuicoesCadastro\(combos,\s*sectors\)/);
   });
 
-  it("mantém o primeiro par no metadata e persiste a lista no perfil", () => {
-    assert.match(autenticacao, /const atribuicaoPrincipal = combos\[0\]/);
+  it("envia a lista completa no metadata e mantém o UPSERT como fallback", () => {
+    assert.match(
+      autenticacao,
+      /criarMetadataCadastro\(\{\s*fullName,\s*atribuicoes:\s*combos,\s*\},\s*sectors\)/,
+    );
     assert.match(
       autenticacao,
       /const atribuicoesSerializadas = serializarAtribuicoesCadastro\(combos,\s*sectors\)/,
@@ -38,6 +41,8 @@ describe("cadastro com múltiplas atribuições", () => {
     assert.match(autenticacao, /persistirAtribuicoesPerfil\(userId,\s*atribuicoesSerializadas/);
     assert.match(autenticacao, /removerAtribuicoesPerfilPendentes\(userId\)/);
     assert.doesNotMatch(autenticacao, /profileData[\s\S]*combos\[0\]/);
+    assert.doesNotMatch(autenticacao, /options:\s*\{\s*data:\s*\{[\s\S]*\brole\b/);
+    assert.doesNotMatch(autenticacao, /sector_locked/);
   });
 
   it("empilha atribuições sem criar largura horizontal", () => {

@@ -38,7 +38,6 @@ import {
   contarAtribuicoesPerfil,
   obterCargoPrincipal,
   obterRotuloNivelAcesso,
-  obterRotuloStatusPerfil,
   resolverAtribuicoesPerfil,
   serializarAtribuicoesPerfil,
 } from "@/utilitarios/perfil-usuario";
@@ -503,12 +502,6 @@ export const UserProfileView: React.FC = () => {
                   
                   {obterCargoPrincipal(profile?.cargo) || "Cargo não informado"}
                 </motion.span>
-                <motion.span
-                  whileHover={{ scale: 1.05 }}
-                  className="perfil__elemento-ativo">
-                  
-                  {obterRotuloStatusPerfil(profile?.status)}
-                </motion.span>
               </div>
               
               <div className="perfil__grupo-10" data-contagem-pares={contagemAtribuicoes.pares} data-contagem-setores={contagemAtribuicoes.setores} data-contagem-cargos={contagemAtribuicoes.cargos}>
@@ -721,11 +714,7 @@ export const UserProfileView: React.FC = () => {
                               <CustomDropdown
                             placeholder={combo.setor ? "Selecione o cargo..." : "Selecione o setor primeiro"}
                             value={combo.cargo}
-                            options={(cargosPorSetor[combo.setor] || []).filter((cargo) => (
-                              cargo === combo.cargo || !editCombos.some((item, itemIndex) => (
-                                itemIndex !== index && item.cargo === cargo
-                              ))
-                            ))}
+                            options={cargosPorSetor[combo.setor] || []}
                             onChange={(carg) => {
                               const newCombos = [...editCombos];
                               newCombos[index].cargo = carg;

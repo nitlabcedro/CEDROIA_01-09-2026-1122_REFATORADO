@@ -16,6 +16,9 @@ const setores = normalizarSetoresAtivos([
   { name: "NIT", cargos: ["Gerente", "Coordenador"], status: "Ativo" },
   { name: "TI", cargos: ["Desenvolvedor"], status: "Ativo" },
   { name: "RH", cargos: ["Gerente", "Analista"], status: "Ativo" },
+  { name: "Gestão Administrativa", cargos: ["COORDENADOR", "ANALISTA"], status: "Ativo" },
+  { name: "Núcleo de Inovação e Tecnologia", cargos: ["COORDENADOR"], status: "Ativo" },
+  { name: "Anatomia Patológica", cargos: ["COORDENADOR"], status: "Ativo" },
   { name: "Inativo", cargos: ["Gerente"], status: "Inativo" },
 ]);
 
@@ -52,9 +55,12 @@ describe("cadastro de usuário", () => {
     assert.equal(manterCargoAoTrocarSetor("Gerente", "NIT", setores), "Gerente");
   });
 
-  it("envia exatamente full_name, setor e cargo no metadata", () => {
+  it("envia 1 par completo no metadata sem role nem sector_locked", () => {
     const metadata = criarMetadataCadastro(
-      { fullName: " Ivaldo Pontes Figueiredo ", setor: "NIT", cargo: "Gerente" },
+      {
+        fullName: " Ivaldo Pontes Figueiredo ",
+        atribuicoes: [{ setor: "NIT", cargo: "Gerente" }],
+      },
       setores,
     );
 
@@ -62,10 +68,95 @@ describe("cadastro de usuário", () => {
       full_name: "Ivaldo Pontes Figueiredo",
       setor: "NIT",
       cargo: "Gerente",
+      atribuicoes: [{ setor: "NIT", cargo: "Gerente" }],
     });
     assert.equal("role" in metadata, false);
+    assert.equal("sector_locked" in metadata, false);
     assert.equal(Object.values(metadata).includes("Geral"), false);
     assert.equal(Object.values(metadata).includes("Colaborador"), false);
+  });
+
+  it("envia 2 pares preservando ordem e o par principal em setor/cargo", () => {
+    const metadata = criarMetadataCadastro(
+      {
+        fullName: "Ivaldo Pontes Figueiredo",
+        atribuicoes: [
+          { setor: "NIT", cargo: "Coordenador" },
+          { setor: "TI", cargo: "Desenvolvedor" },
+        ],
+      },
+      setores,
+    );
+
+    assert.deepEqual(metadata.atribuicoes, [
+      { setor: "NIT", cargo: "Coordenador" },
+      { setor: "TI", cargo: "Desenvolvedor" },
+    ]);
+    assert.equal(metadata.setor, "NIT");
+    assert.equal(metadata.cargo, "Coordenador");
+    assert.equal("role" in metadata, false);
+    assert.equal("sector_locked" in metadata, false);
+  });
+
+  it("envia 3 pares preservando ordem e o par principal em setor/cargo", () => {
+    const metadata = criarMetadataCadastro(
+      {
+        fullName: "Ivaldo Pontes Figueiredo",
+        atribuicoes: [
+          { setor: "NIT", cargo: "Coordenador" },
+          { setor: "TI", cargo: "Desenvolvedor" },
+          { setor: "RH", cargo: "Analista" },
+        ],
+      },
+      setores,
+    );
+
+    assert.deepEqual(metadata.atribuicoes, [
+      { setor: "NIT", cargo: "Coordenador" },
+      { setor: "TI", cargo: "Desenvolvedor" },
+      { setor: "RH", cargo: "Analista" },
+    ]);
+    assert.equal(metadata.setor, "NIT");
+    assert.equal(metadata.cargo, "Coordenador");
+    assert.equal(metadata.atribuicoes.length, 3);
+  });
+
+  it("rejeita metadata com cargo inválido, setor inexistente ou pares duplicados", () => {
+    assert.throws(
+      () => criarMetadataCadastro(
+        {
+          fullName: "Ivaldo",
+          atribuicoes: [{ setor: "NIT", cargo: "Desenvolvedor" }],
+        },
+        setores,
+      ),
+      /não pertence ao setor/i,
+    );
+
+    assert.throws(
+      () => criarMetadataCadastro(
+        {
+          fullName: "Ivaldo",
+          atribuicoes: [{ setor: "Financeiro", cargo: "Gerente" }],
+        },
+        setores,
+      ),
+      /não pertence ao setor/i,
+    );
+
+    assert.throws(
+      () => criarMetadataCadastro(
+        {
+          fullName: "Ivaldo",
+          atribuicoes: [
+            { setor: "NIT", cargo: "Gerente" },
+            { setor: "NIT", cargo: "Coordenador" },
+          ],
+        },
+        setores,
+      ),
+      /mesmo setor/i,
+    );
   });
 
   it("valida e serializa uma ou várias atribuições preservando a principal", () => {
@@ -86,21 +177,45 @@ describe("cadastro de usuário", () => {
     });
   });
 
-  it("impede setor ou cargo duplicado", () => {
+  it("permite o mesmo cargo em setores diferentes e serializa na ordem", () => {
+    const doisPares = [
+      { setor: "Gestão Administrativa", cargo: "COORDENADOR" },
+      { setor: "Núcleo de Inovação e Tecnologia", cargo: "COORDENADOR" },
+    ];
+    assert.equal(validarAtribuicoesCadastro(doisPares, setores), null);
+    assert.equal(podeEnviarAtribuicoesCadastro(doisPares, setores), true);
+    assert.deepEqual(serializarAtribuicoesCadastro(doisPares, setores), {
+      setor: "Gestão Administrativa; Núcleo de Inovação e Tecnologia",
+      cargo: "COORDENADOR; COORDENADOR",
+    });
+
+    const tresPares = [
+      { setor: "Gestão Administrativa", cargo: "COORDENADOR" },
+      { setor: "Núcleo de Inovação e Tecnologia", cargo: "COORDENADOR" },
+      { setor: "Anatomia Patológica", cargo: "COORDENADOR" },
+    ];
+    assert.equal(validarAtribuicoesCadastro(tresPares, setores), null);
+    assert.deepEqual(serializarAtribuicoesCadastro(tresPares, setores), {
+      setor: "Gestão Administrativa; Núcleo de Inovação e Tecnologia; Anatomia Patológica",
+      cargo: "COORDENADOR; COORDENADOR; COORDENADOR",
+    });
+  });
+
+  it("bloqueia o mesmo setor mais de uma vez, mesmo com cargos iguais ou diferentes", () => {
     assert.equal(
       validarAtribuicoesCadastro([
-        { setor: "NIT", cargo: "Gerente" },
-        { setor: "NIT", cargo: "Coordenador" },
+        { setor: "Gestão Administrativa", cargo: "COORDENADOR" },
+        { setor: "Gestão Administrativa", cargo: "ANALISTA" },
       ], setores),
       "Não é permitido selecionar o mesmo setor mais de uma vez.",
     );
 
     assert.equal(
       validarAtribuicoesCadastro([
-        { setor: "NIT", cargo: "Gerente" },
-        { setor: "RH", cargo: "Gerente" },
+        { setor: "Gestão Administrativa", cargo: "COORDENADOR" },
+        { setor: "Gestão Administrativa", cargo: "COORDENADOR" },
       ], setores),
-      "Não é permitido selecionar o mesmo cargo mais de uma vez.",
+      "Não é permitido selecionar o mesmo setor mais de uma vez.",
     );
   });
 
