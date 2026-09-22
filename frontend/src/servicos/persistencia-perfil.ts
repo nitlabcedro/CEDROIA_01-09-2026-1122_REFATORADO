@@ -80,6 +80,47 @@ export function conferirAtribuicoesPersistidas(
   return esperado.setor === persistido.setor && esperado.cargo === persistido.cargo;
 }
 
+function montarCamposUpsertPerfil(
+  userId: string,
+  normalizadas: { setor: string; cargo: string },
+  complementares: CamposComplementaresPerfil,
+): {
+  id: string;
+  setor: string;
+  cargo: string;
+  updated_at: string;
+  full_name?: string;
+  contato?: string;
+  avatar_url?: string;
+} {
+  const campos: {
+    id: string;
+    setor: string;
+    cargo: string;
+    updated_at: string;
+    full_name?: string;
+    contato?: string;
+    avatar_url?: string;
+  } = {
+    id: userId,
+    setor: normalizadas.setor,
+    cargo: normalizadas.cargo,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (complementares.full_name != null) {
+    campos.full_name = complementares.full_name;
+  }
+  if (complementares.contato != null) {
+    campos.contato = complementares.contato;
+  }
+  if (complementares.avatar_url != null) {
+    campos.avatar_url = complementares.avatar_url;
+  }
+
+  return campos;
+}
+
 export async function persistirAtribuicoesPerfil(
   userId: string,
   atribuicoes: FonteAtribuicoesPerfil,
@@ -90,22 +131,21 @@ export async function persistirAtribuicoesPerfil(
     throw new Error("As atribuições completas são obrigatórias para atualizar o perfil.");
   }
 
+  const campos = montarCamposUpsertPerfil(userId, normalizadas, complementares);
+
   const { data, error } = await supabase
     .from(TABELAS_SUPABASE.PERFIS)
-    .update({
-      ...complementares,
-      setor: normalizadas.setor,
-      cargo: normalizadas.cargo,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", userId)
+    .upsert(campos, { onConflict: "id" })
     .select("id,setor,cargo")
     .single();
 
   if (error) {
     throw new Error(`Não foi possível persistir todas as atribuições do perfil: ${error.message}`);
   }
-  if (!data || !conferirAtribuicoesPersistidas(normalizadas, data)) {
+  if (!data || data.id !== userId) {
+    throw new Error("O Supabase não confirmou a persistência do perfil para o usuário esperado.");
+  }
+  if (!conferirAtribuicoesPersistidas(normalizadas, data)) {
     throw new Error("O Supabase não confirmou a persistência de todos os setores e cargos.");
   }
 

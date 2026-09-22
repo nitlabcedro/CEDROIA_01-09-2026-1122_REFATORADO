@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 
 import {
@@ -6,6 +7,11 @@ import {
   lerAtribuicoesPerfilPendentes,
   sincronizarAtribuicoesPerfilPendentes,
 } from "./persistencia-perfil";
+
+const fontePersistenciaPerfil = readFileSync(
+  new URL("./persistencia-perfil.ts", import.meta.url),
+  "utf8",
+);
 import { obterAtribuicoesPerfil } from "../utilitarios/perfil-usuario";
 
 class ArmazenamentoMemoria {
@@ -23,6 +29,27 @@ class ArmazenamentoMemoria {
     this.dados.delete(chave);
   }
 }
+
+describe("upsert resiliente de public.perfis", () => {
+  it("substitui update exclusivo por upsert com onConflict id e confirmação por select", () => {
+    assert.match(fontePersistenciaPerfil, /\.upsert\(campos,\s*\{\s*onConflict:\s*"id"\s*\}\)/);
+    assert.match(fontePersistenciaPerfil, /\.select\("id,setor,cargo"\)/);
+    assert.match(fontePersistenciaPerfil, /data\.id !== userId/);
+    assert.doesNotMatch(fontePersistenciaPerfil, /\.from\(TABELAS_SUPABASE\.PERFIS\)[\s\S]*?\.update\(/);
+  });
+
+  it("não inclui role, sector_locked ou campos administrativos no payload", () => {
+    assert.doesNotMatch(fontePersistenciaPerfil, /montarCamposUpsertPerfil[\s\S]*\brole\b/);
+    assert.doesNotMatch(fontePersistenciaPerfil, /sector_locked/);
+  });
+
+  it("inclui avatar_url somente quando informado nos complementares", () => {
+    assert.match(
+      fontePersistenciaPerfil,
+      /if \(complementares\.avatar_url != null\)/,
+    );
+  });
+});
 
 describe("persistência das atribuições do perfil", () => {
   for (const caso of [

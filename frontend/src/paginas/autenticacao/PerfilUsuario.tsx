@@ -38,7 +38,6 @@ import {
   contarAtribuicoesPerfil,
   obterCargoPrincipal,
   obterRotuloNivelAcesso,
-  obterRotuloStatusPerfil,
   resolverAtribuicoesPerfil,
   serializarAtribuicoesPerfil,
 } from "@/utilitarios/perfil-usuario";
@@ -502,12 +501,6 @@ export const UserProfileView: React.FC = () => {
                   className="perfil__elemento">
                   
                   {obterCargoPrincipal(profile?.cargo) || "Cargo não informado"}
-                </motion.span>
-                <motion.span
-                  whileHover={{ scale: 1.05 }}
-                  className="perfil__elemento-ativo">
-                  
-                  {obterRotuloStatusPerfil(profile?.status)}
                 </motion.span>
               </div>
               

@@ -134,12 +134,6 @@ export const ProfileModal: React.FC<{profile: UserProfile;onClose: () => void;}>
               </div>
             }
             
-            {profile.status === "Autorizado" &&
-            <div className="chat-perfil-modal__badge-ativo">
-                <span className="chat-perfil-modal__badge-ativo-ponto" />
-                <span className="chat-perfil-modal__badge-ativo-texto">Ativo</span>
-              </div>
-            }
           </div>
 
           {/* Grid de Informações Organizacionais com mais dados */}

@@ -655,8 +655,8 @@ export default function AdminPanel({
             className="administracao-usuarios-toolbar__select"
             aria-label="Filtrar usuários por status">
             <option value="all">Todos os status</option>
-            <option value="conforme">Conformidade</option>
-            <option value="pendente">Pendências</option>
+            <option value="conforme">Sem solicitações em andamento</option>
+            <option value="pendente">Com solicitações em andamento</option>
           </select>
 
           <button
@@ -1327,7 +1327,7 @@ export default function AdminPanel({
                                 </span>
                                 <span className={`administracao__texto-17 ${hasPending ? "administracao__texto-15" : "administracao__texto-18"}`}>
                                   {hasPending ? <AlertTriangle size={10} /> : <ShieldCheck size={10} />}
-                                  {hasPending ? "Pendências" : "Conformidade"}
+                                  {hasPending ? "Com solicitações em andamento" : "Sem solicitações em andamento"}
                                 </span>
                               </div>
 
@@ -1377,7 +1377,6 @@ export default function AdminPanel({
                       const cargo = userProfile?.cargo || "";
                       const setor = userProfile?.setor || userIAs[0]?.unidadeSetor || "Não Associado";
                       const role = userProfile?.role || "user";
-                      const status = userProfile?.status || "Autorizado";
 
                       return (
                         <tr key={userId} className="administracao-item administracao__administracao-item-estrutura" data-usuario={userId} data-role={role}>
@@ -1422,11 +1421,11 @@ export default function AdminPanel({
                                     {/* Governance State Badge */}
                                     {hasPending ?
                               <span className="administracao__texto-pendencias">
-                                        <AlertTriangle size={10} /> Pendências
+                                        <AlertTriangle size={10} /> Com solicitações em andamento
                                       </span> :
 
                               <span className="administracao__texto-conformidade">
-                                        <ShieldCheck size={10} /> Conformidade
+                                        <ShieldCheck size={10} /> Sem solicitações em andamento
                                       </span>
                               }
                                   </div>
