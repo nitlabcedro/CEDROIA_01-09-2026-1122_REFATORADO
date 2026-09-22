@@ -340,7 +340,6 @@ export const addRecord = async (record: IARecord, userId?: string, isAdmin?: boo
               full_name: record.responsavelPreenchimento || 'Membro Cedro',
               setor: record.unidadeSetor || '',
               cargo: record.cargo || '',
-              role: 'user',
               updated_at: new Date().toISOString()
             });
         }
