@@ -112,6 +112,20 @@ export function mesclarAtualizacaoPerfil(
   };
 }
 
+/**
+ * Aplica o novo papel apenas ao perfil alvo, preservando os demais campos já
+ * carregados (full_name, setor, cargo, avatar_url etc.).
+ */
+export function aplicarPapelNaListaPerfis(
+  perfis: UserProfile[],
+  userId: string,
+  role: UserProfile["role"],
+): UserProfile[] {
+  return perfis.map((perfil) =>
+    perfil.id === userId ? { ...perfil, role } : perfil,
+  );
+}
+
 export function obterCargoPrincipal(cargo?: string | null): string {
   return separarValores(cargo)[0] || "";
 }
