@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 
 import {
+  cancelarSolicitacao,
   decidirWorkflow,
   inicializarWorkflow,
   listarWorkflows,
@@ -31,4 +32,8 @@ export function decidir(req: Request, res: Response) {
 
 export function redefinirStatus(req: Request, res: Response) {
   return redefinirStatusWorkflow(req, res);
+}
+
+export function cancelar(req: Request, res: Response) {
+  return cancelarSolicitacao(req, res);
 }

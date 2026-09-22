@@ -12,7 +12,7 @@ describe("armazenamento cache", () => {
   it("reutiliza registros em cache após seedGlobalRecordsCache sem nova consulta obrigatória", async () => {
     const mock: IARecord[] = [
       {
-        id: "IA-CEDRO-0099",
+        id: "IA-00000099",
         nomeFerramenta: "Mock",
         unidadeSetor: "TI",
       } as IARecord,
@@ -22,7 +22,7 @@ describe("armazenamento cache", () => {
     const fromCache = await getGlobalRecords();
 
     assert.equal(fromCache.length, 1);
-    assert.equal(fromCache[0].id, "IA-CEDRO-0099");
+    assert.equal(fromCache[0].id, "IA-00000099");
   });
 
   it("reutiliza perfis em cache após seedProfilesCache", async () => {
@@ -43,7 +43,7 @@ describe("armazenamento cache", () => {
 
   it("deduplica chamadas simultâneas idênticas a getGlobalRecords", async () => {
     const mock: IARecord[] = [
-      { id: "IA-CEDRO-0001", nomeFerramenta: "A", unidadeSetor: "TI" } as IARecord,
+      { id: "IA-00000001", nomeFerramenta: "A", unidadeSetor: "TI" } as IARecord,
     ];
     seedGlobalRecordsCache(mock);
 

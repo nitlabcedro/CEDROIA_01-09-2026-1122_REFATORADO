@@ -9,18 +9,16 @@ const fonte = readFileSync(
 );
 
 describe("useAplicacao — persistência da decisão", () => {
-  it("alinha o fallback de status_uso com o backend ao avançar para a etapa 3", () => {
-    assert.match(fonte, /if \(nextStep >= 3\) \{\s*newStatusUso = "Em teste\/piloto";/);
-    assert.doesNotMatch(fonte, /if \(nextStep >= 4\) \{\s*newStatusUso = "Em teste\/piloto";/);
-  });
-
   it("propaga erro da decisão para o chamador em vez de engolir a falha", () => {
-    assert.match(fonte, /throw new Error\(errRes\.error\);/);
+    assert.match(fonte, /throw new Error\(errRes\.error/);
     assert.match(fonte, /await refreshRecords\(\);\s*throw error;/);
   });
 
-  it("persiste coluna status e valida linha ao negar no fallback Supabase", () => {
-    assert.match(fonte, /updatePayload\.status = "Negado"/);
-    assert.match(fonte, /nenhuma linha foi atualizada no banco/);
+  it("não executa fallback de escrita no Supabase para decidir etapa", () => {
+    const handle = fonte.slice(fonte.indexOf("const handleUpdateStatus"));
+    const corpo = handle.slice(0, handle.indexOf("const handleResetStatus"));
+    assert.match(corpo, /ROTAS_API\.WORKFLOW_DECIDE/);
+    assert.doesNotMatch(corpo, /TABELAS_SUPABASE\.REGISTROS_IA/);
+    assert.doesNotMatch(corpo, /fallback local/);
   });
 });

@@ -57,9 +57,11 @@ describe("setores-gestao — atualização de setores", () => {
     assert.equal(renomeado?.description, "Setor renomeado");
   });
 
-  it("saveSectors delega persistência à tabela oficial public.sectors/setores", () => {
+  it("saveSectors delega persistência à tabela oficial public.sectors e não grava METADATA-SECTORS", () => {
     assert.match(armazenamentoFonte, /persistirSetoresGestaoNoSupabase/);
     assert.match(armazenamentoFonte, /carregarSetoresGestaoDoSupabase/);
+    assert.doesNotMatch(armazenamentoFonte, /eq\("id",\s*["']METADATA-SECTORS["']\)/);
+    assert.doesNotMatch(armazenamentoFonte, /id:\s*["']METADATA-SECTORS["']/);
   });
 
   it("não trata lista vazia de remoções como sucesso de exclusão indevida", () => {

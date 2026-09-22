@@ -230,7 +230,6 @@ export default function Aplicacao() {
       {activeTab === "new" &&
     <FormularioCadastro
       initialData={selectedRecord}
-      existingRecords={records}
       onSave={handleSave}
       onCancel={() => navegarPara("inventory")}
       isAdmin={isCurrentUserAdmin} />

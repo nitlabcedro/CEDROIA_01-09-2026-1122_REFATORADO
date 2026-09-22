@@ -4,6 +4,8 @@ export const ROTAS_API = {
   WORKFLOW_INIT: "/api/workflow/init",
   WORKFLOW_DECIDE: "/api/workflow/decide",
   WORKFLOW_RESET_STATUS: "/api/workflow/reset-status",
+  WORKFLOW_CANCEL: "/api/workflow/cancel",
+  REGISTROS_PROXIMO_ID: "/api/registros/next-id",
   TI_INTERACOES_PENDENTES: "/api/workflow/ti-interactions/pending",
   TI_INTERACOES_PENDENTES_RESPONSAVEL: "/api/workflow/ti-interactions/pending-ti",
   TI_INTERACOES_SOLICITAR: "/api/workflow/ti-interactions/request",

@@ -7,6 +7,7 @@ import { TABELAS_SUPABASE } from "@/constantes/supabase";
 import { CHAVES_ARMAZENAMENTO_LOCAL } from "@/constantes/armazenamento-local";
 import { usuarioEhAdmin } from "@/utilitarios/permissoes";
 import { supabase } from "./supabase";
+import { obterColunaLegadaRemovivel } from "./compatibilidade-registros";
 import {
   carregarSetoresGestaoDoSupabase,
   persistirSetoresGestaoNoSupabase,
@@ -92,9 +93,6 @@ const mapRegistrosIaRows = (data: any[]): IARecord[] => {
         } as any as IARecord;
       }
 
-      if (item.status) {
-        record.statusAuditoria = item.status as StatusAuditoria;
-      }
       if (item.status_uso) {
         record.statusUso = item.status_uso === "Negado" ? StatusUso.NAO_APROVADO : (item.status_uso as StatusUso);
       }
@@ -248,9 +246,6 @@ export const getRecords = async (userId?: string, isAdmin?: boolean, userSector?
           } as any as IARecord;
         }
 
-        if (item.status) {
-          record.statusAuditoria = item.status as StatusAuditoria;
-        }
         if (item.status_uso) {
           record.statusUso = item.status_uso === "Negado" ? StatusUso.NAO_APROVADO : (item.status_uso as StatusUso);
         }
@@ -294,6 +289,15 @@ const isValidUUID = (id: unknown): boolean => {
 };
 
 export const addRecord = async (record: IARecord, userId?: string, isAdmin?: boolean) => {
+  return persistirRegistroIa(record, userId, isAdmin, "criar");
+};
+
+async function persistirRegistroIa(
+  record: IARecord,
+  userId: string | undefined,
+  isAdmin: boolean | undefined,
+  modo: "criar" | "atualizar",
+) {
   let finalIsAdmin = isAdmin;
   try {
     if (userId && !finalIsAdmin && isValidUUID(userId)) {
@@ -314,12 +318,15 @@ export const addRecord = async (record: IARecord, userId?: string, isAdmin?: boo
     const finalStatus = record.statusAuditoria || (finalIsAdmin ? StatusAuditoria.APROVADO : StatusAuditoria.PENDENTE);
     
     let resolvedOwnerId: string | null = null;
-    if (userId && isValidUUID(userId)) {
+    if (modo === "criar") {
+      if (!userId || !isValidUUID(userId)) {
+        throw new Error("Não foi possível criar a solicitação: owner_id autenticado é obrigatório.");
+      }
       resolvedOwnerId = userId;
     } else {
-      const candidateOwnerId = record.ownerId || (record as any).owner_id;
-      if (candidateOwnerId && isValidUUID(candidateOwnerId)) {
-        resolvedOwnerId = candidateOwnerId;
+      const ownerExistente = record.ownerId || (record as { owner_id?: string }).owner_id;
+      if (ownerExistente && isValidUUID(ownerExistente)) {
+        resolvedOwnerId = ownerExistente;
       }
     }
 
@@ -351,7 +358,7 @@ export const addRecord = async (record: IARecord, userId?: string, isAdmin?: boo
     const recordWithStatus = { 
       ...record, 
       statusAuditoria: finalStatus,
-      ownerId: resolvedOwnerId 
+      ...(resolvedOwnerId ? { ownerId: resolvedOwnerId } : {}),
     };
 
     const payload: Record<string, unknown> = { 
@@ -361,23 +368,13 @@ export const addRecord = async (record: IARecord, userId?: string, isAdmin?: boo
       unidade_setor: record.unidadeSetor || '',
       responsavel_preenchimento: record.responsavelPreenchimento || '',
       nome_ferramenta: record.nomeFerramenta || '',
-      status: record.statusAuditoria || finalStatus,
       status_uso: record.statusUso || 'Em avaliação',
       owner_id: resolvedOwnerId
     };
 
-    const getMissingColumnName = (message: string): string | null => {
-      let match = message.match(/column "([^"]+)" does not exist/i);
-      if (match) return match[1];
-      
-      match = message.match(/column ([a-zA-Z0-9_-]+) does not exist/i);
-      if (match) return match[1];
-
-      match = message.match(/could not find the column ([a-zA-Z0-9_-]+)/i);
-      if (match) return match[1];
-
-      return null;
-    };
+    if (modo === "atualizar" && !resolvedOwnerId) {
+      delete payload.owner_id;
+    }
 
     let currentPayload = { ...payload };
     let attempts = 0;
@@ -398,40 +395,10 @@ export const addRecord = async (record: IARecord, userId?: string, isAdmin?: boo
         }
         
         lastError = error;
-        const errMsg = error.message || '';
-        const errCode = error.code || '';
-        
-        const isMissingColumn = errCode === '42703' || 
-                               errCode === 'PGRST204' || 
-                               errMsg.toLowerCase().includes('column') || 
-                               errMsg.toLowerCase().includes('does not exist');
-        
-        if (isMissingColumn) {
-          const missingCol = getMissingColumnName(errMsg);
-          if (missingCol && missingCol in currentPayload) {
-            console.warn(`⚠️ Coluna [${missingCol}] inexistente no banco. Removendo do payload...`);
-            delete currentPayload[missingCol];
-            continue;
-          } else {
-            const fallbackRemovals = ['owner_id', 'status_uso', 'status', 'unidade_setor', 'responsavel_preenchimento', 'nome_ferramenta', 'updated_at'];
-            let removedSomething = false;
-            for (const col of fallbackRemovals) {
-              if (col in currentPayload) {
-                console.warn(`⚠️ Erro de coluna não identificada. Removendo fallback [${col}]...`);
-                delete currentPayload[col];
-                removedSomething = true;
-                break;
-              }
-            }
-            if (removedSomething) {
-              continue;
-            }
-          }
-        }
-        
-        if (errMsg.toLowerCase().includes('violates foreign key constraint') && errMsg.toLowerCase().includes('owner_id')) {
-          console.warn('⚠️ Violação de chave estrangeira em owner_id. Removendo owner_id...');
-          delete currentPayload['owner_id'];
+        const colunaLegada = obterColunaLegadaRemovivel(error, currentPayload);
+        if (colunaLegada) {
+          console.warn(`⚠️ Coluna legada [${colunaLegada}] inexistente no banco. Removendo do payload...`);
+          delete currentPayload[colunaLegada];
           continue;
         }
 
@@ -459,19 +426,21 @@ export const addRecord = async (record: IARecord, userId?: string, isAdmin?: boo
     const finalStatus = record.statusAuditoria || (finalIsAdmin ? StatusAuditoria.APROVADO : StatusAuditoria.PENDENTE);
     
     let resolvedOwnerId: string | null = null;
-    if (userId && isValidUUID(userId)) {
-      resolvedOwnerId = userId;
+    if (modo === "criar") {
+      if (userId && isValidUUID(userId)) {
+        resolvedOwnerId = userId;
+      }
     } else {
-      const candidateOwnerId = record.ownerId || (record as any).owner_id;
-      if (candidateOwnerId && isValidUUID(candidateOwnerId)) {
-        resolvedOwnerId = candidateOwnerId;
+      const ownerExistente = record.ownerId || (record as { owner_id?: string }).owner_id;
+      if (ownerExistente && isValidUUID(ownerExistente)) {
+        resolvedOwnerId = ownerExistente;
       }
     }
 
     const recordWithStatus = { 
       ...record, 
       statusAuditoria: finalStatus,
-      ownerId: resolvedOwnerId
+      ...(resolvedOwnerId ? { ownerId: resolvedOwnerId } : {}),
     };
     
     if (index === -1) records.push(recordWithStatus);
@@ -485,16 +454,16 @@ export const addRecord = async (record: IARecord, userId?: string, isAdmin?: boo
 export const saveRecordsToSupabase = async (records: IARecord[], userId?: string, isAdmin?: boolean) => {
   console.log(`Syncing ${records.length} records to Supabase...`);
   for (const record of records) {
-    await addRecord(record, userId, isAdmin);
+    await persistirRegistroIa(record, userId, isAdmin, "atualizar");
   }
 };
 
 export const updateRecord = async (record: IARecord, userId?: string, isAdmin?: boolean) => {
-  return addRecord(record, userId, isAdmin);
+  return persistirRegistroIa(record, userId, isAdmin, "atualizar");
 };
 
 export const addOrUpdateRecord = async (record: IARecord, userId?: string, isAdmin?: boolean) => {
-  return addRecord(record, userId, isAdmin);
+  return persistirRegistroIa(record, userId, isAdmin, "atualizar");
 };
 
 export const deleteRecord = async (id: string) => {
@@ -632,18 +601,6 @@ export const updateUserProfile = async (profileId: string, updates: Partial<User
   }
 };
 
-export const generateId = (records: IARecord[]): string => {
-  if (records.length === 0) return "IA-CEDRO-0001";
-  
-  const ids = records.map(r => {
-    const match = r.id.match(/\d+$/);
-    return match ? parseInt(match[0], 10) : 0;
-  });
-  
-  const maxId = Math.max(...ids);
-  return `IA-CEDRO-${(maxId + 1).toString().padStart(4, "0")}`;
-};
-
 export const DEFAULT_SECTORS = [
   "NIT",
   "TI",
@@ -660,7 +617,6 @@ export const DEFAULT_SECTORS = [
 const SECTORS_STORAGE_KEY = CHAVES_ARMAZENAMENTO_LOCAL.SETORES_LEGADO;
 
 const SECTOR_DETAILS_STORAGE_KEY = CHAVES_ARMAZENAMENTO_LOCAL.DETALHES_SETORES;
-const SECTORS_METADATA_ID = "METADATA-SECTORS";
 const SECTORS_CACHE_MS = 300000;
 
 export interface SectorMetadataDetail {
@@ -675,17 +631,6 @@ type SectorDetailsMap = MapaDetalhesSetor;
 let sectorsCache: string[] | null = null;
 let sectorsCacheEm = 0;
 let sectorsRequest: Promise<string[]> | null = null;
-
-const readLocalSectors = (): string[] | null => {
-  try {
-    const raw = localStorage.getItem(SECTORS_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : null;
-  } catch {
-    return null;
-  }
-};
 
 export const getSectorDetails = (): SectorDetailsMap => {
   try {
@@ -703,45 +648,21 @@ export const getSectors = async (): Promise<string[]> => {
   if (sectorsRequest) return sectorsRequest;
 
   sectorsRequest = (async () => {
-    try {
-      const oficial = await carregarSetoresGestaoDoSupabase();
-      if (oficial && oficial.nomes.length > 0) {
-        localStorage.setItem(SECTORS_STORAGE_KEY, JSON.stringify(oficial.nomes));
-        localStorage.setItem(SECTOR_DETAILS_STORAGE_KEY, JSON.stringify(oficial.detalhes));
-        sectorsCache = oficial.nomes;
-        sectorsCacheEm = Date.now();
-        return [...oficial.nomes];
-      }
-    } catch {
-      // O fallback abaixo mantém a tela funcional quando o backend está indisponível.
+    const oficial = await carregarSetoresGestaoDoSupabase();
+    if (!oficial || oficial.nomes.length === 0) {
+      throw new Error("Não foi possível carregar os setores oficiais.");
     }
 
     try {
-      const { data, error } = await supabase
-        .from(TABELAS_SUPABASE.REGISTROS_IA)
-        .select("data")
-        .eq("id", SECTORS_METADATA_ID)
-        .maybeSingle();
-
-      const metadata = data?.data as { sectors?: unknown; details?: unknown } | undefined;
-      if (!error && Array.isArray(metadata?.sectors) && metadata.sectors.length > 0) {
-        const sectors = metadata.sectors.filter((item): item is string => typeof item === "string");
-        localStorage.setItem(SECTORS_STORAGE_KEY, JSON.stringify(sectors));
-        if (metadata.details && typeof metadata.details === "object" && !Array.isArray(metadata.details)) {
-          localStorage.setItem(SECTOR_DETAILS_STORAGE_KEY, JSON.stringify(metadata.details));
-        }
-        sectorsCache = sectors;
-        sectorsCacheEm = Date.now();
-        return [...sectors];
-      }
-    } catch {
-      // Mantém fallback legado quando a tabela oficial e a metadata estão indisponíveis.
+      localStorage.setItem(SECTORS_STORAGE_KEY, JSON.stringify(oficial.nomes));
+      localStorage.setItem(SECTOR_DETAILS_STORAGE_KEY, JSON.stringify(oficial.detalhes));
+    } catch (e) {
+      console.warn("Não foi possível cachear setores oficiais no localStorage:", e);
     }
 
-    const localSectors = readLocalSectors();
-    sectorsCache = localSectors?.length ? localSectors : [...DEFAULT_SECTORS];
+    sectorsCache = oficial.nomes;
     sectorsCacheEm = Date.now();
-    return [...sectorsCache];
+    return [...oficial.nomes];
   })().finally(() => {
     sectorsRequest = null;
   });
@@ -765,30 +686,6 @@ export const saveSectors = async (sectors: string[], details?: SectorDetailsMap)
     if (!persistidoOficial) {
       console.error("Erro ao salvar setores na tabela oficial do Supabase.");
       return false;
-    }
-
-    const payload = {
-      id: SECTORS_METADATA_ID,
-      unidade_setor: "METADATA",
-      nome_ferramenta: "Configuração de Setores",
-      responsavel_preenchimento: "ADMIN",
-      data_registro: new Date().toISOString().split('T')[0],
-      utiliza_ia: "Não",
-      status_uso: "Em uso",
-      status: "Aprovado",
-      data: {
-        sectors,
-        details: sectorDetails
-      },
-      updated_at: new Date().toISOString()
-    };
-
-    const { error } = await supabase
-      .from(TABELAS_SUPABASE.REGISTROS_IA)
-      .upsert(payload);
-
-    if (error) {
-      console.warn("Setores salvos na tabela oficial; espelho METADATA-SECTORS não atualizado:", error);
     }
     return true;
   } catch (err) {

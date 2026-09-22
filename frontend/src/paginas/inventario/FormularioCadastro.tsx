@@ -16,7 +16,7 @@ import {
   StatusAuditoria,
   IARecord, TiposIA, ObjetivosIA, EtapaProcesso, StatusUso } from
 "@/tipos";
-import { generateId, getGlobalRecords } from "@/servicos/armazenamento";
+import { idRegistroIaValido, solicitarProximoIdRegistro } from "@/servicos/registros-ia-id";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 import {
   definirSetorInicialSolicitacao,
@@ -28,8 +28,6 @@ import { useAuth } from "@/contextos/ContextoAutenticacao";
 
 interface RegistrationFormProps {
   initialData?: IARecord | null;
-  /** Registros já carregados pelo app — evita nova consulta a registros_ia só para gerar protocolo. */
-  existingRecords?: IARecord[];
   onSave: (record: IARecord) => Promise<void> | void;
   onCancel: () => void;
   isAdmin?: boolean;
@@ -211,7 +209,7 @@ const TextArea = ({
 
 };
 
-export default function RegistrationForm({ initialData, existingRecords = [], onSave, onCancel, isAdmin }: RegistrationFormProps) {
+export default function RegistrationForm({ initialData, onSave, onCancel, isAdmin }: RegistrationFormProps) {
   const { profile } = useAuth();
   const [formData, setFormData] = useState<Partial<IARecord>>({
     id: "",
@@ -271,7 +269,10 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
       }
     } else if (!isInitialized && profile) {
       const fetchAndSetId = async () => {
-        const records = existingRecords.length > 0 ? existingRecords : await getGlobalRecords();
+        const obterId = async (idRascunho?: unknown) => {
+          if (idRegistroIaValido(idRascunho)) return idRascunho;
+          return solicitarProximoIdRegistro();
+        };
 
         try {
           const savedDraft = localStorage.getItem(`${CHAVES_ARMAZENAMENTO_LOCAL.RASCUNHO_SOLICITACAO_PREFIXO}${profile.id}`);
@@ -288,10 +289,11 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
                 setoresVinculados,
                 restored.unidadeSetor,
               );
+              const idRegistro = await obterId(restored.id);
               setFormData((prev) => ({
                 ...prev,
                 ...restored,
-                id: restored.id || generateId(records),
+                id: idRegistro,
                 unidadeSetor: setorRestaurado,
                 cargo: obterCargoVinculadoAoSetor(
                   setorRestaurado,
@@ -311,27 +313,33 @@ export default function RegistrationForm({ initialData, existingRecords = [], on
           console.warn("Não foi possível restaurar o rascunho local:", draftError);
         }
 
-        const defaultSetor = definirSetorInicialSolicitacao(setoresVinculados);
-        const defaultCargo = obterCargoVinculadoAoSetor(
-          defaultSetor,
-          profile.setor,
-          profile.cargo,
-        );
+        try {
+          const idRegistro = await obterId();
+          const defaultSetor = definirSetorInicialSolicitacao(setoresVinculados);
+          const defaultCargo = obterCargoVinculadoAoSetor(
+            defaultSetor,
+            profile.setor,
+            profile.cargo,
+          );
 
-        setFormData((prev) => ({
-          ...prev,
-          id: generateId(records),
-          unidadeSetor: defaultSetor || prev.unidadeSetor || "",
-          responsavelPreenchimento: profile.full_name || prev.responsavelPreenchimento || "",
-          cargo: defaultCargo || prev.cargo || "",
-          dataRegistro: prev.dataRegistro || new Date().toISOString().split('T')[0]
-        }));
-        setOutroActive(false);
-        setIsInitialized(true);
+          setFormData((prev) => ({
+            ...prev,
+            id: idRegistro,
+            unidadeSetor: defaultSetor || prev.unidadeSetor || "",
+            responsavelPreenchimento: profile.full_name || prev.responsavelPreenchimento || "",
+            cargo: defaultCargo || prev.cargo || "",
+            dataRegistro: prev.dataRegistro || new Date().toISOString().split('T')[0]
+          }));
+          setOutroActive(false);
+          setIsInitialized(true);
+        } catch (erroId) {
+          console.error("Erro ao gerar identificador da solicitação:", erroId);
+          alert(obterMensagemErroUsuario(erroId, "inventario"));
+        }
       };
       fetchAndSetId();
     }
-  }, [initialData, profile, isInitialized, existingRecords, setoresVinculados.join(";")]);
+  }, [initialData, profile, isInitialized, setoresVinculados.join(";")]);
 
   useEffect(() => {
     if (initialData || !profile || !isInitialized) return;
