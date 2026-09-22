@@ -7,6 +7,7 @@ import {
   obterConfiguracao,
   salvarConfiguracao,
   redefinirStatus,
+  cancelar,
 } from "../controladores/aprovacoes.controlador";
 import { autenticar } from "../middlewares/autenticacao.middleware";
 import { autorizarPapeis } from "../middlewares/autorizacao.middleware";
@@ -33,6 +34,7 @@ aprovacoesRotas.get("/list", listar);
 aprovacoesRotas.post("/init", inicializar);
 aprovacoesRotas.post("/decide", decidir);
 aprovacoesRotas.post("/reset-status", redefinirStatus);
+aprovacoesRotas.post("/cancel", cancelar);
 aprovacoesRotas.get("/ti-interactions/pending", listarPendenciasTI);
 aprovacoesRotas.get("/ti-interactions/pending-ti", listarPendenciasResponsavelTI);
 aprovacoesRotas.get("/ti-interactions", listarInteracoesTI);

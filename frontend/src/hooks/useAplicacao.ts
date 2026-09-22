@@ -6,7 +6,7 @@ import {
 import { usuarioEhAdmin, usuarioEhModerador, usuarioEhPrivilegiado } from "@/utilitarios/permissoes";
 import { ABAS_APLICACAO, ROTA_REDEFINIR_SENHA, type AbaAplicacao } from "@/constantes/navegacao";
 import { RELACOES_SUPABASE, TABELAS_SUPABASE } from "@/constantes/supabase";
-import { ETAPAS_APROVACAO_OFICIAIS, NOMES_ETAPAS_CURTOS, criarConfiguracaoAprovacaoPadrao, NOME_ETAPA_FINANCEIRA } from "@/constantes/fluxo-aprovacao";
+import { ETAPAS_APROVACAO_OFICIAIS, NOMES_ETAPAS_CURTOS, criarConfiguracaoAprovacaoPadrao } from "@/constantes/fluxo-aprovacao";
 import { CHAVES_ARMAZENAMENTO_LOCAL, EVENTOS_APLICACAO } from "@/constantes/armazenamento-local";
 import React, { useEffect, useMemo, useState } from "react";
 
@@ -24,7 +24,6 @@ import {
   updateRecord,
   updateUserProfile,
 } from "@/servicos/armazenamento";
-import { persistirCancelamentoCoerente } from "@/servicos/cancelamento-solicitacao";
 import {
   calcularTotalMensagensNaoLidas,
   LIMITE_MENSAGENS_CONTAGEM_BADGE,
@@ -1038,82 +1037,27 @@ export function useAplicacao() {
         return;
       }
 
-      const now = new Date().toISOString();
-
-      const updatedRecord: IARecord = {
-        ...record,
-        statusUso: StatusUso.CANCELADA,
-        updatedAt: now,
-        historico: [
-          ...(record.historico || []),
-          {
-            date: now,
-            action: "Solicitação cancelada",
-            user: profile?.full_name || user?.email || "Solicitante",
-            message: "Esta solicitação foi cancelada e não seguirá para aprovação."
-          }
-        ]
-      };
-
-      const { data: workflowAnterior, error: workflowQueryError } = await supabase
-        .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-        .select("id, current_step, final_status, completed_at")
-        .eq("ia_record_id", recordId)
-        .maybeSingle();
-
-      if (workflowQueryError) throw workflowQueryError;
-      if (!workflowAnterior) {
-        throw new Error("Workflow correspondente não encontrado.");
+      const response = await requisicaoApi(ROTAS_API.WORKFLOW_CANCEL, {
+        method: "POST",
+        body: JSON.stringify({ recordId }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || payload.mensagem || "Não foi possível cancelar a solicitação.");
       }
 
-      await persistirCancelamentoCoerente({
-        persistirWorkflowCancelado: async () => {
-          const { data: workflowPersistido, error: workflowError } = await supabase
-            .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-            .update({
-              final_status: "cancelado",
-              completed_at: now
-            })
-            .eq("id", workflowAnterior.id)
-            .select("current_step, final_status")
-            .single();
-
-          if (workflowError) throw workflowError;
-          if (
-            workflowPersistido.final_status !== "cancelado"
-            || workflowPersistido.current_step !== workflowAnterior.current_step
-          ) {
-            throw new Error("Workflow não foi persistido de forma coerente.");
-          }
-        },
-        persistirRegistroCancelado: async () => {
-          const { data: registroPersistido, error: recordError } = await supabase
-            .from(TABELAS_SUPABASE.REGISTROS_IA)
-            .update({
-              data: updatedRecord,
-              status_uso: StatusUso.CANCELADA,
-              updated_at: now
-            })
-            .eq("id", recordId)
-            .select("id, status_uso")
-            .single();
-
-          if (recordError) throw recordError;
-          if (registroPersistido.status_uso !== StatusUso.CANCELADA) {
-            throw new Error("Registro não foi persistido como cancelado.");
-          }
-        },
-        restaurarWorkflow: async () => {
-          const { error: restoreError } = await supabase
-            .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-            .update({
-              final_status: workflowAnterior.final_status,
-              completed_at: workflowAnterior.completed_at,
-            })
-            .eq("id", workflowAnterior.id);
-          if (restoreError) throw restoreError;
-        },
-      });
+      const agora = payload.workflow?.completed_at || payload.record?.updated_at || new Date().toISOString();
+      const dadosServidor = (payload.record?.data && typeof payload.record.data === "object")
+        ? payload.record.data
+        : {};
+      const updatedRecord: IARecord = {
+        ...record,
+        ...dadosServidor,
+        id: recordId,
+        ownerId: payload.record?.owner_id ?? record.ownerId,
+        statusUso: payload.record?.status_uso || StatusUso.CANCELADA,
+        updatedAt: agora,
+      };
 
       setRecords((atuais) =>
         atuais.map((item) => item.id === recordId ? updatedRecord : item),
@@ -1121,7 +1065,7 @@ export function useAplicacao() {
       setWorkflows((atuais) =>
         atuais.map((workflow) =>
           workflow.iaRecordId === recordId
-            ? { ...workflow, finalStatus: "cancelado", completedAt: now }
+            ? { ...workflow, finalStatus: "cancelado", completedAt: agora }
             : workflow,
         ),
       );
@@ -1141,138 +1085,13 @@ export function useAplicacao() {
     try {
       if (isNew) {
         await addRecord(record, user?.id, isAdmin);
-        // Criar workflow de aprovação automaticamente e de forma consistente no Backend com fallback se falhar conexao
-        try {
-          const { data, error: sessionErr } = await supabase.auth.getSession();
-          if (sessionErr) throw new Error(sessionErr.message);
-          const session = data?.session;
-          if (!session?.access_token) {
-            throw new Error("Sessão ou token de acesso de autenticação não encontrado.");
-          }
-          
-          let success = false;
-          try {
-            const initRes = await requisicaoApi(ROTAS_API.WORKFLOW_INIT, {
-              method: "POST",
-              body: JSON.stringify({ recordId: record.id })
-            });
-            
-            if (initRes.ok) {
-              success = true;
-            } else {
-              const errBody = await initRes.json().catch(() => ({}));
-              console.warn("Retorno de erro na inicialização do workflow:", errBody);
-            }
-          } catch (fetchErr) {
-            console.warn("Falha de conexão com a API de inicialização de workflow. Usando fallback direto:", fetchErr);
-          }
-
-          if (!success) {
-            // Callback direto no supabase
-            const { data: existingWf } = await supabase
-              .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-              .select("id, current_step, final_status")
-              .eq("ia_record_id", record.id)
-              .maybeSingle();
-
-            let targetWf = existingWf;
-            let needsSteps = false;
-
-            if (existingWf) {
-              const { data: existingSteps } = await supabase
-                .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
-                .select("id")
-                .eq("workflow_id", existingWf.id);
-
-              if (!existingSteps || existingSteps.length === 0) {
-                needsSteps = true;
-              }
-            } else {
-              const { data: newWf, error: newWfErr } = await supabase
-                .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-                .insert({
-                  ia_record_id: record.id,
-                  current_step: 1,
-                  final_status: "pendente",
-                })
-                .select("id, current_step, final_status")
-                .single();
-
-              if (newWfErr || !newWf) {
-                throw new Error(`Não foi possível inicializar o fluxo de aprovação local: ${newWfErr?.message || "Erro desconhecido"}`);
-              }
-              targetWf = newWf;
-              needsSteps = true;
-            }
-
-            if (needsSteps && targetWf) {
-              const { data: configRows } = await supabase
-                .from(TABELAS_SUPABASE.CONFIGURACAO_APROVACAO)
-                .select("*")
-                .order("step_number");
-
-              const defaultSteps = ETAPAS_APROVACAO_OFICIAIS.map((etapa) => ({
-                step_number: etapa.stepNumber,
-                role_name: etapa.roleName,
-                is_opinion_only: etapa.isOpinionOnly,
-              }));
-
-              const stepsToInsert = (configRows && configRows.length > 0)
-                ? configRows.map((c: any) => ({
-                    workflow_id: targetWf.id,
-                    ia_record_id: record.id,
-                    step_number: c.step_number,
-                    role_name: c.role_name,
-                    assigned_user_id: c.assigned_user_id || null,
-                    assigned_user_name: c.assigned_user_name || null,
-                    status: "aguardando",
-                    comment: null,
-                    is_opinion_only: c.is_opinion_only || false,
-                    decided_at: null,
-                  }))
-                : defaultSteps.map(s => ({
-                    workflow_id: targetWf.id,
-                    ia_record_id: record.id,
-                    step_number: s.step_number,
-                    role_name: s.role_name,
-                    assigned_user_id: null,
-                    assigned_user_name: null,
-                    status: "aguardando",
-                    comment: null,
-                    is_opinion_only: s.is_opinion_only,
-                    decided_at: null,
-                  }));
-
-              await supabase.from(TABELAS_SUPABASE.ETAPAS_APROVACAO).insert(stepsToInsert);
-            }
-
-            // Atualizar status de uso para Em avaliação
-            const { data: iaRecord } = await supabase
-              .from(TABELAS_SUPABASE.REGISTROS_IA)
-              .select("data")
-              .eq("id", record.id)
-              .single();
-
-            if (iaRecord?.data) {
-              const recordData = iaRecord.data as any;
-              const updatedData = {
-                ...recordData,
-                statusUso: "Em avaliação",
-              };
-
-              await supabase
-                .from(TABELAS_SUPABASE.REGISTROS_IA)
-                .update({
-                  data: updatedData,
-                  status_uso: "Em avaliação",
-                  updated_at: new Date().toISOString()
-                })
-                .eq("id", record.id);
-            }
-          }
-        } catch (wfErr) {
-          console.error("Erro ao criar workflow:", wfErr);
-          throw wfErr;
+        const initRes = await requisicaoApi(ROTAS_API.WORKFLOW_INIT, {
+          method: "POST",
+          body: JSON.stringify({ recordId: record.id })
+        });
+        if (!initRes.ok) {
+          const errBody = await initRes.json().catch(() => ({}));
+          throw new Error(errBody.error || errBody.mensagem || "Não foi possível inicializar o fluxo de aprovação.");
         }
       } else {
         await updateRecord(record, user?.id, isAdmin);
@@ -1355,269 +1174,17 @@ export function useAplicacao() {
     const decision = status === StatusAuditoria.APROVADO ? "aprovado" : "negado";
 
     try {
-      const { data, error: sessionErr } = await supabase.auth.getSession();
-      if (sessionErr) {
-        throw new Error(`Erro ao recuperar sessão: ${sessionErr.message}`);
-      }
-      const session = data?.session;
-      
-      let success = false;
-      let result: any = null;
+      const response = await requisicaoApi(ROTAS_API.WORKFLOW_DECIDE, {
+        method: "POST",
+        body: JSON.stringify({ recordId, decision, comment, coordinatorData: extraFields })
+      });
 
-      try {
-        const response = await requisicaoApi(ROTAS_API.WORKFLOW_DECIDE, {
-          method: "POST",
-          body: JSON.stringify({ recordId, decision, comment, coordinatorData: extraFields })
-        });
-
-        if (response.ok) {
-          result = await response.json();
-          success = true;
-        } else {
-          const errRes = await response.json().catch(() => ({}));
-          console.warn("O servidor retornou erro na decisão:", errRes);
-          if (errRes.error) {
-            throw new Error(errRes.error);
-          }
-          throw new Error(`Não foi possível registrar a decisão (HTTP ${response.status}).`);
-        }
-      } catch (err) {
-        console.warn("Falha de conexão com a API de decisão do workflow. Iniciando fallback local no Supabase:", err);
-        if (currentStepNum === 2) {
-          throw new Error("A Etapa 2 — TI exige conexão com o backend para validar se existem perguntas aguardando resposta. Tente novamente quando a API estiver disponível.");
-        }
+      if (!response.ok) {
+        const errRes = await response.json().catch(() => ({}));
+        throw new Error(errRes.error || ("Não foi possível registrar a decisão (HTTP " + response.status + ")."));
       }
 
-      if (!success) {
-        const wfData = await supabase
-          .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-          .select("id, current_step, final_status")
-          .eq("ia_record_id", recordId)
-          .maybeSingle();
-
-        if (wfData.error) throw wfData.error;
-
-        let activeWf = wfData.data;
-        if (!activeWf) {
-          throw new Error("Workflow ativo não encontrado no Supabase.");
-        }
-
-        const { data: stepRow, error: stepLookupError } = await supabase
-          .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
-          .select("id, is_opinion_only, assigned_user_id, assigned_user_name")
-          .eq("workflow_id", activeWf.id)
-          .eq("step_number", activeWf.current_step)
-          .maybeSingle();
-
-        if (stepLookupError) throw stepLookupError;
-
-        if (!stepRow) {
-          throw new Error("Etapa do fluxo não encontrada diretamente no banco.");
-        }
-
-        const decisionStatus = decision === "aprovado" ? "aprovado" : "negado";
-        const fullName = (session?.user as any)?.user_metadata?.full_name || session?.user?.email || "Avaliador";
-
-        const { error: stepUpdateError } = await supabase
-          .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
-          .update({
-            status: decisionStatus,
-            comment: comment || null,
-            decided_at: new Date().toISOString(),
-            assigned_user_id: stepRow.assigned_user_id || user?.id,
-            assigned_user_name: stepRow.assigned_user_name || fullName,
-          })
-          .eq("id", stepRow.id);
-
-        if (stepUpdateError) throw stepUpdateError;
-
-        const { data: allSteps } = await supabase
-          .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
-          .select("step_number")
-          .eq("workflow_id", activeWf.id);
-
-        const stepNumbers = (allSteps || []).map((step: any) => Number(step.step_number));
-        const maxStep = stepNumbers.length > 0 ? Math.max(...stepNumbers) : 5;
-
-        const currentStepNumber = Number(activeWf.current_step);
-        const nextStep = currentStepNumber + 1;
-        const isFinalStep = currentStepNumber === maxStep;
-        const isFinancialStep = currentStepNumber === maxStep || configStep?.roleName === NOME_ETAPA_FINANCEIRA;
-
-        let finalStatus = "pendente";
-        let newAuditStatus = "Pendente";
-        let newStatusUso = "Em avaliação";
-        let workflowUpdatePayload: any = {};
-
-        if (decision === "negado" && isFinancialStep) {
-          // Exceção: Direção Financeira desfavorável não reprova a IA. Como ela é o passo 5 (final), concluímos o fluxo como aprovado.
-          finalStatus = "aprovado";
-          newAuditStatus = "Aprovado";
-          newStatusUso = "Aprovado";
-
-          workflowUpdatePayload = {
-            current_step: currentStepNumber,
-            final_status: "aprovado",
-            completed_at: new Date().toISOString()
-          };
-        } else if (decision === "negado") {
-          // Negativa real nas demais etapas encerra o fluxo.
-          finalStatus = "negado";
-          newAuditStatus = "Negado";
-          newStatusUso = "Não aprovado";
-
-          workflowUpdatePayload = {
-            current_step: currentStepNumber,
-            final_status: "negado",
-            completed_at: new Date().toISOString()
-          };
-        } else if (decision === "aprovado" && isFinalStep) {
-          // Aprovação encerra o fluxo como aprovado.
-          finalStatus = "aprovado";
-          newAuditStatus = "Aprovado";
-          newStatusUso = "Aprovado";
-
-          workflowUpdatePayload = {
-            current_step: currentStepNumber,
-            final_status: "aprovado",
-            completed_at: new Date().toISOString()
-          };
-        } else {
-          // Aprovação de etapa intermediária avança normalmente.
-          finalStatus = "pendente";
-          newAuditStatus = "Pendente";
-
-          if (nextStep >= 3) {
-            newStatusUso = "Em teste/piloto";
-          } else {
-            newStatusUso = "Em avaliação";
-          }
-
-          workflowUpdatePayload = {
-            current_step: nextStep,
-            final_status: "pendente"
-          };
-        }
-
-        const { data: workflowPersistido, error: workflowUpdateError } = await supabase
-          .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-          .update(workflowUpdatePayload)
-          .eq("id", activeWf.id)
-          .select("id, final_status")
-          .limit(1);
-
-        if (workflowUpdateError) throw workflowUpdateError;
-        if (!workflowPersistido?.length) {
-          throw new Error("Não foi possível atualizar o fluxo de aprovação: nenhuma linha foi atualizada no banco.");
-        }
-
-        const { data: iaRecord, error: iaLookupError } = await supabase
-          .from(TABELAS_SUPABASE.REGISTROS_IA)
-          .select("data")
-          .eq("id", recordId)
-          .maybeSingle();
-
-        if (iaLookupError) throw iaLookupError;
-        if (!iaRecord) {
-          throw new Error("Registro de IA não encontrado para persistir a decisão.");
-        }
-
-        {
-          const recordData = (iaRecord.data as Record<string, unknown> | null) || {};
-          let actionLabel = decision === "aprovado"
-            ? `Etapa ${currentStepNumber}/${maxStep} aprovada por ${fullName}`
-            : `Etapa ${currentStepNumber}/${maxStep} negada por ${fullName}`;
-
-          if (decision === "negado" && isFinancialStep) {
-            actionLabel = `Direção Financeira: parecer desfavorável. Fluxo concluído com aprovação da Presidência.`;
-          }
-
-          const updatedData = {
-            ...recordData,
-            ...(extraFields || {}),
-            statusAuditoria: newAuditStatus,
-            statusUso: newStatusUso,
-            observacoesGeraisOriginais: recordData.observacoesGeraisOriginais || recordData.observacoesGerais || "",
-            historico: [{
-              date: new Date().toISOString(),
-              user: fullName,
-              action: actionLabel,
-              message: comment || actionLabel
-            }, ...((recordData.historico as unknown[]) || [])]
-          };
-
-          const updatePayload: Record<string, unknown> = {
-            data: updatedData,
-            status: newAuditStatus,
-            status_uso: newStatusUso,
-            updated_at: new Date().toISOString(),
-          };
-
-          const currentDateStr = new Date().toISOString().split("T")[0];
-
-          if (decision === "negado" && isFinancialStep) {
-            updatePayload.status = "Aprovado";
-            updatePayload.status_uso = "Aprovado";
-            updatedData.statusUso = "Aprovado";
-            updatedData.statusAuditoria = "Aprovado";
-            updatePayload.observacoes_gerais = comment || "Direção Financeira: parecer desfavorável. Fluxo concluído com aprovação da Presidência.";
-          } else if (decision === "negado") {
-            updatePayload.status = "Negado";
-            updatePayload.status_uso = "Não aprovado";
-            updatePayload.parecer_tecnico = "IA indeferida no fluxo de aprovação.";
-            updatePayload.data_aprovacao = currentDateStr;
-            if (comment) {
-              updatePayload.observacoes_gerais = comment;
-            }
-
-            updatedData.statusUso = "Não aprovado";
-            updatedData.statusAuditoria = "Negado";
-            updatedData.parecerTecnico = "IA indeferida no fluxo de aprovação.";
-            updatedData.dataAprovacao = currentDateStr;
-          } else if (decision === "aprovado" && isFinalStep) {
-            updatePayload.status = "Aprovado";
-            updatePayload.status_uso = "Aprovado";
-            updatePayload.parecer_tecnico = "IA aprovada no fluxo de aprovação.";
-            updatePayload.data_aprovacao = currentDateStr;
-            if (comment) {
-              updatePayload.observacoes_gerais = comment;
-            }
-
-            updatedData.statusUso = "Aprovado";
-            updatedData.statusAuditoria = "Aprovado";
-            updatedData.parecerTecnico = "IA aprovada no fluxo de aprovação.";
-            updatedData.dataAprovacao = currentDateStr;
-          }
-
-          const { data: registroPersistido, error: recordUpdateError } = await supabase
-            .from(TABELAS_SUPABASE.REGISTROS_IA)
-            .update(updatePayload)
-            .eq("id", recordId)
-            .select("id, status, status_uso")
-            .limit(1);
-
-          if (recordUpdateError) throw recordUpdateError;
-          if (!registroPersistido?.length) {
-            throw new Error("Não foi possível atualizar o registro da solicitação: nenhuma linha foi atualizada no banco.");
-          }
-        }
-
-        let responseMessage = "";
-        if (decision === "negado" && isFinancialStep) {
-          responseMessage = "Parecer financeiro desfavorável registrado. Fluxo concluído com aprovação da Presidência.";
-        } else if (finalStatus === "aprovado") {
-          responseMessage = "IA aprovada com sucesso.";
-        } else if (finalStatus === "negado") {
-          responseMessage = "IA indeferida.";
-        } else {
-          responseMessage = `Aprovado! Aguardando etapa ${nextStep}.`;
-        }
-
-        result = {
-          finalStatus,
-          message: responseMessage
-        };
-      }
+      const result = await response.json();
 
       const newAuditStatus = result.finalStatus === "aprovado" 
         ? StatusAuditoria.APROVADO 
@@ -1658,186 +1225,19 @@ export function useAplicacao() {
 
   const handleResetStatus = async (recordId: string, newStatus: StatusUso, reason: string) => {
     try {
-      const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
-      if (sessionErr) {
-        throw new Error(`Erro ao recuperar sessão: ${sessionErr.message}`);
-      }
-      const session = sessionData?.session;
-
-      let apiSuccess = false;
-      if (session?.access_token) {
-        const res = await requisicaoApi(ROTAS_API.WORKFLOW_RESET_STATUS, {
-          method: "POST",
-          body: JSON.stringify({ recordId, newStatus, reason })
-        });
-        if (res.ok) {
-          apiSuccess = true;
-        } else {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || `Erro HTTP ${res.status} ao redefinir status.`);
-        }
+      const res = await requisicaoApi(ROTAS_API.WORKFLOW_RESET_STATUS, {
+        method: "POST",
+        body: JSON.stringify({ recordId, newStatus, reason })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || ("Erro HTTP " + res.status + " ao redefinir status."));
       }
 
-      if (!apiSuccess) {
-        // Fallback local via Supabase diretamente
-        const { data: iaRecord, error: fetchErr } = await supabase
-          .from(TABELAS_SUPABASE.REGISTROS_IA)
-          .select("*")
-          .eq("id", recordId)
-          .single();
-
-        if (fetchErr || !iaRecord) {
-          throw new Error(fetchErr?.message || "Registro de IA não encontrado");
-        }
-
-        const recordData = iaRecord.data ? { ...iaRecord.data } : {};
-        const fullName = (session?.user as any)?.user_metadata?.full_name || session?.user?.email || "Usuário";
-        const now = new Date().toISOString();
-
-        let newAuditStatus = StatusAuditoria.PENDENTE;
-        if (newStatus === StatusUso.APROVADO || newStatus === StatusUso.APROVADO_COM_RESTRICOES) {
-          newAuditStatus = StatusAuditoria.APROVADO;
-        } else if (newStatus === StatusUso.NAO_APROVADO || newStatus === StatusUso.SUSPENSO) {
-          newAuditStatus = StatusAuditoria.NEGADO;
-        }
-
-        const updatedRecord = {
-          ...recordData,
-          statusUso: newStatus,
-          statusAuditoria: newAuditStatus,
-          dataAprovacao: null,
-          parecerTecnico: "",
-          parecerTI: "",
-          parecerDiretoria: "",
-          parecerPresidencia: "",
-          etapasAprovacao: [],
-          updatedAt: now,
-          historico: [
-            ...(recordData.historico || []),
-            {
-              date: now,
-              action: "Status redefinido",
-              user: fullName,
-              message: `Status alterado para "${newStatus}". Justificativa: ${reason}`
-            }
-          ]
-        };
-
-        // 1. Atualizar ia_records
-        const { error: updateErr } = await supabase
-          .from(TABELAS_SUPABASE.REGISTROS_IA)
-          .update({
-            data: updatedRecord,
-            status_uso: newStatus,
-            status: newAuditStatus,
-            updated_at: now
-          })
-          .eq("id", recordId);
-
-        if (updateErr) {
-          await supabase
-            .from(TABELAS_SUPABASE.REGISTROS_IA)
-            .update({
-              data: updatedRecord,
-              status_uso: newStatus,
-              updated_at: now
-            })
-            .eq("id", recordId);
-        }
-
-        let targetFinalStatus = "pendente";
-        if (newAuditStatus === StatusAuditoria.APROVADO) {
-          targetFinalStatus = "aprovado";
-        } else if (newAuditStatus === StatusAuditoria.NEGADO) {
-          targetFinalStatus = "negado";
-        }
-
-        // 2. Reiniciar approval_workflows e approval_steps
-        const { data: wfs } = await supabase
-          .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-          .select("id")
-          .eq("ia_record_id", recordId);
-
-        if (wfs && wfs.length > 0) {
-          const wfIds = wfs.map(w => w.id);
-          // Voltar workflows para a etapa 1 e status correto
-          await supabase
-            .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-            .update({
-              current_step: 1,
-              final_status: targetFinalStatus,
-              completed_at: targetFinalStatus === "pendente" ? null : new Date().toISOString()
-            })
-            .in("id", wfIds);
-
-          // Resetar TODAS as etapas para 'aguardando' e limpar os comentários/decisões anteriores
-          await supabase
-            .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
-            .update({
-              status: "aguardando",
-              comment: null,
-              decided_at: null
-            })
-            .in("workflow_id", wfIds);
-        } else {
-          // Criar workflow do zero se não existia
-          const { data: newWf } = await supabase
-            .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-            .insert({
-              ia_record_id: recordId,
-              current_step: 1,
-              final_status: targetFinalStatus
-            })
-            .select("id")
-            .single();
-
-          if (newWf) {
-            const { data: configRows } = await supabase
-              .from(TABELAS_SUPABASE.CONFIGURACAO_APROVACAO)
-              .select("*")
-              .order("step_number");
-
-            const defaultSteps = ETAPAS_APROVACAO_OFICIAIS.map((etapa) => ({
-              step_number: etapa.stepNumber,
-              role_name: etapa.roleName,
-              is_opinion_only: etapa.isOpinionOnly,
-            }));
-
-            const stepsToInsert = (configRows && configRows.length > 0)
-              ? configRows.map((c: any) => ({
-                  workflow_id: newWf.id,
-                  ia_record_id: recordId,
-                  step_number: c.step_number,
-                  role_name: c.role_name,
-                  assigned_user_id: c.assigned_user_id || null,
-                  assigned_user_name: c.assigned_user_name || null,
-                  status: "aguardando",
-                  comment: null,
-                  is_opinion_only: c.is_opinion_only || false,
-                  decided_at: null,
-                }))
-              : defaultSteps.map(s => ({
-                  workflow_id: newWf.id,
-                  ia_record_id: recordId,
-                  step_number: s.step_number,
-                  role_name: s.role_name,
-                  assigned_user_id: null,
-                  assigned_user_name: null,
-                  status: "aguardando",
-                  comment: null,
-                  is_opinion_only: s.is_opinion_only,
-                  decided_at: null,
-                }));
-
-            await supabase.from(TABELAS_SUPABASE.ETAPAS_APROVACAO).insert(stepsToInsert);
-          }
-        }
-      }
-
-      addToast({ 
-        title: "Status Redefinido", 
-        message: "Status e todas as etapas de aprovação foram redefinidos com sucesso.", 
-        type: "success" 
+      addToast({
+        title: "Status Redefinido",
+        message: "Status e todas as etapas de aprovação foram redefinidos com sucesso.",
+        type: "success"
       });
 
       await refreshRecords();

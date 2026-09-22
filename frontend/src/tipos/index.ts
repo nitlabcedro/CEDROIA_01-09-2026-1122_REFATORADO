@@ -88,7 +88,7 @@ export interface RecordHistoryItem {
 
 export interface IARecord {
   statusAuditoria?: StatusAuditoria;
-  id: string; // Ex: IA-CEDRO-0001
+  id: string; // Ex: IA-00000001
   ownerId?: string;
   createdAt: string;
   updatedAt: string;

@@ -100,68 +100,15 @@ export default function Inventory({
     return () => window.removeEventListener("keydown", fecharComEscape);
   }, [warningMessage, cancelTargetRecord, isCancelling]);
 
-  const normalizeText = (value?: string) =>
-  String(value || "").
-  normalize("NFD").
-  replace(/[\u0300-\u036f]/g, "").
-  toLowerCase().
-  replace(/[^a-z0-9@._-]/g, "").
-  trim();
-
   const obterWorkflow = (record: IARecord) =>
     workflows?.find((workflow) => workflow.iaRecordId === record.id);
 
   const obterStatus = (record: IARecord): StatusGeral =>
     obterStatusGeralDoRegistro(record, obterWorkflow(record));
 
-  const isRequester = (record: IARecord) => {
-    if (!currentUser) return false;
-
-    const currentUserId = String(currentUser.id || "");
-    const possibleOwnerIds = [
-    record.ownerId,
-    (record as any).owner_id,
-    (record as any).createdBy,
-    (record as any).created_by,
-    (record as any).userId,
-    (record as any).user_id].
-    filter(Boolean).map(String);
-
-    if (currentUserId && possibleOwnerIds.includes(currentUserId)) {
-      return true;
-    }
-
-    const userEmail = normalizeText(currentUser.email);
-    const possibleEmails = [
-    (record as any).emailSolicitante,
-    (record as any).email_solicitante,
-    (record as any).responsavelEmail,
-    (record as any).responsavel_email,
-    (record as any).email,
-    record.contato].
-    map(normalizeText).filter(Boolean);
-
-    if (userEmail && possibleEmails.some((email) => email === userEmail || email.includes(userEmail))) {
-      return true;
-    }
-
-    const profileName = normalizeText(currentUserProfile?.full_name || currentUserProfile?.name);
-    const possibleNames = [
-    record.responsavelPreenchimento,
-    (record as any).solicitante,
-    (record as any).nomeSolicitante,
-    (record as any).nome_solicitante].
-    map(normalizeText).filter(Boolean);
-
-    if (profileName && possibleNames.includes(profileName)) {
-      return true;
-    }
-
-    return false;
-  };
-
   const canCancel = (record: IARecord) => {
-    const isOwner = isRequester(record);
+    const ownerId = record.ownerId || (record as { owner_id?: string }).owner_id;
+    const isOwner = Boolean(currentUser?.id && ownerId && String(ownerId) === String(currentUser.id));
     const isUserAllowed = isOwner || isAdmin;
 
     if (!isUserAllowed) return false;

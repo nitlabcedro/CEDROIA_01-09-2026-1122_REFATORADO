@@ -533,7 +533,7 @@ s-estrutura {
 
 .inventario__texto-11 {
   max-width: 100%;
-  word-break: break-all;
+  white-space: nowrap;
   border-radius: .5rem;
   border-width: 1px;
   border-style: solid;
@@ -1011,6 +1011,7 @@ s-estrutura {
   text-transform: uppercase;
   letter-spacing: -0.025em;
   display: inline-block;
+  white-space: nowrap;
 }
 
 .inventario__celula-2 {

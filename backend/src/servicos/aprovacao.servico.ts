@@ -9,6 +9,13 @@ import {
   estruturaChatAusente,
   mapearErroRpcInteracaoTI,
 } from "./interacoes-ti.servico";
+import {
+  autorizarCancelamento,
+  estadoFinalImpedeCancelamento,
+  montarDadosRegistroCancelado,
+  STATUS_USO_CANCELADA,
+} from "./cancelamento-solicitacao.regras";
+import type { RequisicaoAutenticada } from "../tipos/requisicao";
 
 function configuracaoSegueFluxoOficial(rows: any[] | null | undefined) {
   return rows?.length === ETAPAS_PADRAO_APROVACAO.length && ETAPAS_PADRAO_APROVACAO.every(
@@ -849,7 +856,6 @@ export async function decidirWorkflow(req: Request, res: Response) {
 
     const updatePayload: Record<string, unknown> = {
       data: updatedData,
-      status: newAuditStatus,
       status_uso: newStatusUso,
       updated_at: new Date().toISOString(),
     };
@@ -857,13 +863,11 @@ export async function decidirWorkflow(req: Request, res: Response) {
     const currentDateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
     if (decision === "negado" && isFinancialStep) {
-      updatePayload.status = "Aprovado";
       updatePayload.status_uso = "Aprovado";
       updatedData.statusUso = "Aprovado";
       updatedData.statusAuditoria = "Aprovado";
       updatePayload.observacoes_gerais = comment || "Direção Financeira: parecer desfavorável. Fluxo concluído com aprovação da Presidência.";
     } else if (decision === "negado") {
-      updatePayload.status = "Negado";
       updatePayload.status_uso = "Não aprovado";
       updatePayload.parecer_tecnico = "IA indeferida no fluxo de aprovação.";
       updatePayload.data_aprovacao = currentDateStr;
@@ -876,7 +880,6 @@ export async function decidirWorkflow(req: Request, res: Response) {
       updatedData.parecerTecnico = "IA indeferida no fluxo de aprovação.";
       updatedData.dataAprovacao = currentDateStr;
     } else if (decision === "aprovado" && isFinalStep) {
-      updatePayload.status = "Aprovado";
       updatePayload.status_uso = "Aprovado";
       updatePayload.parecer_tecnico = "IA aprovada no fluxo de aprovação.";
       updatePayload.data_aprovacao = currentDateStr;
@@ -894,7 +897,7 @@ export async function decidirWorkflow(req: Request, res: Response) {
       .from(TABELAS_SUPABASE.REGISTROS_IA)
       .update(updatePayload)
       .eq("id", recordId)
-      .select("id, status, status_uso")
+      .select("id, status_uso")
       .limit(1);
     garantirGravacaoSupabase(
       { error: recordDecisionError, data: registroPersistido },
@@ -1174,6 +1177,136 @@ export async function redefinirStatusWorkflow(req: Request, res: Response) {
 
   } catch (err: any) {
     console.error("Erro no workflow/reset-status:", err);
+    return res.status(500).json({ error: err.message || "Erro interno do servidor" });
+  }
+}
+
+export async function cancelarSolicitacao(req: RequisicaoAutenticada, res: Response) {
+  const recordId = typeof req.body?.recordId === "string" ? req.body.recordId.trim() : "";
+  const user = req.usuarioAutenticado;
+
+  if (!user?.id) {
+    return res.status(401).json({ error: "Não autorizado." });
+  }
+  if (!recordId) {
+    return res.status(400).json({ error: "Identificador da solicitação ausente." });
+  }
+
+  const supabaseAdmin = obterClienteSupabase();
+
+  try {
+    const { data: registro, error: registroError } = await supabaseAdmin
+      .from(TABELAS_SUPABASE.REGISTROS_IA)
+      .select("id, owner_id, status_uso, data")
+      .eq("id", recordId)
+      .maybeSingle();
+
+    if (registroError) {
+      return res.status(500).json({ error: registroError.message });
+    }
+    if (!registro) {
+      return res.status(404).json({ error: "Registro de IA não encontrado." });
+    }
+
+    const { data: perfil } = await supabaseAdmin
+      .from(TABELAS_SUPABASE.PERFIS)
+      .select("role, full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const autorizacao = autorizarCancelamento({
+      userId: user.id,
+      role: perfil?.role,
+      ownerId: registro.owner_id,
+    });
+    if (!autorizacao.permitido) {
+      return res.status(autorizacao.status).json({ error: autorizacao.mensagem });
+    }
+
+    const { data: workflow, error: workflowError } = await supabaseAdmin
+      .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
+      .select("id, current_step, final_status, completed_at")
+      .eq("ia_record_id", recordId)
+      .maybeSingle();
+
+    if (workflowError) {
+      return res.status(500).json({ error: workflowError.message });
+    }
+
+    // Sem fluxo: a UI atual também recusava. Não inventamos workflow e não
+    // cancelamos só o registro, para não deixar estado institucional divergente.
+    if (!workflow) {
+      return res.status(409).json({ error: "Workflow correspondente não encontrado." });
+    }
+
+    if (estadoFinalImpedeCancelamento({
+      statusUso: registro.status_uso,
+      workflowFinalStatus: workflow.final_status,
+    })) {
+      return res.status(409).json({ error: "Esta solicitação já está encerrada e não pode ser cancelada." });
+    }
+
+    const agora = new Date().toISOString();
+    const nomeAtor = perfil?.full_name || user.email || "Solicitante";
+    const dadosAtuais = (registro.data && typeof registro.data === "object")
+      ? { ...(registro.data as Record<string, unknown>) }
+      : {};
+    const dadosCancelados = montarDadosRegistroCancelado(dadosAtuais, agora, nomeAtor);
+
+    const { data: workflowPersistido, error: workflowUpdateError } = await supabaseAdmin
+      .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
+      .update({
+        final_status: "cancelado",
+        completed_at: agora,
+      })
+      .eq("id", workflow.id)
+      .select("id, current_step, final_status, completed_at")
+      .single();
+
+    if (workflowUpdateError || workflowPersistido?.final_status !== "cancelado") {
+      return res.status(500).json({
+        error: workflowUpdateError?.message || "Workflow não foi persistido de forma coerente.",
+      });
+    }
+
+    const { data: registroPersistido, error: registroUpdateError } = await supabaseAdmin
+      .from(TABELAS_SUPABASE.REGISTROS_IA)
+      .update({
+        data: dadosCancelados,
+        status_uso: STATUS_USO_CANCELADA,
+        updated_at: agora,
+      })
+      .eq("id", recordId)
+      .select("id, owner_id, status_uso, updated_at, data")
+      .single();
+
+    if (registroUpdateError || registroPersistido?.status_uso !== STATUS_USO_CANCELADA) {
+      const { error: restoreError } = await supabaseAdmin
+        .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
+        .update({
+          final_status: workflow.final_status,
+          completed_at: workflow.completed_at,
+        })
+        .eq("id", workflow.id);
+      if (restoreError) {
+        console.error("Erro ao restaurar workflow após falha no cancelamento:", restoreError);
+      }
+      return res.status(500).json({
+        error: registroUpdateError?.message || "Registro não foi persistido como cancelado.",
+      });
+    }
+
+    if (registroPersistido.owner_id !== registro.owner_id) {
+      return res.status(500).json({ error: "Cancelamento alterou owner_id indevidamente." });
+    }
+
+    return res.json({
+      success: true,
+      record: registroPersistido,
+      workflow: workflowPersistido,
+    });
+  } catch (err: any) {
+    console.error("Erro no workflow/cancel:", err);
     return res.status(500).json({ error: err.message || "Erro interno do servidor" });
   }
 }

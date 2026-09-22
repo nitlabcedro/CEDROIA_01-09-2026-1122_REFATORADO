@@ -44,4 +44,21 @@ describe("layout da coluna Setor no Inventário", () => {
     assert.equal(colunas.reduce((total, coluna) => total + coluna.largura, 0), 100);
     assert.ok(colunas.every((coluna) => coluna.indice === 3 || coluna.largura < larguraSetor));
   });
+
+  it("I) badge/célula de ID não quebra linha e continua visível", () => {
+    assert.match(componente, /className="inventario__texto-11"/);
+    assert.match(componente, /className="inventario__texto-13"/);
+    assert.match(componente, /\{record\.id\}/);
+
+    const mobile = estilos.match(/\.inventario__texto-11\s*\{[^}]+\}/)?.[0] || "";
+    const desktop = estilos.match(/\.inventario__texto-13\s*\{[^}]+\}/)?.[0] || "";
+    const pagina = estilos.match(/\.pagina-inventario \.inventario__texto-13\s*\{[^}]+\}/)?.[0] || "";
+
+    assert.match(mobile, /white-space:\s*nowrap/);
+    assert.match(desktop, /white-space:\s*nowrap/);
+    assert.match(pagina, /white-space:\s*nowrap/);
+    assert.doesNotMatch(mobile, /word-break:\s*break-all/);
+    assert.doesNotMatch(desktop, /text-overflow:\s*ellipsis/);
+    assert.doesNotMatch(pagina, /visibility:\s*hidden/);
+  });
 });

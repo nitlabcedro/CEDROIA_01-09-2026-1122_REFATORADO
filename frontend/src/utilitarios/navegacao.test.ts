@@ -45,7 +45,7 @@ describe("navegação por URL", () => {
   });
 
   it("preserva o identificador necessário ao relatório", () => {
-    const id = "IA-CEDRO-0005";
+    const id = "IA-00000005";
     assert.equal(criarUrlNavegacao("report", { registroId: id }), `/relatorios?id=${id}`);
     assert.deepEqual(interpretarUrlNavegacao("/relatorios", `?id=${id}`), {
       tipo: "aba",
@@ -93,8 +93,8 @@ describe("navegação por URL", () => {
     );
     assert.equal(
       urlsNavegacaoIguais(
-        "/relatorios?id=IA-CEDRO-0005",
-        "/relatorios?id=IA-CEDRO-0006",
+        "/relatorios?id=IA-00000005",
+        "/relatorios?id=IA-00000006",
       ),
       false,
     );
