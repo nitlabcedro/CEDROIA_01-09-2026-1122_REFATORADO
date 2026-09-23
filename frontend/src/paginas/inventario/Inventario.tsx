@@ -15,6 +15,12 @@ import {
   STATUS_GERAIS_OFICIAIS,
   type StatusGeral,
 } from "@/utilitarios/status-solicitacao";
+import {
+  fluxoEstaCancelado,
+  normalizarNumeroEtapa,
+  obterEstadoVisualEtapaFluxo,
+} from "@/utilitarios/etapa-atual-workflow";
+import { encontrarWorkflowDoRegistro } from "@/utilitarios/workflows-aprovacao";
 
 interface InventoryProps {
   records: IARecord[];
@@ -101,7 +107,7 @@ export default function Inventory({
   }, [warningMessage, cancelTargetRecord, isCancelling]);
 
   const obterWorkflow = (record: IARecord) =>
-    workflows?.find((workflow) => workflow.iaRecordId === record.id);
+    encontrarWorkflowDoRegistro(workflows, record.id);
 
   const obterStatus = (record: IARecord): StatusGeral =>
     obterStatusGeralDoRegistro(record, obterWorkflow(record));
@@ -112,8 +118,6 @@ export default function Inventory({
     const isUserAllowed = isOwner || isAdmin;
 
     if (!isUserAllowed) return false;
-
-    const workflow = workflows?.find((w) => w.iaRecordId === record.id);
 
     const statusGeral = obterStatus(record);
     return !["Aprovada", "Não aprovada", "Cancelada"].includes(statusGeral);
@@ -302,7 +306,7 @@ export default function Inventory({
   };
 
   const getWorkflowBadge = (record: IARecord) => {
-    const recordWorkflow = workflows?.find((w) => w.iaRecordId === record.id);
+    const recordWorkflow = obterWorkflow(record);
 
     const stepsDef = approvalConfig?.steps ?? ETAPAS_APROVACAO_OFICIAIS.map(({ stepNumber, roleName }) => ({
       stepNumber,
@@ -313,8 +317,10 @@ export default function Inventory({
     const statusGeral = obterStatus(record);
     const isApprov = statusGeral === "Aprovada";
     const isNeg = statusGeral === "Não aprovada";
+    const isCancel = statusGeral === "Cancelada" || fluxoEstaCancelado(recordWorkflow);
 
-    const currentStepNum = recordWorkflow ? recordWorkflow.currentStep : isApprov || isNeg ? 0 : 1;
+    const currentStepNum = normalizarNumeroEtapa(recordWorkflow?.currentStep)
+      ?? (isApprov || isNeg || isCancel ? 0 : 1);
 
     if (isApprov) {
       return (
@@ -360,6 +366,30 @@ export default function Inventory({
 
     }
 
+    if (isCancel) {
+      return (
+        <div className="inventario__grupo-aprovada-final">
+          <div className="inventario__grupo-todos-as-etapas-aprovadas" title="Fluxo encerrado por cancelamento">
+            {stepsDef.map((step: any) => {
+              const estado = obterEstadoVisualEtapaFluxo(step.stepNumber, recordWorkflow);
+              const dotColor = estado === "negado"
+                ? "inventario-fluxo__ponto--negado"
+                : estado === "aprovado"
+                  ? "inventario-fluxo__ponto--aprovado"
+                  : "inventario-fluxo__ponto--aguardando";
+              return (
+                <span
+                  key={step.stepNumber}
+                  className={`inventario-fluxo__ponto ${dotColor}`}
+                  title={`Etapa ${step.stepNumber}: ${step.roleName}`} />);
+            })}
+          </div>
+          <span className="inventario-status inventario-status--cancelada">
+            Cancelada
+          </span>
+        </div>);
+    }
+
     if (!recordWorkflow) {
       return (
         <div className="inventario__grupo-analise-inicial">
@@ -379,7 +409,7 @@ export default function Inventory({
 
     }
 
-    const activeStepDef = stepsDef.find((s: any) => s.stepNumber === currentStepNum);
+    const activeStepDef = stepsDef.find((s: any) => normalizarNumeroEtapa(s.stepNumber) === currentStepNum);
     const stepLabel = activeStepDef ? activeStepDef.roleName : `Etapa ${currentStepNum}`;
 
     return (
@@ -387,15 +417,10 @@ export default function Inventory({
         <div className="inventario__grupo-todos-as-etapas-aprovadas">
           {stepsDef.map((step: any) => {
             const sNum = step.stepNumber;
-            const wfStep = recordWorkflow?.steps?.find((s) => s.stepNumber === sNum);
-
-            const isStepFailed = wfStep?.status === "negado" || isNeg && sNum === currentStepNum;
-            const isStepPassed = !isStepFailed && (
-            wfStep?.status === "aprovado" ||
-            wfStep?.status === "opiniao" ||
-            !wfStep && (sNum < currentStepNum || isApprov));
-
-            const isStepCurrent = sNum === currentStepNum && !isApprov && !isNeg && (!wfStep || wfStep.status === "aguardando");
+            const estado = obterEstadoVisualEtapaFluxo(sNum, recordWorkflow);
+            const isStepFailed = estado === "negado";
+            const isStepPassed = estado === "aprovado";
+            const isStepCurrent = estado === "atual";
 
             const dotColor = isStepFailed
               ? "inventario-fluxo__ponto--negado"

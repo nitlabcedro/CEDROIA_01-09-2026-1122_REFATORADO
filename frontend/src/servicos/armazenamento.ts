@@ -68,74 +68,6 @@ export const getProfiles = async (): Promise<UserProfile[]> => {
   return profilesRequest;
 };
 
-const GLOBAL_RECORDS_CACHE_MS = 60000;
-let globalRecordsCache: IARecord[] | null = null;
-let globalRecordsCacheEm = 0;
-let globalRecordsRequest: Promise<IARecord[]> | null = null;
-
-const mapRegistrosIaRows = (data: any[]): IARecord[] => {
-  if (!data || data.length === 0) return [];
-  return data
-    .filter((item) => item.id !== "METADATA-SECTORS")
-    .map((item) => {
-      let record: IARecord;
-      if (item.data) {
-        record = item.data as IARecord;
-        record.id = item.id;
-        record.unidadeSetor = item.unidade_setor || record.unidadeSetor || "";
-        record.ownerId = item.owner_id || record.ownerId || "";
-      } else {
-        record = {
-          id: item.id,
-          unidadeSetor: item.unidade_setor || "",
-          ownerId: item.owner_id || "",
-          nomeFerramenta: item.nome_ferramenta || "",
-        } as any as IARecord;
-      }
-
-      if (item.status_uso) {
-        record.statusUso = item.status_uso === "Negado" ? StatusUso.NAO_APROVADO : (item.status_uso as StatusUso);
-      }
-      return record;
-    });
-};
-
-/** Reutiliza registros já carregados pelo useAplicacao (ex.: Nova Solicitação). */
-export const seedGlobalRecordsCache = (records: IARecord[]) => {
-  globalRecordsCache = records;
-  globalRecordsCacheEm = Date.now();
-};
-
-export const getGlobalRecords = async (): Promise<IARecord[]> => {
-  if (globalRecordsRequest) return globalRecordsRequest;
-  if (globalRecordsCache && Date.now() - globalRecordsCacheEm < GLOBAL_RECORDS_CACHE_MS) {
-    return [...globalRecordsCache];
-  }
-
-  globalRecordsRequest = (async () => {
-    try {
-      const { data, error } = await supabase
-        .from(TABELAS_SUPABASE.REGISTROS_IA)
-        .select("*")
-        .order("id", { ascending: true });
-
-      if (error) throw error;
-
-      const mapped = mapRegistrosIaRows(data || []);
-      globalRecordsCache = mapped;
-      globalRecordsCacheEm = Date.now();
-      return [...mapped];
-    } catch (error) {
-      console.error("Erro ao buscar registros globais:", error);
-      return globalRecordsCache ? [...globalRecordsCache] : [];
-    } finally {
-      globalRecordsRequest = null;
-    }
-  })();
-
-  return globalRecordsRequest;
-};
-
 export const getRecords = async (userId?: string, isAdmin?: boolean, userSector?: string, knownRole?: string): Promise<IARecord[]> => {
   let finalIsAdmin = isAdmin;
   try {
@@ -194,21 +126,7 @@ export const getRecords = async (userId?: string, isAdmin?: boolean, userSector?
       }
     }
 
-    let result = await query.order('id', { ascending: true });
-    let data = result.data;
-    let error = result.error;
-    let status = result.status;
-
-    if (error && (error.code === '42703' || error.message?.includes('owner_id') || status === 400 || error.code === 'PGRST100')) {
-      console.warn('⚠️ Coluna owner_id não existe. Buscando todos os registros públicos e filtrando na memória...');
-      const fallbackResult = await supabase
-        .from(TABELAS_SUPABASE.REGISTROS_IA)
-        .select('*')
-        .order('id', { ascending: true });
-      data = fallbackResult.data;
-      error = fallbackResult.error;
-      status = fallbackResult.status;
-    }
+    const { data, error, status } = await query.order('id', { ascending: true });
 
     if (error) {
       console.error('❌ Erro ao buscar no Supabase:', error, 'Status:', status);
@@ -324,13 +242,19 @@ async function persistirRegistroIa(
       }
       resolvedOwnerId = userId;
     } else {
-      const ownerExistente = record.ownerId || (record as { owner_id?: string }).owner_id;
-      if (ownerExistente && isValidUUID(ownerExistente)) {
-        resolvedOwnerId = ownerExistente;
+      const { data: registroExistente, error: erroRegistroExistente } = await supabase
+        .from(TABELAS_SUPABASE.REGISTROS_IA)
+        .select("owner_id")
+        .eq("id", record.id)
+        .single();
+
+      if (erroRegistroExistente) throw erroRegistroExistente;
+      if (registroExistente?.owner_id && isValidUUID(registroExistente.owner_id)) {
+        resolvedOwnerId = registroExistente.owner_id;
       }
     }
 
-    if (resolvedOwnerId) {
+    if (modo === "criar" && resolvedOwnerId) {
       try {
         const { data: profileCheck } = await supabase
           .from(TABELAS_SUPABASE.PERFIS)
@@ -355,11 +279,13 @@ async function persistirRegistroIa(
       }
     }
 
-    const recordWithStatus = { 
+    const recordWithStatus: IARecord & { owner_id?: string } = {
       ...record, 
       statusAuditoria: finalStatus,
       ...(resolvedOwnerId ? { ownerId: resolvedOwnerId } : {}),
     };
+    delete recordWithStatus.owner_id;
+    if (!resolvedOwnerId) delete recordWithStatus.ownerId;
 
     const payload: Record<string, unknown> = { 
       id: record.id, 
@@ -369,12 +295,9 @@ async function persistirRegistroIa(
       responsavel_preenchimento: record.responsavelPreenchimento || '',
       nome_ferramenta: record.nomeFerramenta || '',
       status_uso: record.statusUso || 'Em avaliação',
-      owner_id: resolvedOwnerId
     };
 
-    if (modo === "atualizar" && !resolvedOwnerId) {
-      delete payload.owner_id;
-    }
+    if (modo === "criar") payload.owner_id = resolvedOwnerId;
 
     let currentPayload = { ...payload };
     let attempts = 0;
@@ -384,9 +307,10 @@ async function persistirRegistroIa(
     while (attempts < maxAttempts) {
       attempts++;
       try {
-        const { error } = await supabase
-          .from(TABELAS_SUPABASE.REGISTROS_IA)
-          .upsert(currentPayload);
+        const tabela = supabase.from(TABELAS_SUPABASE.REGISTROS_IA);
+        const { error } = modo === "criar"
+          ? await tabela.insert(currentPayload)
+          : await tabela.update(currentPayload).eq("id", record.id);
         
         if (!error) {
           console.log(`✅ Registro ${record.id} salvo com sucesso no Supabase na tentativa ${attempts}!`);
@@ -431,17 +355,21 @@ async function persistirRegistroIa(
         resolvedOwnerId = userId;
       }
     } else {
-      const ownerExistente = record.ownerId || (record as { owner_id?: string }).owner_id;
+      const registroLocalExistente = index >= 0 ? records[index] : null;
+      const ownerExistente = registroLocalExistente?.ownerId
+        || (registroLocalExistente as (IARecord & { owner_id?: string }) | null)?.owner_id;
       if (ownerExistente && isValidUUID(ownerExistente)) {
         resolvedOwnerId = ownerExistente;
       }
     }
 
-    const recordWithStatus = { 
+    const recordWithStatus: IARecord & { owner_id?: string } = {
       ...record, 
       statusAuditoria: finalStatus,
       ...(resolvedOwnerId ? { ownerId: resolvedOwnerId } : {}),
     };
+    delete recordWithStatus.owner_id;
+    if (!resolvedOwnerId) delete recordWithStatus.ownerId;
     
     if (index === -1) records.push(recordWithStatus);
     else records[index] = recordWithStatus;
@@ -451,78 +379,11 @@ async function persistirRegistroIa(
   }
 };
 
-export const saveRecordsToSupabase = async (records: IARecord[], userId?: string, isAdmin?: boolean) => {
-  console.log(`Syncing ${records.length} records to Supabase...`);
-  for (const record of records) {
-    await persistirRegistroIa(record, userId, isAdmin, "atualizar");
-  }
-};
-
 export const updateRecord = async (record: IARecord, userId?: string, isAdmin?: boolean) => {
-  return persistirRegistroIa(record, userId, isAdmin, "atualizar");
-};
-
-export const addOrUpdateRecord = async (record: IARecord, userId?: string, isAdmin?: boolean) => {
-  return persistirRegistroIa(record, userId, isAdmin, "atualizar");
-};
-
-export const deleteRecord = async (id: string) => {
-  try {
-    console.log(`🗑️ Iniciando exclusão em cascata do registro ${id} no Supabase...`);
-    
-    const { data: workflows, error: wfErr } = await supabase
-      .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-      .select('id')
-      .eq('ia_record_id', id);
-
-    if (wfErr) {
-      console.warn("Aviso ao buscar workflows associados para exclusão:", wfErr);
-    }
-
-    if (workflows && workflows.length > 0) {
-      const workflowIds = workflows.map(w => w.id);
-      
-      const { error: stepsErr } = await supabase
-        .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
-        .delete()
-        .in('workflow_id', workflowIds);
-      
-      if (stepsErr) {
-        console.error("Erro ao realizar exclusão das etapas de aprovação:", stepsErr);
-      }
-
-      const { error: wfDelErr } = await supabase
-        .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-        .delete()
-        .in('id', workflowIds);
-
-      if (wfDelErr) {
-        console.error("Erro ao realizar exclusão dos fluxos de aprovação:", wfDelErr);
-      }
-    }
-
-    const { error } = await supabase
-      .from(TABELAS_SUPABASE.REGISTROS_IA)
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-    console.log(`✅ Registro ${id} e todas as suas dependências foram removidos com sucesso!`);
-  } catch (error) {
-    console.error('Error deleting from Supabase:', error);
-    throw error;
+  if (!isAdmin) {
+    throw new Error("Somente administradores podem editar cadastros.");
   }
-
-  try {
-    const localData = localStorage.getItem(STORAGE_KEY);
-    if (localData) {
-      const records = JSON.parse(localData);
-      const filtered = records.filter((r: any) => r.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-    }
-  } catch (e) {
-    console.error('Error updating localStorage:', e);
-  }
+  return persistirRegistroIa(record, userId, isAdmin, "atualizar");
 };
 
 export const checkSupabaseStatus = async (): Promise<boolean> => {

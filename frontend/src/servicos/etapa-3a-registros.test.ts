@@ -74,7 +74,7 @@ describe("Etapa 3A — METADATA, ID e owner_id", () => {
   it("K/L/M) criar usa auth uid; editar preserva owner_id existente", () => {
     const armazenamento = ler("frontend/src/servicos/armazenamento.ts");
     assert.match(armazenamento, /modo === "criar"/);
-    assert.match(armazenamento, /modo === "atualizar"/);
+    assert.match(armazenamento, /modo: "criar" \| "atualizar"/);
     assert.match(
       armazenamento,
       /export const addRecord[\s\S]*persistirRegistroIa\(record,\s*userId,\s*isAdmin,\s*"criar"\)/,
@@ -90,9 +90,10 @@ describe("Etapa 3A — METADATA, ID e owner_id", () => {
     assert.match(criarBloco[0], /resolvedOwnerId = userId/);
     assert.doesNotMatch(criarBloco[0], /record\.ownerId/);
 
-    const atualizarBloco = persistir.match(/\} else \{\s*const ownerExistente[\s\S]*?\}/);
+    const atualizarBloco = persistir.match(/\} else \{\s*const \{ data: registroExistente[\s\S]*?\n    \}/);
     assert.ok(atualizarBloco);
-    assert.match(atualizarBloco[0], /ownerExistente/);
+    assert.match(atualizarBloco[0], /\.select\("owner_id"\)/);
+    assert.match(atualizarBloco[0], /resolvedOwnerId = registroExistente\.owner_id/);
     assert.doesNotMatch(atualizarBloco[0], /resolvedOwnerId = userId/);
   });
 });

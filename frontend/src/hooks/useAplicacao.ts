@@ -1,4 +1,4 @@
-import { ROTAS_API } from "@/constantes/api";
+import { ROTAS_API, rotaExcluirRegistro } from "@/constantes/api";
 import {
   INTERVALO_HEARTBEAT_PRESENCA_MS,
   registrarPollingComVisibilidade,
@@ -15,12 +15,9 @@ import { requisicaoApi } from "@/servicos/api";
 import {
   addRecord,
   checkSupabaseStatus,
-  deleteRecord,
   getProfiles,
-  seedGlobalRecordsCache,
   seedProfilesCache,
   getRecords,
-  saveRecordsToSupabase,
   updateRecord,
   updateUserProfile,
 } from "@/servicos/armazenamento";
@@ -58,6 +55,12 @@ import {
 } from "@/utilitarios/historico-navegacao";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 import { aplicarPapelNaListaPerfis } from "@/utilitarios/perfil-usuario";
+import {
+  decidirAtualizacaoWorkflows,
+  encontrarWorkflowDoRegistro,
+  mesclarEtapasEmFluxos,
+  normalizarListaWorkflows,
+} from "@/utilitarios/workflows-aprovacao";
 import { useNotifications } from "./useNotificacoes";
 
 export interface OpcoesNavegarPara {
@@ -619,7 +622,7 @@ export function useAplicacao() {
       if (configData && configData.length > 0) {
         setApprovalConfig({
           steps: configData.map((c: any) => ({
-            stepNumber: c.step_number,
+            stepNumber: Number(c.step_number),
             roleName: FIXED_NAMES[c.step_number] || c.role_name || `Etapa ${c.step_number}`,
             userId: c.assigned_user_id,
             userName: c.assigned_user_name,
@@ -629,16 +632,24 @@ export function useAplicacao() {
       }
 
       let wfData: any[] | null = null;
+      // A leitura direta é filtrada por RLS e devolve [] sem erro: só a API é fonte confiável.
+      let origemWorkflowsConfiavel = false;
       try {
         const listRes = await requisicaoApi(ROTAS_API.WORKFLOW_LIST);
         if (listRes.ok) {
-          wfData = await listRes.json();
+          const payload = await listRes.json();
+          if (Array.isArray(payload)) {
+            wfData = payload;
+            origemWorkflowsConfiavel = true;
+          }
+        } else {
+          console.warn(`API de workflows respondeu ${listRes.status}; tentando Supabase direto.`);
         }
       } catch (err) {
         console.warn("API de workflows indisponível, tentando Supabase direto:", err);
       }
 
-      if (!wfData) {
+      if (!origemWorkflowsConfiavel) {
         // Obter do supabase diretamente
         const { data: dbWf } = await supabase
           .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
@@ -647,35 +658,19 @@ export function useAplicacao() {
         if (!dbWf || dbWf.length === 0 || dbWf[0].steps === undefined) {
           const { data: rawWfs } = await supabase.from(TABELAS_SUPABASE.FLUXOS_APROVACAO).select("*");
           const { data: rawSteps } = await supabase.from(TABELAS_SUPABASE.ETAPAS_APROVACAO).select("*");
-          if (rawWfs) {
-            wfData = rawWfs.map(w => ({
-              ...w,
-              steps: (rawSteps || []).filter((s: any) => s.workflow_id === w.id)
-            }));
-          }
+          wfData = rawWfs ? mesclarEtapasEmFluxos(rawWfs, rawSteps || []) : null;
         } else {
           wfData = dbWf;
         }
       }
 
-      if (wfData) {
-        setWorkflows(wfData.map((wf: any) => ({
-          iaRecordId: wf.ia_record_id,
-          currentStep: wf.current_step,
-          finalStatus: wf.final_status,
-          completedAt: wf.completed_at,
-          steps: (wf.steps || []).map((s: any) => ({
-            stepNumber: s.step_number,
-            roleName: FIXED_NAMES[s.step_number] || s.role_name || `Etapa ${s.step_number}`,
-            assignedUserId: s.assigned_user_id,
-            assignedUserName: s.assigned_user_name,
-            status: s.status,
-            comment: s.comment,
-            decidedAt: s.decided_at,
-            isOpinionOnly: s.is_opinion_only,
-          }))
-        })));
+      const workflowsCarregados = normalizarListaWorkflows(wfData);
+      if (!origemWorkflowsConfiavel && workflowsCarregados.length === 0) {
+        console.warn("Nenhum fluxo de aprovação legível; mantendo os fluxos já carregados.");
       }
+      setWorkflows((atuais) =>
+        decidirAtualizacaoWorkflows(atuais, workflowsCarregados, origemWorkflowsConfiavel),
+      );
     } catch (e) {
       console.warn("Erro ao carregar dados de aprovação:", e);
     }
@@ -696,7 +691,6 @@ export function useAplicacao() {
       
         const data = await getRecords(user?.id, isPrivileged, profile?.setor, profile?.role);
         setRecords(data);
-        seedGlobalRecordsCache(data);
 
         if (isPrivileged) {
           const usersData = await getProfiles();
@@ -978,32 +972,8 @@ export function useAplicacao() {
     };
   }, [user?.id]);
 
-  const handleSync = async () => {
-    if (supabaseStatus !== "online") {
-      addToast({
-        title: "Serviço indisponível",
-        message: "O serviço está temporariamente indisponível. Tente novamente em alguns instantes.",
-        type: "error",
-      });
-      return;
-    }
-    
-    setIsSyncing(true);
-    try {
-      console.log("Forçando sincronização manual...");
-      const isAdmin = isCurrentUserAdmin;
-      await saveRecordsToSupabase(records, user?.id, isAdmin);
-      await refreshRecords();
-      addToast({ title: "Sincronização concluída", message: "Os dados foram sincronizados com sucesso.", type: "success" });
-    } catch (error: unknown) {
-      console.error("Erro na sincronização manual:", error);
-      addToast({ title: "Erro na sincronização", message: obterMensagemErroUsuario(error), type: "error" });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   const handleEdit = (record: IARecord) => {
+    if (!isCurrentUserAdmin) return;
     navegarPara("new", { registro: record });
   };
 
@@ -1012,12 +982,25 @@ export function useAplicacao() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!isCurrentUserAdmin) {
+      addToast({
+        title: "Acesso negado",
+        message: "Somente administradores podem excluir registros.",
+        type: "error",
+      });
+      return;
+    }
+
     // Optimistic update
     const previousRecords = [...records];
     setRecords(prev => prev.filter(r => r.id !== id));
     
     try {
-      await deleteRecord(id);
+      const response = await requisicaoApi(rotaExcluirRegistro(id), { method: "DELETE" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || payload.mensagem || "Não foi possível excluir o registro.");
+      }
       await refreshRecords();
       if (selectedRecord?.id === id) {
         setSelectedRecord(null);
@@ -1062,13 +1045,15 @@ export function useAplicacao() {
       setRecords((atuais) =>
         atuais.map((item) => item.id === recordId ? updatedRecord : item),
       );
-      setWorkflows((atuais) =>
-        atuais.map((workflow) =>
-          workflow.iaRecordId === recordId
+      setWorkflows((atuais) => {
+        const alvo = encontrarWorkflowDoRegistro(atuais, recordId);
+        if (!alvo) return atuais;
+        return atuais.map((workflow) =>
+          workflow === alvo
             ? { ...workflow, finalStatus: "cancelado", completedAt: agora }
             : workflow,
-        ),
-      );
+        );
+      });
       await refreshRecords();
 
       addToast({ title: "Solicitação cancelada", message: "A solicitação foi cancelada com sucesso.", type: "success" });
@@ -1094,6 +1079,9 @@ export function useAplicacao() {
           throw new Error(errBody.error || errBody.mensagem || "Não foi possível inicializar o fluxo de aprovação.");
         }
       } else {
+        if (!isAdmin) {
+          throw new Error("Somente administradores podem editar cadastros.");
+        }
         await updateRecord(record, user?.id, isAdmin);
       }
       await refreshRecords();
@@ -1155,7 +1143,7 @@ export function useAplicacao() {
     }
 
     // Verificar se o usuário atual é o responsável designado para a etapa atual, um admin ou moderador
-    const wf = workflows.find(w => w.iaRecordId === recordId);
+    const wf = encontrarWorkflowDoRegistro(workflows, recordId);
     const currentStepNum = wf ? wf.currentStep : 1;
     const configStep = approvalConfig?.steps?.find(s => s.stepNumber === currentStepNum);
     const wfStep = wf?.steps?.find(s => s.stepNumber === currentStepNum);
@@ -1431,8 +1419,6 @@ export function useAplicacao() {
     unreadChatCount,
     toasts,
     removeToast,
-    isSyncing,
-    handleSync,
     handleEdit,
     handleView,
     handleDelete,

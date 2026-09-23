@@ -24,7 +24,7 @@ import {
   ApprovalConfig,
   ApprovalWorkflow } from
 "@/tipos";
-import { getSectors, deleteRecord } from "@/servicos/armazenamento";
+import { getSectors } from "@/servicos/armazenamento";
 import { TextoExibicaoFluxoAprovacao } from "@/componentes/aprovacoes/TextoExibicaoFluxoAprovacao";
 import { obterUltimoParecerLimpo as getCleanLastOpinion } from "@/utilitarios/pareceres";
 import SystemControls from "./ControlesSistema";
@@ -72,8 +72,6 @@ interface AdminPanelProps {
   currentUserId?: string;
   workflows?: ApprovalWorkflow[];
   supabaseStatus?: "online" | "offline" | "checking";
-  isSyncing?: boolean;
-  onSync?: () => Promise<void>;
   onResetStatus?: (recordId: string, newStatus: StatusUso, reason: string) => Promise<void>;
   onNavigate?: (tab: string) => void;
 }
@@ -98,8 +96,6 @@ export default function AdminPanel({
   currentUserId,
   workflows = [],
   supabaseStatus = "checking",
-  isSyncing = false,
-  onSync,
   onResetStatus,
   onNavigate
 }: AdminPanelProps) {
@@ -849,13 +845,13 @@ export default function AdminPanel({
                               Ver ficha <ArrowUpRight size={14} />
                             </button>
 
-                            {/* Editar button */}
-                            <button
-                        onClick={() => onEditRecord?.(record)}
-                        className="administracao__botao-editar">
-                        
-                              <Edit size={14} /> Editar
-                            </button>
+                            {isCurrentUserAdmin && (
+                              <button
+                                onClick={() => onEditRecord?.(record)}
+                                className="administracao__botao-editar">
+                                <Edit size={14} /> Editar
+                              </button>
+                            )}
 
                             {isCurrentUserAdmin &&
                       <button
@@ -866,7 +862,7 @@ export default function AdminPanel({
                               </button>
                       }
 
-                            {/* Excluir button with confirmation */}
+                            {isCurrentUserAdmin && (
                             <div className="administracao__grupo-25" data-delete-record-menu={record.id}>
                               <AnimatePresence>
                                 {deleteRecordConfirmId === record.id &&
@@ -923,6 +919,7 @@ export default function AdminPanel({
                                 <Trash2 size={14} /> Excluir
                               </button>
                             </div>
+                            )}
 
                             {/* Action toggle Context Menu */}
                             <div>
@@ -1735,8 +1732,6 @@ export default function AdminPanel({
           {activeTab === "system_controls" &&
         <SystemControls
           supabaseStatus={supabaseStatus}
-          isSyncing={isSyncing}
-          onSync={onSync}
           records={records} />
 
         }
