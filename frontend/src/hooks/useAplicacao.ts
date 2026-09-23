@@ -53,6 +53,10 @@ import {
   podeContinuarSaltandoHistorico,
   rotaPrivadaBloqueada,
 } from "@/utilitarios/historico-navegacao";
+import {
+  criarAtualizacaoCoordenada,
+  criarControleRespostaRecente,
+} from "@/utilitarios/atualizacao-coordenada";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 import { aplicarPapelNaListaPerfis } from "@/utilitarios/perfil-usuario";
 import {
@@ -595,9 +599,16 @@ export function useAplicacao() {
   useEffect(() => { document.documentElement.classList.remove("dark"); }, []);
 
   const [isSyncing, setIsSyncing] = useState(false);
-  const refreshRecordsRequestRef = React.useRef<Promise<void> | null>(null);
+  // Respostas fora de ordem não podem sobrescrever uma leitura mais recente.
+  const controleRegistros = React.useRef(criarControleRespostaRecente()).current;
+  const controleAprovacoes = React.useRef(criarControleRespostaRecente()).current;
+  const executarAtualizacaoRef = React.useRef<() => Promise<void>>(async () => {});
+  const atualizacaoCoordenada = React.useRef(
+    criarAtualizacaoCoordenada(() => executarAtualizacaoRef.current()),
+  ).current;
 
   const loadApprovalData = async () => {
+    const requisicao = controleAprovacoes.iniciar();
     try {
       let configData: any[] | null = null;
       try {
@@ -619,7 +630,7 @@ export function useAplicacao() {
 
       const FIXED_NAMES = NOMES_ETAPAS_CURTOS;
 
-      if (configData && configData.length > 0) {
+      if (configData && configData.length > 0 && controleAprovacoes.estaAtual(requisicao)) {
         setApprovalConfig({
           steps: configData.map((c: any) => ({
             stepNumber: Number(c.step_number),
@@ -668,6 +679,7 @@ export function useAplicacao() {
       if (!origemWorkflowsConfiavel && workflowsCarregados.length === 0) {
         console.warn("Nenhum fluxo de aprovação legível; mantendo os fluxos já carregados.");
       }
+      if (!controleAprovacoes.estaAtual(requisicao)) return;
       setWorkflows((atuais) =>
         decidirAtualizacaoWorkflows(atuais, workflowsCarregados, origemWorkflowsConfiavel),
       );
@@ -676,44 +688,51 @@ export function useAplicacao() {
     }
   };
 
-  const refreshRecords = () => {
-    if (refreshRecordsRequestRef.current) return refreshRecordsRequestRef.current;
+  const executarAtualizacaoCompleta = async () => {
+    const requisicao = controleRegistros.iniciar();
+    setIsSyncing(true);
+    try {
+      const isOnline = await checkSupabaseStatus();
+      setSupabaseStatus(isOnline ? "online" : "offline");
 
-    const request = (async () => {
-      setIsSyncing(true);
-      try {
-        const isOnline = await checkSupabaseStatus();
-        setSupabaseStatus(isOnline ? "online" : "offline");
-      
-        const isAdmin = usuarioEhAdmin(profile);
-        const isModerator = usuarioEhModerador(profile);
-        const isPrivileged = isAdmin || isModerator;
-      
-        const data = await getRecords(user?.id, isPrivileged, profile?.setor, profile?.role);
-        setRecords(data);
+      const isAdmin = usuarioEhAdmin(profile);
+      const isModerator = usuarioEhModerador(profile);
+      const isPrivileged = isAdmin || isModerator;
 
-        if (isPrivileged) {
-          const usersData = await getProfiles();
-          seedProfilesCache(usersData);
-          setProfilesCatalog(usersData);
-          setProfiles(usersData);
-        }
+      const data = await getRecords(user?.id, isPrivileged, profile?.setor, profile?.role);
+      if (!controleRegistros.estaAtual(requisicao)) return;
+      setRecords(data);
 
-        // Carregar dados de conformidade e fluxos ativos de aprovação
-        await loadApprovalData();
-      } catch (error) {
-        console.error("Erro ao atualizar registros:", error);
-      } finally {
+      if (isPrivileged) {
+        const usersData = await getProfiles();
+        seedProfilesCache(usersData);
+        setProfilesCatalog(usersData);
+        setProfiles(usersData);
+      }
+
+      // Carregar dados de conformidade e fluxos ativos de aprovação
+      await loadApprovalData();
+    } catch (error) {
+      console.error("Erro ao atualizar registros:", error);
+    } finally {
+      if (controleRegistros.estaAtual(requisicao)) {
         setRecordsCarregados(true);
         setIsSyncing(false);
       }
-    })();
-
-    refreshRecordsRequestRef.current = request;
-    return request.finally(() => {
-      if (refreshRecordsRequestRef.current === request) refreshRecordsRequestRef.current = null;
-    });
+    }
   };
+
+  executarAtualizacaoRef.current = executarAtualizacaoCompleta;
+
+  /** Leitura de tela: reaproveita a atualização já em andamento. */
+  const refreshRecords = () => atualizacaoCoordenada.reaproveitar();
+
+  /**
+   * Releitura obrigatória depois de uma escrita. Reaproveitar a requisição em voo
+   * devolveria a lista de fluxos lida antes da escrita — é o que deixava a coluna
+   * "Etapa atual" sem fluxo logo após criar uma solicitação.
+   */
+  const atualizarDadosDaAplicacao = () => atualizacaoCoordenada.forcar();
 
   useEffect(() => {
     if (user?.id && profile) {
@@ -1001,7 +1020,7 @@ export function useAplicacao() {
       if (!response.ok) {
         throw new Error(payload.error || payload.mensagem || "Não foi possível excluir o registro.");
       }
-      await refreshRecords();
+      await atualizarDadosDaAplicacao();
       if (selectedRecord?.id === id) {
         setSelectedRecord(null);
       }
@@ -1054,7 +1073,7 @@ export function useAplicacao() {
             : workflow,
         );
       });
-      await refreshRecords();
+      await atualizarDadosDaAplicacao();
 
       addToast({ title: "Solicitação cancelada", message: "A solicitação foi cancelada com sucesso.", type: "success" });
     } catch (error) {
@@ -1084,7 +1103,9 @@ export function useAplicacao() {
         }
         await updateRecord(record, user?.id, isAdmin);
       }
-      await refreshRecords();
+      // Só depois do registro gravado e do fluxo inicializado: registros e
+      // fluxos são recarregados juntos, então o Inventário já abre com a etapa atual.
+      await atualizarDadosDaAplicacao();
       navegarPara("inventory");
     } catch (error: unknown) {
       console.error("Erro ao salvar registro:", error);
@@ -1202,7 +1223,7 @@ export function useAplicacao() {
         addToast({ title: "Etapa Concluída", message: result.message, type: "info" });
       }
 
-      await refreshRecords();
+      await atualizarDadosDaAplicacao();
     } catch (error: unknown) {
       console.error("Erro ao atualizar status:", error);
       addToast({ title: "Não foi possível atualizar", message: obterMensagemErroUsuario(error, "aprovacao"), type: "error" });

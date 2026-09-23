@@ -77,7 +77,10 @@ describe("setor na edição administrativa", () => {
 
   it("G. o owner_id original é preservado na atualização", () => {
     assert.match(armazenamento, /modo === "criar"[\s\S]{0,400}select\("owner_id"\)/);
-    assert.match(armazenamento, /if \(modo === "criar"\) payload\.owner_id = resolvedOwnerId;/);
+    assert.match(
+      armazenamento,
+      /if \(modo === "criar"\) \{[\s\S]*payload\.id = record\.id;[\s\S]*payload\.owner_id = resolvedOwnerId;/,
+    );
   });
 });
 
