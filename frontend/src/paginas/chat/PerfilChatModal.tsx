@@ -28,7 +28,7 @@ export const ProfileModal: React.FC<{profile: UserProfile;onClose: () => void;}>
         const { count, error } = await supabase.
         from(TABELAS_SUPABASE.REGISTROS_IA).
         select("*", { count: "exact", head: true }).
-        or(`owner_id.eq.${profile.id},responsavel_preenchimento.eq.${profile.full_name}`);
+        eq("owner_id", profile.id);
 
         if (isMounted && !error && count !== null) {
           setIaRecordsCount(count);
@@ -47,7 +47,7 @@ export const ProfileModal: React.FC<{profile: UserProfile;onClose: () => void;}>
     return () => {
       isMounted = false;
     };
-  }, [profile.id, profile.full_name]);
+  }, [profile.id]);
 
   // Converte a data do last_seen se existir
   const lastSeenLabel = useMemo(() => {

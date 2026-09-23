@@ -848,10 +848,10 @@ export function useAplicacao() {
       .channel("global-chat-notifications")
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: TABELAS_SUPABASE.MENSAGENS },
+        { event: "INSERT", schema: "public", table: TABELAS_SUPABASE.MENSAGENS, filter: `recipient_id=eq.${user.id}` },
         async (payload) => {
           const msg = payload.new as any;
-          if (!msg || msg.sender_id === user.id) return;
+          if (!msg || msg.sender_id === user.id || msg.recipient_id !== user.id) return;
 
           const currentTab = activeTabRef.current;
           if (
@@ -871,14 +871,11 @@ export function useAplicacao() {
 
           if (currentTab !== "chat") {
             // Se não está no chat, notifica sobre mensagens públicas ou privadas direcionadas para si
-            if (!msg.is_private) {
-              shouldNotify = true;
-            } else if (msg.recipient_id === user.id) {
+            if (msg.recipient_id === user.id) {
               shouldNotify = true;
             }
           } else {
-            // Se está na tela do chat, notifica apenas se for mensagem privada direcionada e o remetente não for o chat ativo atual
-            if (msg.is_private && msg.recipient_id === user.id) {
+            if (msg.recipient_id === user.id) {
               const activeChatWith = localStorage.getItem(CHAVES_ARMAZENAMENTO_LOCAL.CHAT_ATIVO_COM);
               if (activeChatWith !== msg.sender_id) {
                 shouldNotify = true;
@@ -903,7 +900,7 @@ export function useAplicacao() {
               }
 
               addToast({
-                title: `Chat: ${senderName || "Colega"}`,
+                title: `Suporte: ${senderName || "equipe administrativa"}`,
                 message: msg.content.length > 60 ? `${msg.content.slice(0, 60)}...` : msg.content,
                 type: "chat",
                 actionLabel: "Ver Mensagem",
