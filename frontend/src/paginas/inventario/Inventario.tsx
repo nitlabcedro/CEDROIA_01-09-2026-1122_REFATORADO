@@ -26,7 +26,6 @@ interface InventoryProps {
   records: IARecord[];
   onEdit: (record: IARecord) => void;
   onView: (record: IARecord) => void;
-  onDelete: (id: string) => void;
   onAdd: () => void;
   onRefresh: () => void;
   isAdmin?: boolean;
@@ -42,7 +41,6 @@ export default function Inventory({
   records,
   onEdit,
   onView,
-  onDelete,
   onAdd,
   onRefresh,
   isAdmin,

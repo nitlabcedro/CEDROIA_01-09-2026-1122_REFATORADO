@@ -170,7 +170,6 @@ export default function Aplicacao() {
       records={records}
       onEdit={handleEdit}
       onView={handleView}
-      onDelete={handleDelete}
       onAdd={() => {
         navegarPara("new");
       }}
@@ -252,7 +251,6 @@ export default function Aplicacao() {
       records={records}
       onEdit={handleEdit}
       onView={handleView}
-      onDelete={handleDelete}
       onAdd={() => {
         navegarPara("new");
       }}
