@@ -25,7 +25,10 @@ const payload = payloadMatch[1];
 
 describe("persistência segura de registros_ia", () => {
   it("D/G — criação envia owner_id e não envia a coluna inexistente status", () => {
-    assert.match(persistir, /if \(modo === "criar"\) payload\.owner_id = resolvedOwnerId/);
+    assert.match(
+      persistir,
+      /if \(modo === "criar"\) \{[\s\S]*payload\.id = record\.id;[\s\S]*payload\.owner_id = resolvedOwnerId;/,
+    );
     assert.match(payload, /status_uso: record\.statusUso/);
     assert.doesNotMatch(payload, /\bstatus\s*:/);
   });

@@ -287,8 +287,7 @@ async function persistirRegistroIa(
     delete recordWithStatus.owner_id;
     if (!resolvedOwnerId) delete recordWithStatus.ownerId;
 
-    const payload: Record<string, unknown> = { 
-      id: record.id, 
+    const payload: Record<string, unknown> = {
       data: recordWithStatus,
       updated_at: new Date().toISOString(),
       unidade_setor: record.unidadeSetor || '',
@@ -297,7 +296,10 @@ async function persistirRegistroIa(
       status_uso: record.statusUso || 'Em avaliação',
     };
 
-    if (modo === "criar") payload.owner_id = resolvedOwnerId;
+    if (modo === "criar") {
+      payload.id = record.id;
+      payload.owner_id = resolvedOwnerId;
+    }
 
     let currentPayload = { ...payload };
     let attempts = 0;
