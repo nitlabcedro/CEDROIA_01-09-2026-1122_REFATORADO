@@ -343,42 +343,6 @@ async function persistirRegistroIa(
     console.error('Error adding to Supabase:', error);
     throw error; 
   }
-  
-  // Local fallback
-  try {
-    const localData = localStorage.getItem(STORAGE_KEY);
-    const records: IARecord[] = localData ? JSON.parse(localData) : [];
-    const index = records.findIndex(r => r.id === record.id);
-    const finalStatus = record.statusAuditoria || (finalIsAdmin ? StatusAuditoria.APROVADO : StatusAuditoria.PENDENTE);
-    
-    let resolvedOwnerId: string | null = null;
-    if (modo === "criar") {
-      if (userId && isValidUUID(userId)) {
-        resolvedOwnerId = userId;
-      }
-    } else {
-      const registroLocalExistente = index >= 0 ? records[index] : null;
-      const ownerExistente = registroLocalExistente?.ownerId
-        || (registroLocalExistente as (IARecord & { owner_id?: string }) | null)?.owner_id;
-      if (ownerExistente && isValidUUID(ownerExistente)) {
-        resolvedOwnerId = ownerExistente;
-      }
-    }
-
-    const recordWithStatus: IARecord & { owner_id?: string } = {
-      ...record, 
-      statusAuditoria: finalStatus,
-      ...(resolvedOwnerId ? { ownerId: resolvedOwnerId } : {}),
-    };
-    delete recordWithStatus.owner_id;
-    if (!resolvedOwnerId) delete recordWithStatus.ownerId;
-    
-    if (index === -1) records.push(recordWithStatus);
-    else records[index] = recordWithStatus;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-  } catch (e) {
-    console.error('Local sync failed:', e);
-  }
 };
 
 export const updateRecord = async (record: IARecord, userId?: string, isAdmin?: boolean) => {
@@ -463,19 +427,6 @@ export const updateUserProfile = async (profileId: string, updates: Partial<User
     throw error;
   }
 };
-
-export const DEFAULT_SECTORS = [
-  "NIT",
-  "TI",
-  "Marketing",
-  "Administrativo",
-  "Jurídico",
-  "Direção Técnica",
-  "Qualidade",
-  "Atendimento / Recepção",
-  "Laboratório de Patologia",
-  "Laboratório Central"
-];
 
 const SECTORS_STORAGE_KEY = CHAVES_ARMAZENAMENTO_LOCAL.SETORES_LEGADO;
 
