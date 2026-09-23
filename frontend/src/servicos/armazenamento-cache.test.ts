@@ -1,30 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { IARecord, UserProfile } from "@/tipos";
+import type { UserProfile } from "@/tipos";
 import {
-  getGlobalRecords,
   getProfiles,
-  seedGlobalRecordsCache,
   seedProfilesCache,
 } from "./armazenamento";
 
 describe("armazenamento cache", () => {
-  it("reutiliza registros em cache após seedGlobalRecordsCache sem nova consulta obrigatória", async () => {
-    const mock: IARecord[] = [
-      {
-        id: "IA-00000099",
-        nomeFerramenta: "Mock",
-        unidadeSetor: "TI",
-      } as IARecord,
-    ];
-
-    seedGlobalRecordsCache(mock);
-    const fromCache = await getGlobalRecords();
-
-    assert.equal(fromCache.length, 1);
-    assert.equal(fromCache[0].id, "IA-00000099");
-  });
-
   it("reutiliza perfis em cache após seedProfilesCache", async () => {
     const mock: UserProfile[] = [
       {
@@ -41,14 +23,4 @@ describe("armazenamento cache", () => {
     assert.equal(fromCache[0].full_name, "Usuário Teste");
   });
 
-  it("deduplica chamadas simultâneas idênticas a getGlobalRecords", async () => {
-    const mock: IARecord[] = [
-      { id: "IA-00000001", nomeFerramenta: "A", unidadeSetor: "TI" } as IARecord,
-    ];
-    seedGlobalRecordsCache(mock);
-
-    const [a, b] = await Promise.all([getGlobalRecords(), getGlobalRecords()]);
-    assert.equal(a.length, b.length);
-    assert.equal(a[0].id, b[0].id);
-  });
 });

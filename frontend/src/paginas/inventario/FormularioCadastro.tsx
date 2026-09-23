@@ -4,7 +4,7 @@
  */
 
 import { CHAVES_ARMAZENAMENTO_LOCAL } from "@/constantes/armazenamento-local";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
 import { IconeIA } from "@/componentes/comuns/IconeIA";
 import {
@@ -17,11 +17,15 @@ import {
   IARecord, TiposIA, ObjetivosIA, EtapaProcesso, StatusUso } from
 "@/tipos";
 import { idRegistroIaValido, solicitarProximoIdRegistro } from "@/servicos/registros-ia-id";
+import { obterSetoresAtivos } from "@/servicos/setores";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 import {
   definirSetorInicialSolicitacao,
   obterCargoVinculadoAoSetor,
   obterSetoresVinculadosPerfil,
+  perfilImpedeEtapaSolicitacao,
+  resolverOpcoesSetorSolicitacao,
+  setorSolicitacaoValido,
 } from "@/utilitarios/perfil-usuario";
 
 import { useAuth } from "@/contextos/ContextoAutenticacao";
@@ -244,7 +248,37 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
   const [outroActive, setOutroActive] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [savingStep, setSavingStep] = useState("");
+  const [setoresAtivos, setSetoresAtivos] = useState<string[]>([]);
   const setoresVinculados = obterSetoresVinculadosPerfil(profile?.setor);
+
+  // Edição administrativa: o setor pertence ao registro, nunca ao perfil do admin.
+  const isEdicaoAdministrativa = Boolean(initialData && isAdmin);
+  const setorOriginalRegistro = (initialData?.unidadeSetor || "").trim();
+  // Evita que rotinas assíncronas da criação sobrescrevam um registro aberto para edição.
+  const edicaoEmAndamentoRef = useRef(false);
+  edicaoEmAndamentoRef.current = Boolean(initialData);
+
+  const opcoesSetorSolicitacao = useMemo(() => resolverOpcoesSetorSolicitacao({
+    edicaoAdministrativa: isEdicaoAdministrativa,
+    setoresVinculados,
+    setoresAtivos,
+    setorOriginal: setorOriginalRegistro,
+  }), [isEdicaoAdministrativa, setoresVinculados.join(";"), setoresAtivos.join(";"), setorOriginalRegistro]);
+
+  useEffect(() => {
+    if (!isEdicaoAdministrativa) return;
+    let ativo = true;
+    obterSetoresAtivos()
+      .then((setores) => {
+        if (ativo) setSetoresAtivos(setores.map((setor) => setor.name));
+      })
+      .catch((erro) => {
+        console.warn("Não foi possível carregar os setores ativos para edição:", erro);
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [isEdicaoAdministrativa]);
 
   useEffect(() => {
     if (!showTypeIAPopup) return;
@@ -269,6 +303,8 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
       }
     } else if (!isInitialized && profile) {
       const fetchAndSetId = async () => {
+        if (edicaoEmAndamentoRef.current) return;
+
         const obterId = async (idRascunho?: unknown) => {
           if (idRegistroIaValido(idRascunho)) return idRascunho;
           return solicitarProximoIdRegistro();
@@ -290,6 +326,7 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
                 restored.unidadeSetor,
               );
               const idRegistro = await obterId(restored.id);
+              if (edicaoEmAndamentoRef.current) return;
               setFormData((prev) => ({
                 ...prev,
                 ...restored,
@@ -322,6 +359,7 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
             profile.cargo,
           );
 
+          if (edicaoEmAndamentoRef.current) return;
           setFormData((prev) => ({
             ...prev,
             id: idRegistro,
@@ -363,21 +401,15 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
     }));
   }, [initialData, profile, isInitialized, setoresVinculados.join(";")]);
 
-  const isProfileIncompleteForStep1 = (() => {
-    if (!profile || !profile.full_name || profile.full_name.trim() === "") return true;
-    return setoresVinculados.length === 0 ||
-      setoresVinculados.every((setor) => !obterCargoVinculadoAoSetor(
-        setor,
-        profile.setor,
-        profile.cargo,
-      ));
-  })();
+  const isProfileIncompleteForStep1 = perfilImpedeEtapaSolicitacao({
+    edicaoAdministrativa: isEdicaoAdministrativa,
+    profile,
+  });
 
-  const isSetorSolicitacaoInvalido = !formData.unidadeSetor ||
-  formData.unidadeSetor.trim() === "" ||
-  formData.unidadeSetor.trim() === "Não definido" ||
-  formData.unidadeSetor.trim() === "Nao definido" ||
-  !setoresVinculados.includes(formData.unidadeSetor.trim());
+  const isSetorSolicitacaoInvalido = !setorSolicitacaoValido(formData.unidadeSetor, {
+    edicaoAdministrativa: isEdicaoAdministrativa,
+    setoresVinculados,
+  });
 
   const isStep1Incomplete = isSetorSolicitacaoInvalido ||
   !formData.responsavelPreenchimento ||
@@ -409,7 +441,10 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
     setFormData((prev) => ({
       ...prev,
       unidadeSetor: setor,
-      cargo: obterCargoVinculadoAoSetor(setor, profile?.setor, profile?.cargo),
+      // O cargo continua sendo o do solicitante original em edições administrativas.
+      cargo: isEdicaoAdministrativa ?
+      prev.cargo :
+      obterCargoVinculadoAoSetor(setor, profile?.setor, profile?.cargo),
     }));
   };
 
@@ -515,7 +550,9 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
       await onSave({
         ...formData,
         unidadeSetor: cleanSector,
-        cargo: obterCargoVinculadoAoSetor(cleanSector, profile?.setor, profile?.cargo) || formData.cargo || "",
+        cargo: isEdicaoAdministrativa ?
+        formData.cargo || "" :
+        obterCargoVinculadoAoSetor(cleanSector, profile?.setor, profile?.cargo) || formData.cargo || "",
         nomeFerramenta: cleanNome,
         tipoIA: cleanTipoIA,
         tipoIAOutro: cleanTipoIAOutro,
@@ -672,11 +709,15 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
             {activeSection === 0 && (
               <div className="nova-solicitacao__fase nova-solicitacao__fase--solucao">
                 <div className="nova-solicitacao__setor-solicitacao">
-                  <InputGroup label="Setor da solicitação" required badge={<BadgePerfil />}>
+                  <InputGroup
+                    label="Setor da solicitação"
+                    required
+                    badge={isEdicaoAdministrativa ? undefined : <BadgePerfil />}
+                  >
                     <CustomDropdown
                       placeholder="Selecione o setor responsável..."
                       value={formData.unidadeSetor || ""}
-                      options={setoresVinculados}
+                      options={opcoesSetorSolicitacao}
                       onChange={selecionarSetorSolicitacao}
                       icon={<Database size={17} aria-hidden="true" />}
                       size="lg"
@@ -684,7 +725,9 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
                     />
                   </InputGroup>
                   <p className="nova-solicitacao__campo-ajuda">
-                    A solicitação ficará vinculada somente ao setor selecionado.
+                    {isEdicaoAdministrativa ?
+                    "O setor original do registro é mantido. Altere apenas se a solicitação realmente pertencer a outro setor." :
+                    "A solicitação ficará vinculada somente ao setor selecionado."}
                   </p>
                 </div>
 

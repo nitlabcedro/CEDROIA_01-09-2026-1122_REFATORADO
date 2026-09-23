@@ -19,6 +19,9 @@ export const ROTAS_API = {
 export const rotaInteracoesTI = (recordId: string) =>
   `/api/workflow/ti-interactions?recordId=${encodeURIComponent(recordId)}`;
 
+export const rotaExcluirRegistro = (recordId: string) =>
+  `/api/registros/${encodeURIComponent(recordId)}`;
+
 export const rotaRascunhoInteracaoTI = (solicitacaoId: string) =>
   `/api/workflow/ti-interactions/${encodeURIComponent(solicitacaoId)}/draft`;
 

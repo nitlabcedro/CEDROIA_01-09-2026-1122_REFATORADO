@@ -116,15 +116,17 @@ export function AdminDropdownPortal({
         <SheetIcon size={14} className="administracao__icone-database" /> Visualizar detalhes
       </button>
 
-      <button
-        onClick={() => {
-          onClose();
-          onEditRecord?.(record);
-        }}
-        className="administracao__botao-visualizar-detalhes"
-      >
-        <Sliders size={14} className="administracao__icone-database" /> Editar registro
-      </button>
+      {isAdmin && (
+        <button
+          onClick={() => {
+            onClose();
+            onEditRecord?.(record);
+          }}
+          className="administracao__botao-visualizar-detalhes"
+        >
+          <Sliders size={14} className="administracao__icone-database" /> Editar registro
+        </button>
+      )}
 
       <button
         onClick={() => {
@@ -161,16 +163,20 @@ export function AdminDropdownPortal({
         </>
       )}
 
-      <div className="administracao__grupo-91" />
-      <button
-        onClick={() => {
-          onClose();
-          handleArchiveRecord(record);
-        }}
-        className="administracao__botao-arquivar-registro"
-      >
-        <Trash2 size={14} className="administracao__icone-trash2" /> Arquivar registro
-      </button>
+      {isAdmin && (
+        <>
+          <div className="administracao__grupo-91" />
+          <button
+            onClick={() => {
+              onClose();
+              handleArchiveRecord(record);
+            }}
+            className="administracao__botao-arquivar-registro"
+          >
+            <Trash2 size={14} className="administracao__icone-trash2" /> Arquivar registro
+          </button>
+        </>
+      )}
     </motion.div>,
     document.body,
   );

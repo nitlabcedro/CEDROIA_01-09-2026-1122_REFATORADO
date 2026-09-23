@@ -9,15 +9,11 @@ import { IARecord } from "@/tipos";
 
 interface SystemControlsProps {
   supabaseStatus?: "online" | "offline" | "checking";
-  isSyncing?: boolean;
-  onSync?: () => Promise<void>;
   records: IARecord[];
 }
 
 export default function SystemControls({
   supabaseStatus = "checking",
-  isSyncing = false,
-  onSync,
   records
 }: SystemControlsProps) {
   // Enforce/load localStorage values
@@ -269,7 +265,7 @@ export default function SystemControls({
             </div>
 
             <p className="controles-sistema__descricao-define-o-rigor-com-que-os-cole">
-              Consolida redundância de dados local para persistência relacional do Supabase Cloud, permitindo acionamento e reparo manual.
+              Exibe a disponibilidade do Supabase Cloud e oferece manutenção do cache local do navegador.
             </p>
 
             {/* Supabase Status Banner */}
@@ -283,7 +279,7 @@ export default function SystemControls({
                   "controles-sistema__texto-6"}`
                   } />
                   <span className="controles-sistema__texto-7">
-                    {supabaseStatus === "online" ? "ONLINE (SICRONIZAR)" : supabaseStatus === "offline" ? "OFFLINE/STANDBY" : "VERIFICANDO..."}
+                    {supabaseStatus === "online" ? "ONLINE" : supabaseStatus === "offline" ? "OFFLINE/STANDBY" : "VERIFICANDO..."}
                   </span>
                 </div>
               </div>
@@ -291,19 +287,6 @@ export default function SystemControls({
           </div>
 
           <div className="controles-sistema__grupo-15">
-            <button
-              onClick={onSync}
-              disabled={isSyncing || supabaseStatus !== "online"}
-              className={`controles-sistema__botao-5 ${
-              isSyncing ?
-              "controles-sistema__botao-6" :
-              "controles-sistema__botao-7"}`
-              }>
-              
-              <RefreshCw size={14} className={isSyncing ? "controles-sistema__icone-refreshcw" : ""} />
-              {isSyncing ? "Sincronizando..." : "Sincronizar Banco de Dados"}
-            </button>
-
             <button
               onClick={handleClearCache}
               className="controles-sistema__botao-limpar-cache-do-navegador">

@@ -67,6 +67,75 @@ export function definirSetorInicialSolicitacao(
   return setoresVinculados.length === 1 ? setoresVinculados[0] : "";
 }
 
+export interface ContextoSetorSolicitacao {
+  edicaoAdministrativa: boolean;
+  setoresVinculados: string[];
+  setoresAtivos?: string[];
+  setorOriginal?: string | null;
+}
+
+const SETORES_SEM_DEFINICAO = ["não definido", "nao definido"];
+
+/**
+ * Criação: o solicitante só escolhe setores vinculados ao próprio perfil.
+ * Edição administrativa: qualquer setor ativo, somado ao setor original do
+ * registro (que pode não estar mais ativo nem pertencer ao administrador).
+ */
+export function resolverOpcoesSetorSolicitacao({
+  edicaoAdministrativa,
+  setoresVinculados,
+  setoresAtivos = [],
+  setorOriginal,
+}: ContextoSetorSolicitacao): string[] {
+  if (!edicaoAdministrativa) return [...setoresVinculados];
+
+  const ativos = Array.from(
+    new Set(setoresAtivos.map((setor) => setor.trim()).filter(Boolean)),
+  );
+  const original = setorOriginal?.trim();
+  if (original && !ativos.includes(original)) return [original, ...ativos];
+  return ativos;
+}
+
+export function setorSolicitacaoValido(
+  setor: string | null | undefined,
+  { edicaoAdministrativa, setoresVinculados }: ContextoSetorSolicitacao,
+): boolean {
+  const valor = (setor || "").trim();
+  if (!valor || SETORES_SEM_DEFINICAO.includes(valor.toLowerCase())) return false;
+  if (edicaoAdministrativa) return true;
+  return setoresVinculados.includes(valor);
+}
+
+export interface FontePerfilSolicitacao {
+  full_name?: string | null;
+  setor?: string | null;
+  cargo?: string | null;
+}
+
+/**
+ * Criação: o solicitante precisa de nome, setor e cargo vinculados.
+ * Edição administrativa: o perfil do admin não é requisito; os dados
+ * relevantes já estão no registro.
+ */
+export function perfilImpedeEtapaSolicitacao({
+  edicaoAdministrativa,
+  profile,
+}: {
+  edicaoAdministrativa: boolean;
+  profile?: FontePerfilSolicitacao | null;
+}): boolean {
+  if (edicaoAdministrativa) return false;
+  if (!profile || !profile.full_name || profile.full_name.trim() === "") return true;
+  const setoresVinculados = obterSetoresVinculadosPerfil(profile.setor);
+  return setoresVinculados.length === 0 ||
+    setoresVinculados.every((setor) => !obterCargoVinculadoAoSetor(
+      setor,
+      profile.setor,
+      profile.cargo,
+    ));
+}
+
 export function serializarAtribuicoesPerfil(atribuicoes: AtribuicaoPerfil[]): {
   setor: string;
   cargo: string;

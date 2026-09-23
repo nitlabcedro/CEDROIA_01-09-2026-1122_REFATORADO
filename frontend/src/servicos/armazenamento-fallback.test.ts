@@ -14,7 +14,7 @@ const armazenamento = readFileSync(
 );
 const persistir = armazenamento.slice(
   armazenamento.indexOf("async function persistirRegistroIa"),
-  armazenamento.indexOf("export const saveRecordsToSupabase"),
+  armazenamento.indexOf("export const updateRecord"),
 );
 
 const payloadMatch = persistir.match(
@@ -25,7 +25,7 @@ const payload = payloadMatch[1];
 
 describe("persistência segura de registros_ia", () => {
   it("D/G — criação envia owner_id e não envia a coluna inexistente status", () => {
-    assert.match(payload, /owner_id: resolvedOwnerId/);
+    assert.match(persistir, /if \(modo === "criar"\) payload\.owner_id = resolvedOwnerId/);
     assert.match(payload, /status_uso: record\.statusUso/);
     assert.doesNotMatch(payload, /\bstatus\s*:/);
   });
@@ -89,14 +89,15 @@ describe("persistência segura de registros_ia", () => {
     assert.doesNotMatch(persistir, /Removendo owner_id/);
   });
 
-  it("K/L — edição preserva owner existente e admin não assume propriedade", () => {
+  it("K/L — edição consulta o owner persistido e admin não assume propriedade", () => {
     const blocoEdicao = persistir.match(
-      /\} else \{\s*const ownerExistente[\s\S]*?\n    \}/,
+      /\} else \{\s*const \{ data: registroExistente[\s\S]*?\n    \}/,
     );
     assert.ok(blocoEdicao);
-    assert.match(blocoEdicao[0], /record\.ownerId/);
-    assert.match(blocoEdicao[0], /resolvedOwnerId = ownerExistente/);
+    assert.match(blocoEdicao[0], /\.select\("owner_id"\)/);
+    assert.match(blocoEdicao[0], /resolvedOwnerId = registroExistente\.owner_id/);
     assert.doesNotMatch(blocoEdicao[0], /resolvedOwnerId = userId/);
     assert.doesNotMatch(blocoEdicao[0], /finalIsAdmin[\s\S]*owner/);
+    assert.doesNotMatch(payload, /owner_id/);
   });
 });

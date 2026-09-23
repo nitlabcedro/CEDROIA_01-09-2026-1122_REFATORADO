@@ -65,8 +65,6 @@ export default function Aplicacao() {
     unreadChatCount,
     toasts,
     removeToast,
-    isSyncing,
-    handleSync,
     handleEdit,
     handleView,
     handleDelete,
@@ -221,8 +219,6 @@ export default function Aplicacao() {
       currentUserId={user.id}
       workflows={workflows}
       supabaseStatus={supabaseStatus}
-      isSyncing={isSyncing}
-      onSync={handleSync}
       onResetStatus={handleResetStatus}
       onNavigate={navegarPara} />
 
