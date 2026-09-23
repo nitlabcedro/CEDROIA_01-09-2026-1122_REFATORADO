@@ -1,7 +1,10 @@
 import { CHAVES_ARMAZENAMENTO_LOCAL, EVENTOS_APLICACAO } from "@/constantes/armazenamento-local";
 import { datasNoMesmoDia, EMOJIS_SUGERIDOS, formatarHorarioMensagem, mesclarMensagemSemDuplicar, ordenarMensagens, removerDuplicadasPorId, rotuloDataAmigavel, usuarioEstaOnline } from "./chat.utilitarios";
 import { ChatAvatar } from "./ChatAvatar";
+import { ChatAnexoDownload } from "./ChatAnexoDownload";
 import { ProfileModal } from "./PerfilChatModal";
+import { filtrarContatosChat, podeConversarNoChat } from "@/utilitarios/chat-suporte";
+import { limparAnexoChatAposFalhaDeMensagem, montarCaminhoAnexoChat, removerObjetoAnexoChat, validarAnexoChat } from "@/servicos/chat-anexos";
 import { BUCKETS_SUPABASE, TABELAS_SUPABASE } from "@/constantes/supabase";
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/servicos/supabase";
@@ -22,7 +25,7 @@ import {
   Send, User, MoreVertical, MessageSquare, X,
   Search, Filter, Plus,
   Paperclip, Smile, Star, Check, ChevronLeft,
-  FileText, Download } from
+  FileText } from
 "lucide-react";
 
 type ChatProps = {
@@ -208,10 +211,10 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
 
   const aplicarCatalogoUsuarios = React.useCallback((lista: UserProfile[]) => {
     if (!user?.id || lista.length === 0) return false;
-    setUsers(lista.filter((item) => item.id !== user.id));
+    setUsers(filtrarContatosChat(profile, lista));
     usuariosHidratadosDoCatalogoRef.current = true;
     return true;
-  }, [user?.id]);
+  }, [user?.id, profile]);
   const carregandoUltimasMensagensRef = useRef(false);
   const conversasEmCarregamentoRef = useRef(new Set<string>());
 
@@ -221,8 +224,7 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
     carregandoUsuariosRef.current = true;
     try {
       const data = await getProfiles();
-      // Libera todo o chat para que todos os usuários possam ver e conversar com qualquer colega voluntariamente
-      setUsers(data.filter((item) => item.id !== user?.id));
+      setUsers(filtrarContatosChat(profile, data));
     } catch (e) {
       console.error("Falha ao carregar perfis reais de usuários para o Chat:", e);
     } finally {
@@ -430,6 +432,13 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
   }, [catalogProfiles, user?.id, aplicarCatalogoUsuarios]);
 
   useEffect(() => {
+    if (!selectedConvId || users.length === 0) return;
+    if (!users.some((contato) => contato.id === selectedConvId)) {
+      setSelectedConvId("");
+    }
+  }, [selectedConvId, users]);
+
+  useEffect(() => {
     if (selectedConvId) {
       fetchRealtimeMessages();
     } else {
@@ -437,89 +446,96 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
     }
   }, [selectedConvId, user?.id]);
 
-  // Integração em tempo real com o canal do Supabase (estável, depende apenas de user.id)
   useEffect(() => {
     if (!user?.id) return;
 
-    const messageChannel = supabase.
-    channel("chat-realtime-cedro").
-    on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: TABELAS_SUPABASE.MENSAGENS },
-      async (payload) => {
-        const insertMsg = payload.new as ChatMessage;
-        const isRelatedToMe = insertMsg.sender_id === user.id || insertMsg.recipient_id === user.id;
+    const aplicarInsertRealtime = (payload: { new: ChatMessage }) => {
+      const insertMsg = payload.new as ChatMessage;
+      if (insertMsg.sender_id !== user.id && insertMsg.recipient_id !== user.id) return;
 
-        if (isRelatedToMe) {
-          // Atualiza mapa de últimas mensagens
-          const partnerId = insertMsg.sender_id === user.id ? insertMsg.recipient_id : insertMsg.sender_id;
-          if (partnerId) {
-            setLastMessagesMap((prev) => ({
+      const partnerId = insertMsg.sender_id === user.id ? insertMsg.recipient_id : insertMsg.sender_id;
+      if (partnerId) {
+        setLastMessagesMap((prev) => ({
+          ...prev,
+          [partnerId]: insertMsg,
+        }));
+
+        if (insertMsg.recipient_id === user.id && insertMsg.sender_id !== user.id) {
+          setLastIncomingMessagesMap((prev) => ({
+            ...prev,
+            [partnerId]: insertMsg,
+          }));
+
+          if (selectedConvIdRef.current === partnerId) {
+            markConversationAsSeen(partnerId, [insertMsg]);
+          } else {
+            setUnreadCountsMap((prev) => ({
               ...prev,
-              [partnerId]: insertMsg
+              [partnerId]: (prev[partnerId] || 0) + 1,
             }));
-
-            if (insertMsg.recipient_id === user.id && insertMsg.sender_id !== user.id) {
-              setLastIncomingMessagesMap((prev) => ({
-                ...prev,
-                [partnerId]: insertMsg
-              }));
-
-              if (selectedConvIdRef.current === partnerId) {
-                // Se a conversa já está aberta, a nova mensagem é considerada visualizada imediatamente.
-                markConversationAsSeen(partnerId, [insertMsg]);
-              } else {
-                setUnreadCountsMap((prev) => ({
-                  ...prev,
-                  [partnerId]: (prev[partnerId] || 0) + 1
-                }));
-              }
-            }
-          }
-
-          // Se for do chat ativamente aberto, adiciona na lista
-          const currentConvId = selectedConvIdRef.current;
-          const isForOpenChat =
-          insertMsg.sender_id === user.id && insertMsg.recipient_id === currentConvId ||
-          insertMsg.sender_id === currentConvId && insertMsg.recipient_id === user.id;
-
-          if (isForOpenChat) {
-            let senderProfile = null;
-            if (insertMsg.sender_id === user.id) {
-              senderProfile = profileRef.current;
-            } else {
-              senderProfile = usersRef.current.find((u) => u.id === insertMsg.sender_id) || null;
-            }
-            const enrichedMsg = {
-              ...insertMsg,
-              sender_profile: senderProfile
-            };
-
-            setMessages((prev) => mesclarMensagemSemDuplicar(prev, enrichedMsg));
           }
         }
       }
-    ).
-    on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: TABELAS_SUPABASE.PERFIS },
-      async (payload) => {
-        const updatedProfile = payload.new as UserProfile;
-        if (updatedProfile && updatedProfile.id !== user?.id) {
+
+      const currentConvId = selectedConvIdRef.current;
+      const isForOpenChat =
+        insertMsg.sender_id === user.id && insertMsg.recipient_id === currentConvId
+        || insertMsg.sender_id === currentConvId && insertMsg.recipient_id === user.id;
+
+      if (isForOpenChat) {
+        const senderProfile = insertMsg.sender_id === user.id
+          ? profileRef.current
+          : usersRef.current.find((u) => u.id === insertMsg.sender_id) || null;
+        setMessages((prev) => mesclarMensagemSemDuplicar(prev, {
+          ...insertMsg,
+          sender_profile: senderProfile,
+        }));
+      }
+    };
+
+    const messageChannel = supabase
+      .channel("chat-realtime-cedro")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: TABELAS_SUPABASE.MENSAGENS,
+          filter: `recipient_id=eq.${user.id}`,
+        },
+        (payload) => aplicarInsertRealtime({ new: payload.new as ChatMessage }),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: TABELAS_SUPABASE.MENSAGENS,
+          filter: `sender_id=eq.${user.id}`,
+        },
+        (payload) => aplicarInsertRealtime({ new: payload.new as ChatMessage }),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: TABELAS_SUPABASE.PERFIS },
+        (payload) => {
+          const updatedProfile = payload.new as UserProfile;
+          if (!updatedProfile?.id || updatedProfile.id === user.id) return;
           setUsers((prev) => {
             const exists = prev.some((u) => u.id === updatedProfile.id);
             if (exists) {
-              return prev.map((u) => u.id === updatedProfile.id ? { ...u, ...updatedProfile } : u);
-            } else {
-              return [...prev, updatedProfile];
+              const atualizados = prev.map((u) =>
+                u.id === updatedProfile.id ? { ...u, ...updatedProfile } : u
+              );
+              return filtrarContatosChat(profileRef.current, atualizados);
             }
+            if (!podeConversarNoChat(profileRef.current, updatedProfile)) return prev;
+            return [...prev, updatedProfile];
           });
-        }
-      }
-    ).
-    subscribe();
+        },
+      )
+      .subscribe();
 
-    // Reconciliacao de seguranca; o fluxo principal continua sendo o Realtime.
     const pollInterval = setInterval(() => {
       if (document.visibilityState !== "visible") return;
       if (!usuariosHidratadosDoCatalogoRef.current) {
@@ -625,19 +641,11 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Bloquear arquivos com mais de 10MB
-    if (file.size > 10 * 1024 * 1024) {
-      setUiError("O arquivo selecionado é muito grande. O limite máximo permitido é 10MB.");
+    const erroAnexo = validarAnexoChat(file);
+    if (erroAnexo) {
+      setUiError(erroAnexo);
       setTimeout(() => setUiError(""), 5000);
-      return;
-    }
-
-    // Bloquear arquivos inseguros
-    const unsafeExtensions = ["exe", "bat", "cmd", "sh", "js", "vbs"];
-    const fileExt = file.name.split('.').pop()?.toLowerCase();
-    if (fileExt && unsafeExtensions.includes(fileExt)) {
-      setUiError("Este tipo de arquivo não é permitido por motivos de segurança do laboratório.");
-      setTimeout(() => setUiError(""), 5000);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
@@ -689,6 +697,12 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
       return;
     }
 
+    const destinatario = users.find((item) => item.id === selectedConvId);
+    if (!podeConversarNoChat(profile, destinatario)) {
+      setUiError("Este canal é exclusivo para suporte com a equipe administrativa.");
+      return;
+    }
+
     const textToSend = newMessage.trim();
     const fileToUpload = selectedFile;
 
@@ -709,18 +723,10 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
     }
     ultimaTentativaEnvioRef.current = { assinatura: assinaturaEnvio, em: agora };
 
-    // 1. Validar anexo antes de prosseguir
     if (fileToUpload) {
-      const allowedExts = ["pdf", "doc", "docx", "xls", "xlsx", "png", "jpg", "jpeg", "txt"];
-      const fileExt = fileToUpload.name.split('.').pop()?.toLowerCase();
-      if (!fileExt || !allowedExts.includes(fileExt)) {
-        setUiError("Tipo de arquivo não permitido.");
-        return;
-      }
-
-      const maxSize = 10 * 1024 * 1024; // 10 MB
-      if (fileToUpload.size > maxSize) {
-        setUiError("O arquivo excede o tamanho máximo permitido de 10 MB.");
+      const erroAnexo = validarAnexoChat(fileToUpload);
+      if (erroAnexo) {
+        setUiError(erroAnexo);
         return;
       }
     }
@@ -771,11 +777,14 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
     if (fileToUpload) {
       setUploading(true);
       try {
-        const fileExt = fileToUpload.name.split('.').pop()?.toLowerCase();
-        const fileName = `${Math.random().toString(36).substring(2, 11)}-${Date.now()}.${fileExt}`;
-        const filePath = `${user.id}/${fileName}`;
+        const filePath = montarCaminhoAnexoChat(
+          user.id,
+          fileToUpload.name,
+          typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+        );
 
-        // Tenta fazer o upload para o bucket chat-attachments
         const { data: uploadData, error: uploadError } = await supabase.storage.
         from(BUCKETS_SUPABASE.ANEXOS_CHAT).
         upload(filePath, fileToUpload);
@@ -785,11 +794,7 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
         }
 
         if (uploadData) {
-          const { data: publicUrlData } = supabase.storage.
-          from(BUCKETS_SUPABASE.ANEXOS_CHAT).
-          getPublicUrl(filePath);
-
-          attachment_url = publicUrlData.publicUrl;
+          attachment_url = filePath;
           attachment_name = fileToUpload.name;
           attachment_type = fileToUpload.type;
           attachment_size = fileToUpload.size;
@@ -839,34 +844,16 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
       insertData = res1.data;
       insertError = res1.error;
 
-      // 2. Se der erro por falta de colunas (anexos ausentes na tabela do Supabase legado)
-      if (insertError && (insertError.code === "42703" || insertError.message?.includes("attachment") || insertError.message?.includes("column"))) {
-        console.warn("Tabela remote 'messages' não suporta anexos ainda. Tentando persistência com fallback básico de texto.");
-
-        let fallbackText = textToSend;
-        if (attachment_url && !uploadFailed) {
-          fallbackText = (textToSend ? textToSend + "\n\n" : "") + `📎 Arquivo Anexo: [${attachment_name}](${attachment_url})`;
-        }
-
-        const basicPayload = {
-          content: fallbackText || "📎 Anexo enviado",
-          sender_id: user.id,
-          is_private: true,
-          recipient_id: selectedConvId
-        };
-
-        const res2 = await supabase.
-        from(TABELAS_SUPABASE.MENSAGENS).
-        insert(basicPayload).
-        select().
-        single();
-
-        insertData = res2.data;
-        insertError = res2.error;
-      }
-
       if (insertError) {
         console.error("Erro ao salvar mensagem no Supabase:", insertError);
+        if (attachment_url) {
+          await limparAnexoChatAposFalhaDeMensagem({
+            caminho: attachment_url,
+            erroOriginal: insertError,
+            remover: removerObjetoAnexoChat,
+            avisar: (mensagem, erro) => console.warn(mensagem, erro),
+          });
+        }
         setUiError(obterMensagemErroUsuario(insertError, "chat"));
 
         // Marcar mensagem local temporária como erro
@@ -897,6 +884,14 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
       }
     } catch (dbErr: unknown) {
       console.error("Erro fatal ao processar envio de mensagem:", dbErr);
+      if (attachment_url) {
+        await limparAnexoChatAposFalhaDeMensagem({
+          caminho: attachment_url,
+          erroOriginal: dbErr,
+          remover: removerObjetoAnexoChat,
+          avisar: (mensagem, erro) => console.warn(mensagem, erro),
+        });
+      }
       setUiError(obterMensagemErroUsuario(dbErr, "chat"));
       setMessages((prev) => prev.map((m) => m.id === tempId ? { ...m, status: "error" } : m));
       setNewMessage(textToSend);
@@ -979,14 +974,14 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
             <div className="chat__conversas-topo">
               <div className="chat__conversas-titulos">
                 <div className="chat__linha-controle">
-                  <h2 className="chat__conversas-titulo">Conversas</h2>
+                  <h2 className="chat__conversas-titulo">Suporte Cedro IA</h2>
                   {totalUnreadCount > 0 &&
                   <span className="chat__contador-nao-lidas-total">
                       {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
                     </span>
                   }
                 </div>
-                <p className="chat__conversas-subtitulo">Mensagens internas do Cedro</p>
+                <p className="chat__conversas-subtitulo">Fale com a equipe administrativa para tirar dúvidas ou relatar problemas.</p>
               </div>
               <button
                 onClick={() => setIsNewChatOpen(true)}
@@ -1048,16 +1043,16 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
                   <User size={20} />
                 </div>
                 <div>
-                  <h3 className="chat__lista-vazia-titulo">Nenhum contato disponível</h3>
+                  <h3 className="chat__lista-vazia-titulo">Nenhum contato de suporte</h3>
                   <p className="chat__lista-vazia-descricao">
-                    Ainda não há outros usuários cadastrados para iniciar uma conversa.
+                    Ainda não há administradores disponíveis para atendimento.
                   </p>
                 </div>
               </div> :
             filteredConversations.length === 0 ?
             <div className="chat__busca-vazia">
                 <p className="chat__busca-vazia-titulo">Nenhuma conversa encontrada</p>
-                <p className="chat__busca-vazia-descricao">Verifique os filtros ou busque por outro profissional.</p>
+                <p className="chat__busca-vazia-descricao">Verifique os filtros ou busque outro contato de suporte.</p>
               </div> :
 
             filteredConversations.map((conv) => {
@@ -1356,26 +1351,25 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
                               {/* Exibição de Anexos */}
                               {(msg.attachment_url || msg.attachment_name) &&
                           <div className={`chat__anexo ${idOwn ? "chat__anexo--enviado" : "chat__anexo--recebido"}`}>
-                                  <div className={`chat__anexo-icone ${idOwn ? "chat__anexo-icone--enviado" : "chat__anexo-icone--recebido"}`}>
-                                    <FileText size={16} />
+                                  <div className={`chat__anexo-icone ${idOwn ? "chat__anexo-icone--enviado" : "chat__anexo-icone--recebido"}`} aria-hidden="true">
+                                    <FileText size={18} />
                                   </div>
-                                  <div className="chat__informacao-textos">
-                                    <p className={`chat__anexo-nome ${idOwn ? "chat__anexo-nome--enviado" : "chat__texto-secundario"}`}>{msg.attachment_name || "Documento"}</p>
-                                    <p className={`chat__anexo-meta ${idOwn ? "chat__anexo-meta--enviado" : "chat__texto-suave"}`}>
+                                  <div className="chat__anexo-textos">
+                                    <p
+                                      className={`chat__anexo-nome ${idOwn ? "chat__anexo-nome--enviado" : "chat__anexo-nome--recebido"}`}
+                                      title={msg.attachment_name || "Documento"}
+                                    >
+                                      {msg.attachment_name || "Documento"}
+                                    </p>
+                                    <p className={`chat__anexo-meta ${idOwn ? "chat__anexo-meta--enviado" : "chat__anexo-meta--recebido"}`}>
                                       {msg.attachment_size ? `${Math.round(msg.attachment_size / 1024)} KB` : "Arquivo"}
                                       {msg.status === "sending" && <span className="chat__anexo-status">(Anexando...)</span>}
                                     </p>
                                   </div>
                                   {msg.attachment_url ?
-                            <a
-                              href={msg.attachment_url}
-                              target="_blank"
-                              rel="noreferrer referrer"
-                              className={`chat__anexo-download ${idOwn ? "chat__anexo-download--enviado" : "chat__anexo-download--recebido"}`}
-                              title="Baixar anexo">
-                              
-                                      <Download size={14} />
-                                    </a> :
+                            <ChatAnexoDownload
+                              referencia={msg.attachment_url}
+                              enviadoPorMim={idOwn} /> :
 
                             <span className="chat__anexo-processando">...</span>
                             }
@@ -1470,6 +1464,7 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
                   type="file"
                   ref={fileInputRef}
                   className="chat__arquivo-input"
+                  accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp"
                   onChange={handleFileSelect} />
                 
 
@@ -1496,7 +1491,7 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
                   <input
                   type="text"
                   ref={inputRef}
-                  placeholder="Digite sua mensagem corporativa..."
+                  placeholder="Digite sua mensagem de suporte..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   className="chat__composer-campo"
@@ -1517,7 +1512,7 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
                   <span className="chat__composer-seguranca-texto">
                     <span className="chat__composer-seguranca-ponto" /> Mensagem segura e confidencial
                   </span>
-                  <span>Canal interno</span>
+                    Canal de suporte
                 </div>
               </div>
             </> : (
@@ -1533,7 +1528,7 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
                   Selecione uma conversa
                 </h3>
                 <p className="chat__estado-vazio-descricao">
-                  Escolha um contato ao lado para iniciar ou continuar uma conversa.
+                  Escolha um contato de suporte ao lado para iniciar ou continuar o atendimento.
                 </p>
               </div>
             </div>
@@ -1574,8 +1569,8 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
             
               <div className="cedro-modal-cabecalho chat-nova-conversa__cabecalho">
                 <div>
-                  <h3 className="chat-nova-conversa__titulo">Iniciar Conversa</h3>
-                  <p className="chat-nova-conversa__subtitulo">Selecione um profissional do Cedro Labs</p>
+                  <h3 className="chat-nova-conversa__titulo">Novo atendimento</h3>
+                  <p className="chat-nova-conversa__subtitulo">Selecione um contato autorizado do suporte Cedro IA</p>
                 </div>
                 <button
                 onClick={() => {
@@ -1593,7 +1588,7 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
                   <Search size={13} className="chat-nova-conversa__busca-icone" />
                   <input
                   type="text"
-                  placeholder="Buscar profissional por nome, setor ou cargo..."
+                  placeholder="Buscar contato de suporte..."
                   value={newChatSearch}
                   onChange={(e) => setNewChatSearch(e.target.value)}
                   className="chat-nova-conversa__busca-campo" />
@@ -1604,7 +1599,7 @@ export const Chat: React.FC<ChatProps> = ({ catalogProfiles = [] }) => {
               <div className="rolagem-personalizada chat-nova-conversa__lista">
                 {modalUsersRoster.length === 0 ?
               <div className="chat-nova-conversa__vazio">
-                    <p className="chat-nova-conversa__vazio-texto">Profissional não cadastrado</p>
+                    <p className="chat-nova-conversa__vazio-texto">Nenhum contato de suporte encontrado</p>
                   </div> :
 
               modalUsersRoster.map((rosterUser) =>

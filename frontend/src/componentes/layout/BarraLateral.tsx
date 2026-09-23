@@ -163,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     label: "Chat",
     icon: MessageSquare,
     badge: unreadChatCount > 0 ? unreadChatCount : null,
-    description: "Conversas e colaboração interna"
+                description: "Suporte com a equipe administrativa"
   },
   {
     id: "profile",
