@@ -48,6 +48,7 @@ export default function Aplicacao() {
     navegarPara,
     records,
     workflows,
+    workflowSummaries,
     approvalConfig,
     profiles,
     profilesCatalog,
@@ -177,7 +178,7 @@ export default function Aplicacao() {
       approvalConfig={approvalConfig}
       onSaveApprovalConfig={handleSaveApprovalConfig}
       isAdmin={isCurrentUserAdmin}
-      workflows={workflows}
+      workflows={workflowSummaries}
       currentUser={user}
       currentUserProfile={profile}
       onCancelRequest={handleCancelRequest} />
@@ -258,7 +259,7 @@ export default function Aplicacao() {
       approvalConfig={approvalConfig}
       onSaveApprovalConfig={handleSaveApprovalConfig}
       isAdmin={isCurrentUserAdmin}
-      workflows={workflows}
+      workflows={workflowSummaries}
       currentUser={user}
       currentUserProfile={profile}
       onCancelRequest={handleCancelRequest} />)

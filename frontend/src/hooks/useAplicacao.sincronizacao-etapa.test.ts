@@ -44,8 +44,8 @@ const atualizacaoCompleta = hook.slice(
   hook.indexOf("const atualizarDadosDaAplicacao"),
 );
 
-/** Resposta de /api/workflow/list logo após o init do fluxo da nova solicitação. */
-const respostaApiWorkflowList = [
+/** Resposta de /api/workflow/summary logo após o init do fluxo da nova solicitação. */
+const respostaApiWorkflowSummary = [
   {
     id: "wf-1",
     ia_record_id: "IA-00000042",
@@ -89,7 +89,7 @@ describe("sincronização da etapa atual após criar uma solicitação", () => {
   });
 
   it("E/F) o Inventário associa o fluxo novo pelo ID e mostra Etapa 1: NIT", () => {
-    const workflows = normalizarListaWorkflows(respostaApiWorkflowList);
+    const workflows = normalizarListaWorkflows(respostaApiWorkflowSummary);
     const workflow = encontrarWorkflowDoRegistro(workflows, "ia-00000042");
 
     assert.ok(workflow, "fluxo recém-criado não foi associado ao registro");
@@ -127,19 +127,20 @@ describe("sincronização da etapa atual após criar uma solicitação", () => {
   });
 
   it("J) fallback vazio não apaga os fluxos já carregados; a API segue sendo a fonte", () => {
-    const atuais = normalizarListaWorkflows(respostaApiWorkflowList);
+    const atuais = normalizarListaWorkflows(respostaApiWorkflowSummary);
 
     assert.deepEqual(decidirAtualizacaoWorkflows(atuais, [], false), atuais);
     assert.deepEqual(decidirAtualizacaoWorkflows(atuais, [], true), []);
 
-    assert.match(hook, /ROTAS_API\.WORKFLOW_LIST/);
-    assert.match(hook, /origemWorkflowsConfiavel = true/);
-    assert.match(hook, /decidirAtualizacaoWorkflows\(atuais, workflowsCarregados, origemWorkflowsConfiavel\)/);
+    assert.match(hook, /ROTAS_API\.WORKFLOW_SUMMARY/);
+    assert.match(hook, /origemResumosConfiavel = true/);
+    assert.match(hook, /decidirAtualizacaoWorkflows\(atuais, resumosCarregados, origemResumosConfiavel\)/);
   });
 
   it("respostas fora de ordem não sobrescrevem a leitura mais recente", () => {
     assert.match(hook, /const requisicao = controleAprovacoes\.iniciar\(\)/);
     assert.match(hook, /if \(!controleAprovacoes\.estaAtual\(requisicao\)\) return;\s*\n\s*setWorkflows/);
+    assert.match(hook, /setWorkflowSummaries/);
     assert.match(atualizacaoCompleta, /if \(!controleRegistros\.estaAtual\(requisicao\)\) return;\s*\n\s*setRecords/);
   });
 

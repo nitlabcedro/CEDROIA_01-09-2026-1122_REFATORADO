@@ -1,6 +1,5 @@
 import { RELACOES_SUPABASE, TABELAS_SUPABASE } from "../configuracoes/schema-supabase";
-import { ETAPAS_PADRAO_APROVACAO, NOME_ETAPA_FINANCEIRA } from "../configuracoes/fluxo-aprovacao";
-import { papelEhAdmin, papelEhCoordenadorNit } from "../utilitarios/permissoes";
+import { ETAPAS_PADRAO_APROVACAO } from "../configuracoes/fluxo-aprovacao";
 import type { Request, Response } from "express";
 
 import { obterClienteSupabase } from "../configuracoes/supabase";
@@ -39,6 +38,134 @@ function obterEtapasOficiaisComResponsaveis(rows: any[] | null | undefined) {
   });
 }
 
+export function filtrarWorkflowsVisiveis(
+  workflows: any[],
+  etapasAtribuidas: number[],
+) {
+  const etapas = new Set(etapasAtribuidas.map(Number));
+  const possuiAcompanhamentoGlobal = etapas.has(1) || etapas.has(2);
+
+  return workflows.filter((workflow) => {
+    if (workflow.final_status !== "pendente") return false;
+    if (possuiAcompanhamentoGlobal) {
+      return Number(workflow.current_step) >= 1 && Number(workflow.current_step) <= 5;
+    }
+    return etapas.has(Number(workflow.current_step));
+  });
+}
+
+export function usuarioPodeVisualizarResumoWorkflow(params: {
+  userId: string;
+  role?: string | null;
+  setores?: string | null;
+  registro: {
+    owner_id?: string | null;
+    unidade_setor?: string | null;
+  };
+}) {
+  const role = String(params.role || "").toLowerCase().trim();
+  if (role === "admin" || role === "moderator") return true;
+  if (params.registro.owner_id === params.userId) return true;
+
+  const setores = String(params.setores || "")
+    .split(";")
+    .map((setor) => setor.trim().toLowerCase())
+    .filter(Boolean);
+  const setorRegistro = String(params.registro.unidade_setor || "").trim().toLowerCase();
+  return Boolean(setorRegistro && setores.includes(setorRegistro));
+}
+
+export function montarResumoWorkflow(workflow: any) {
+  return {
+    ia_record_id: workflow.ia_record_id,
+    current_step: Number(workflow.current_step),
+    final_status: workflow.final_status,
+    steps: Array.isArray(workflow.steps)
+      ? workflow.steps.map((step: any) => ({
+          step_number: Number(step.step_number),
+          status: step.status,
+        }))
+      : [],
+  };
+}
+
+export function usuarioPodeInicializarWorkflow(userId: string, ownerId: string | null | undefined) {
+  return Boolean(userId && ownerId && userId === ownerId);
+}
+
+export function papelPodeRedefinirWorkflow(role: string | null | undefined) {
+  return String(role || "").toLowerCase().trim() === "admin";
+}
+
+export function validarAutorizacaoDecisao(params: {
+  userId: string;
+  requestedStep: number;
+  workflow: { current_step: number; final_status: string };
+  step: { status?: string | null; assigned_user_id?: string | null };
+}) {
+  if (params.workflow.final_status !== "pendente") {
+    return { permitido: false, status: 409, mensagem: "O workflow já foi encerrado." };
+  }
+  if (Number(params.workflow.current_step) !== Number(params.requestedStep)) {
+    return { permitido: false, status: 409, mensagem: "A etapa informada não é a etapa atual do workflow." };
+  }
+  if (params.step.status !== "aguardando") {
+    return { permitido: false, status: 409, mensagem: "A etapa atual não está aguardando decisão." };
+  }
+  if (!params.step.assigned_user_id) {
+    return {
+      permitido: false,
+      status: 409,
+      mensagem: "A etapa atual não possui responsável. Um administrador deve corrigir a configuração do fluxo.",
+    };
+  }
+  if (params.step.assigned_user_id !== params.userId) {
+    return { permitido: false, status: 403, mensagem: "Apenas o responsável designado para a etapa atual pode decidir." };
+  }
+  return { permitido: true, status: 200, mensagem: "" };
+}
+
+export function calcularResultadoDecisaoWorkflow(params: {
+  decision: "aprovado" | "negado";
+  currentStep: number;
+  maxStep: number;
+  isOpinionOnly?: boolean | null;
+}) {
+  void params.isOpinionOnly;
+
+  if (params.decision === "negado") {
+    return {
+      stepStatus: "negado" as const,
+      finalStatus: "negado" as const,
+      statusAuditoria: "Negado",
+      statusUso: "Não aprovado",
+      nextStep: null as number | null,
+      completed: true,
+    };
+  }
+
+  if (params.currentStep === params.maxStep) {
+    return {
+      stepStatus: "aprovado" as const,
+      finalStatus: "aprovado" as const,
+      statusAuditoria: "Aprovado",
+      statusUso: "Aprovado",
+      nextStep: null,
+      completed: true,
+    };
+  }
+
+  const nextStep = params.currentStep + 1;
+  return {
+    stepStatus: "aprovado" as const,
+    finalStatus: "pendente" as const,
+    statusAuditoria: "Pendente",
+    statusUso: nextStep >= 3 ? "Em teste/piloto" : "Em avaliação",
+    nextStep,
+    completed: false,
+  };
+}
+
 export function garantirGravacaoSupabase(
   resultado: { error?: { message?: string } | null; data?: unknown[] | null },
   contexto: string,
@@ -65,40 +192,8 @@ export async function obterConfiguracaoWorkflow(req: Request, res: Response) {
     }
 
     if (!configuracaoSegueFluxoOficial(configData)) {
-      console.log("Sincronizando a configuração com o fluxo oficial de 5 etapas...");
-
-      const officialSteps = obterEtapasOficiaisComResponsaveis(configData);
-      const configuredStepNumbers = [...new Set((configData || []).map((row: any) => Number(row.step_number)))];
-
-      for (const stepNumber of configuredStepNumbers) {
-        const { error: deleteError } = await supabaseAdmin
-          .from(TABELAS_SUPABASE.CONFIGURACAO_APROVACAO)
-          .delete()
-          .eq("step_number", stepNumber);
-
-        if (deleteError) {
-          return res.status(500).json({ error: deleteError.message });
-        }
-      }
-
-      const { error: upsertError } = await supabaseAdmin.from(TABELAS_SUPABASE.CONFIGURACAO_APROVACAO).upsert(
-        officialSteps.map((stepDef) => ({
-          ...stepDef,
-          updated_at: new Date().toISOString(),
-        })),
-        { onConflict: "step_number" }
-      );
-
-      if (upsertError) {
-        return res.status(500).json({ error: upsertError.message });
-      }
-
-      const { data: updatedConfig } = await supabaseAdmin
-        .from(TABELAS_SUPABASE.CONFIGURACAO_APROVACAO)
-        .select("*")
-        .order("step_number");
-
-      return res.json(updatedConfig || []);
+      res.setHeader("X-Workflow-Config-Inconsistent", "true");
+      return res.json(obterEtapasOficiaisComResponsaveis(configData));
     }
 
     return res.json(configData || []);
@@ -204,7 +299,8 @@ export async function salvarConfiguracaoWorkflow(req: Request, res: Response) {
             is_opinion_only: step.is_opinion_only,
           })
           .in("workflow_id", activeWfIds)
-          .eq("step_number", step.step_number);
+          .eq("step_number", step.step_number)
+          .eq("status", "aguardando");
 
         if (stepUpdateError) {
           return res.status(500).json({
@@ -229,36 +325,101 @@ export async function salvarConfiguracaoWorkflow(req: Request, res: Response) {
   }
 }
 
-export async function listarWorkflows(req: Request, res: Response) {
+export async function listarWorkflows(req: RequisicaoAutenticada, res: Response) {
   try {
+    const userId = req.usuarioAutenticado?.id;
+    if (!userId) return res.status(401).json({ error: "Não autorizado." });
+
     const supabaseAdmin = obterClienteSupabase();
+    const { data: configuracoes, error: configError } = await supabaseAdmin
+      .from(TABELAS_SUPABASE.CONFIGURACAO_APROVACAO)
+      .select("step_number")
+      .eq("assigned_user_id", userId);
+
+    if (configError) return res.status(500).json({ error: configError.message });
+
+    const etapasAtribuidas = (configuracoes || []).map((item: any) => Number(item.step_number));
+    if (etapasAtribuidas.length === 0) return res.json([]);
+
     const { data: wfData, error } = await supabaseAdmin
       .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-      .select(`*, ${RELACOES_SUPABASE.ETAPAS_DO_FLUXO}`);
+      .select(`*, ${RELACOES_SUPABASE.ETAPAS_DO_FLUXO}`)
+      .eq("final_status", "pendente");
     
     if (error) {
       return res.status(500).json({ error: error.message });
     }
-    return res.json(wfData || []);
+    return res.json(filtrarWorkflowsVisiveis(wfData || [], etapasAtribuidas));
   } catch (err: any) {
     return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }
 
-export async function inicializarWorkflow(req: Request, res: Response) {
-  const { recordId } = req.body;
-  const authHeader = req.headers.authorization;
+export async function resumirWorkflowsVisiveis(req: RequisicaoAutenticada, res: Response) {
+  try {
+    const userId = req.usuarioAutenticado?.id;
+    if (!userId) return res.status(401).json({ error: "Não autorizado." });
 
-  if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+    const supabaseAdmin = obterClienteSupabase();
+    const { data: perfil, error: perfilError } = await supabaseAdmin
+      .from(TABELAS_SUPABASE.PERFIS)
+      .select("role, setor")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (perfilError) return res.status(500).json({ error: perfilError.message });
+
+    const { data: registros, error: registrosError } = await supabaseAdmin
+      .from(TABELAS_SUPABASE.REGISTROS_IA)
+      .select("id, owner_id, unidade_setor");
+
+    if (registrosError) return res.status(500).json({ error: registrosError.message });
+
+    const idsVisiveis = (registros || [])
+      .filter((registro: any) => usuarioPodeVisualizarResumoWorkflow({
+        userId,
+        role: perfil?.role,
+        setores: perfil?.setor,
+        registro,
+      }))
+      .map((registro: any) => registro.id)
+      .filter(Boolean);
+
+    if (idsVisiveis.length === 0) return res.json([]);
+
+    const { data: workflows, error: workflowsError } = await supabaseAdmin
+      .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
+      .select(`ia_record_id, current_step, final_status, steps:${TABELAS_SUPABASE.ETAPAS_APROVACAO}(step_number,status)`)
+      .in("ia_record_id", idsVisiveis);
+
+    if (workflowsError) return res.status(500).json({ error: workflowsError.message });
+    return res.json((workflows || []).map(montarResumoWorkflow));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || "Não foi possível carregar o resumo dos workflows." });
+  }
+}
+
+export async function inicializarWorkflow(req: RequisicaoAutenticada, res: Response) {
+  const recordId = typeof req.body?.recordId === "string" ? req.body.recordId.trim() : "";
+  const user = req.usuarioAutenticado;
+
+  if (!user?.id) return res.status(401).json({ error: "Não autorizado." });
+  if (!recordId) return res.status(400).json({ error: "Identificador da solicitação ausente." });
 
   try {
-    const token = authHeader.replace("Bearer ", "");
-    const supabase = obterClienteSupabase();
     const supabaseAdmin = obterClienteSupabase();
 
-    // 1. Verificar quem está fazendo a requisição
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) return res.status(401).json({ error: "Token inválido" });
+    const { data: registro, error: registroError } = await supabaseAdmin
+      .from(TABELAS_SUPABASE.REGISTROS_IA)
+      .select("id, owner_id, data")
+      .eq("id", recordId)
+      .maybeSingle();
+
+    if (registroError) return res.status(500).json({ error: registroError.message });
+    if (!registro) return res.status(404).json({ error: "Registro de IA não encontrado." });
+    if (!usuarioPodeInicializarWorkflow(user.id, registro.owner_id)) {
+      return res.status(403).json({ error: "Apenas o solicitante proprietário pode inicializar este workflow." });
+    }
 
     // 2. Buscar workflow da IA
     let wfData = null;
@@ -328,14 +489,8 @@ export async function inicializarWorkflow(req: Request, res: Response) {
     }
 
     // 5. Atualizar status_uso da IA para "Em avaliação" no início do workflow
-    const { data: iaRecord } = await supabaseAdmin
-      .from(TABELAS_SUPABASE.REGISTROS_IA)
-      .select("data")
-      .eq("id", recordId)
-      .single();
-
-    if (iaRecord?.data) {
-      const recordData = iaRecord.data as any;
+    if (registro.data) {
+      const recordData = registro.data as any;
       const updatedData = {
         ...recordData,
         statusUso: "Em avaliação",
@@ -487,168 +642,64 @@ async function garantirEtapasWorkflowSincronizadas(supabaseAdmin: any, wfData: a
 
 // Rota de aprovação/negação de IA com validação de fluxo
 
-export async function decidirWorkflow(req: Request, res: Response) {
-  const { recordId, decision, comment, coordinatorData } = req.body;
-  const authHeader = req.headers.authorization;
+export async function decidirWorkflow(req: RequisicaoAutenticada, res: Response) {
+  const { recordId, decision, comment } = req.body;
+  const requestedStep = Number(req.body?.stepNumber);
+  const user = req.usuarioAutenticado;
 
-  if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+  if (!user?.id) return res.status(401).json({ error: "Não autorizado." });
   if (!["aprovado", "negado"].includes(decision)) {
     return res.status(400).json({ error: "Decisão inválida. Use: aprovado ou negado" });
   }
+  if (!Number.isInteger(requestedStep) || requestedStep < 1 || requestedStep > 5) {
+    return res.status(400).json({ error: "Etapa da decisão inválida." });
+  }
 
   try {
-    const token = authHeader.replace("Bearer ", "");
-    const supabase = obterClienteSupabase();
     const supabaseAdmin = obterClienteSupabase();
 
-    // 1. Verificar quem está fazendo a requisição
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) return res.status(401).json({ error: "Token inválido" });
-
-    // 2. Obter perfil do solicitante
     const { data: requesterProfile } = await supabaseAdmin
       .from(TABELAS_SUPABASE.PERFIS)
       .select("role, full_name")
       .eq("id", user.id)
       .single();
 
-    const role = requesterProfile?.role?.toLowerCase().trim() || "user";
     const fullName = requesterProfile?.full_name || user.email || "Avaliador";
 
-    // 3. Buscar workflow da IA
-    let wfData = null;
     const { data: existingWf } = await supabaseAdmin
       .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
       .select("id, current_step, final_status")
       .eq("ia_record_id", recordId)
       .maybeSingle();
 
-    if (existingWf) {
-      wfData = existingWf;
-      await garantirEtapasWorkflowSincronizadas(supabaseAdmin, wfData, recordId);
-    } else {
-      console.log(`Workflow não encontrado para a IA ${recordId}. Inicializando on-the-fly...`);
-      const { data: configRows } = await supabaseAdmin
-        .from(TABELAS_SUPABASE.CONFIGURACAO_APROVACAO)
-        .select("*")
-        .order("step_number");
-
-      const { data: newWf, error: newWfErr } = await supabaseAdmin
-        .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-        .insert({
-          ia_record_id: recordId,
-          current_step: 1,
-          final_status: "pendente",
-        })
-        .select("id, current_step, final_status")
-        .single();
-
-      if (newWfErr || !newWf) {
-        return res.status(500).json({ error: `Não foi possível inicializar o fluxo de aprovação para esta IA: ${newWfErr?.message || "Erro desconhecido"}` });
-      }
-
-      wfData = newWf;
-
-      const stepsToInsert = obterEtapasOficiaisComResponsaveis(configRows)
-        .map((c) => ({
-            workflow_id: newWf.id,
-            ia_record_id: recordId,
-            step_number: c.step_number,
-            role_name: c.role_name,
-            assigned_user_id: c.assigned_user_id || null,
-            assigned_user_name: c.assigned_user_name || null,
-            status: "aguardando",
-            comment: null,
-            is_opinion_only: c.is_opinion_only,
-            decided_at: null,
-          }));
-
-      const { error: stepsInsertErr } = await supabaseAdmin
-        .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
-        .insert(stepsToInsert);
-
-      if (stepsInsertErr) {
-        console.error("Erro ao inserir etapas automáticas:", stepsInsertErr);
-        return res.status(500).json({ error: `Erro ao salvar as etapas do fluxo: ${stepsInsertErr.message}` });
-      }
-    }
-
+    if (!existingWf) return res.status(404).json({ error: "Workflow não encontrado." });
+    const wfData = existingWf;
     if (wfData.final_status !== "pendente") {
-      return res.status(400).json({ error: "Esta IA já teve seu fluxo encerrado" });
+      return res.status(409).json({ error: "O workflow já foi encerrado." });
+    }
+    if (Number(wfData.current_step) !== requestedStep) {
+      return res.status(409).json({ error: "A etapa informada não é a etapa atual do workflow." });
     }
 
-    // 4. Buscar dados da etapa atual
-    let { data: currentStepData } = await supabaseAdmin
+    const { data: currentStepData } = await supabaseAdmin
       .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
-      .select("id, role_name, is_opinion_only, assigned_user_id, assigned_user_name")
+      .select("id, step_number, role_name, status, is_opinion_only, assigned_user_id, assigned_user_name")
       .eq("workflow_id", wfData.id)
-      .eq("step_number", wfData.current_step)
+      .eq("step_number", requestedStep)
       .maybeSingle();
 
     if (!currentStepData) {
-      // Fallback: se não encontrar por step_number, pega a primeira etapa com status 'aguardando'
-      const { data: fallbackStep } = await supabaseAdmin
-        .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
-        .select("id, role_name, is_opinion_only, assigned_user_id, assigned_user_name, step_number")
-        .eq("workflow_id", wfData.id)
-        .eq("status", "aguardando")
-        .order("step_number")
-        .limit(1)
-        .maybeSingle();
-
-      if (fallbackStep) {
-        currentStepData = fallbackStep;
-        wfData.current_step = fallbackStep.step_number;
-        const { error: currentStepFixError } = await supabaseAdmin
-          .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-          .update({ current_step: fallbackStep.step_number })
-          .eq("id", wfData.id);
-        garantirGravacaoSupabase({ error: currentStepFixError }, "Não foi possível atualizar a etapa atual do fluxo");
-      } else {
-        return res.status(404).json({ error: "Etapa atual não encontrada no workflow" });
-      }
+      return res.status(404).json({ error: "Etapa informada não encontrada no workflow." });
     }
 
-    // Se a etapa ainda não tem responsável atribuído no approval_steps, buscar do approval_config ou atribuir ao usuário atual se admin
-    if (!currentStepData.assigned_user_id) {
-      const { data: cfgStep } = await supabaseAdmin
-        .from(TABELAS_SUPABASE.CONFIGURACAO_APROVACAO)
-        .select("assigned_user_id, assigned_user_name")
-        .eq("step_number", wfData.current_step)
-        .maybeSingle();
-
-      if (cfgStep?.assigned_user_id) {
-        currentStepData.assigned_user_id = cfgStep.assigned_user_id;
-        currentStepData.assigned_user_name = cfgStep.assigned_user_name;
-        const { error: assignCfgError } = await supabaseAdmin
-          .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
-          .update({
-            assigned_user_id: cfgStep.assigned_user_id,
-            assigned_user_name: cfgStep.assigned_user_name,
-          })
-          .eq("id", currentStepData.id);
-        garantirGravacaoSupabase({ error: assignCfgError }, "Não foi possível atribuir o responsável da etapa");
-      } else if (papelEhAdmin(role) || papelEhCoordenadorNit(role)) {
-        currentStepData.assigned_user_id = user.id;
-        currentStepData.assigned_user_name = fullName;
-        const { error: assignAdminError } = await supabaseAdmin
-          .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
-          .update({
-            assigned_user_id: user.id,
-            assigned_user_name: fullName,
-          })
-          .eq("id", currentStepData.id);
-        garantirGravacaoSupabase({ error: assignAdminError }, "Não foi possível atribuir o responsável da etapa");
-      }
-    }
-
-    // Administradores e a própria pessoa designada podem realizar a decisão
-    const isAssignedToMe = currentStepData.assigned_user_id === user.id || papelEhAdmin(role);
-
-    if (!isAssignedToMe) {
-      return res.status(403).json({ 
-        error: "Apenas o responsável designado para esta etapa (ou Administrador) pode aprovar ou negar." 
-      });
+    const autorizacao = validarAutorizacaoDecisao({
+      userId: user.id,
+      requestedStep,
+      workflow: wfData,
+      step: currentStepData,
+    });
+    if (!autorizacao.permitido) {
+      return res.status(autorizacao.status).json({ error: autorizacao.mensagem });
     }
 
     // A Etapa 2 (TI) não pode ser concluída enquanto houver perguntas aguardando resposta do solicitante.
@@ -676,26 +727,7 @@ export async function decidirWorkflow(req: Request, res: Response) {
 
     // 5. Registrar decisão (Regra 4)
     // Atualizar status da etapa correspondente para 'aprovado' ou 'negado'
-    const decisionStatus = decision === "aprovado" ? "aprovado" : "negado";
-    const stepUpdatePayload = {
-      status: decisionStatus,
-      comment: comment || null,
-      decided_at: new Date().toISOString(),
-      assigned_user_id: currentStepData.assigned_user_id || user.id,
-      assigned_user_name: currentStepData.assigned_user_name || fullName,
-    };
-
-    // Na Etapa 2, etapa + workflow são atualizados juntos pela RPC após uma
-    // segunda validação de pendência sob o mesmo lock usado pelo chat.
-    if (Number(wfData.current_step) !== 2) {
-      const { error: stepDecisionError } = await supabaseAdmin
-        .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
-        .update(stepUpdatePayload)
-        .eq("id", currentStepData.id);
-      garantirGravacaoSupabase({ error: stepDecisionError }, "Não foi possível registrar a decisão da etapa");
-    }
-
-    // 6. Contar total de etapas e calcular regras de fluxo dinamicamente
+    const currentStepNumber = Number(wfData.current_step);
     const { data: allSteps } = await supabaseAdmin
       .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
       .select("step_number")
@@ -703,66 +735,54 @@ export async function decidirWorkflow(req: Request, res: Response) {
 
     const stepNumbers = (allSteps || []).map((step: any) => Number(step.step_number));
     const maxStep = stepNumbers.length > 0 ? Math.max(...stepNumbers) : 5;
+    const resultado = calcularResultadoDecisaoWorkflow({
+      decision,
+      currentStep: currentStepNumber,
+      maxStep,
+      isOpinionOnly: currentStepData.is_opinion_only,
+    });
 
-    const currentStepNumber = Number(wfData.current_step);
-    const nextStep = currentStepNumber + 1;
-    const isFinalStep = currentStepNumber === maxStep;
-    const isFinancialStep = currentStepNumber === maxStep || currentStepData?.role_name === NOME_ETAPA_FINANCEIRA;
+    const stepUpdatePayload = {
+      status: resultado.stepStatus,
+      comment: comment || null,
+      decided_at: new Date().toISOString(),
+      assigned_user_id: currentStepData.assigned_user_id,
+      assigned_user_name: currentStepData.assigned_user_name,
+      is_opinion_only: Boolean(currentStepData.is_opinion_only),
+    };
 
-    let finalStatus = "pendente";
-    let newAuditStatus = "Pendente";
-    let newStatusUso = "Em avaliação";
-    let workflowUpdatePayload: any = {};
-
-    if (decision === "negado" && isFinancialStep) {
-      // Exceção: Direção Financeira desfavorável não reprova a IA. Como ela é o passo 5 (final), concluímos o fluxo como aprovado.
-      finalStatus = "aprovado";
-      newAuditStatus = "Aprovado";
-      newStatusUso = "Aprovado";
-
-      workflowUpdatePayload = {
-        current_step: currentStepNumber,
-        final_status: "aprovado",
-        completed_at: new Date().toISOString()
-      };
-    } else if (decision === "negado") {
-      // Negativa real nas demais etapas encerra o fluxo.
-      finalStatus = "negado";
-      newAuditStatus = "Negado";
-      newStatusUso = "Não aprovado";
-
-      workflowUpdatePayload = {
-        current_step: currentStepNumber,
-        final_status: "negado",
-        completed_at: new Date().toISOString()
-      };
-    } else if (decision === "aprovado" && isFinalStep) {
-      // Aprovação encerra o fluxo como aprovado.
-      finalStatus = "aprovado";
-      newAuditStatus = "Aprovado";
-      newStatusUso = "Aprovado";
-
-      workflowUpdatePayload = {
-        current_step: currentStepNumber,
-        final_status: "aprovado",
-        completed_at: new Date().toISOString()
-      };
-    } else {
-      // Aprovação de etapa intermediária avança normalmente.
-      finalStatus = "pendente";
-      newAuditStatus = "Pendente";
-
-      if (nextStep >= 3) {
-        newStatusUso = "Em teste/piloto";
-      } else {
-        newStatusUso = "Em avaliação";
-      }
-
-      workflowUpdatePayload = {
-        current_step: nextStep,
-        final_status: "pendente"
-      };
+    // Na Etapa 2, etapa + workflow são atualizados juntos pela RPC após uma
+    // segunda validação de pendência sob o mesmo lock usado pelo chat.
+    if (Number(wfData.current_step) !== 2) {
+      const { data: etapaPersistida, error: stepDecisionError } = await supabaseAdmin
+        .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
+        .update(stepUpdatePayload)
+        .eq("id", currentStepData.id)
+        .eq("status", "aguardando")
+        .eq("assigned_user_id", user.id)
+        .select("id")
+        .limit(1);
+      garantirGravacaoSupabase(
+        { error: stepDecisionError, data: etapaPersistida },
+        "Não foi possível registrar a decisão da etapa",
+        true,
+      );
     }
+
+    const finalStatus = resultado.finalStatus;
+    const newAuditStatus = resultado.statusAuditoria;
+    const newStatusUso = resultado.statusUso;
+    const nextStep = resultado.nextStep;
+    const workflowUpdatePayload: Record<string, unknown> = resultado.completed
+      ? {
+          current_step: currentStepNumber,
+          final_status: resultado.finalStatus,
+          completed_at: new Date().toISOString(),
+        }
+      : {
+          current_step: nextStep,
+          final_status: "pendente",
+        };
 
     if (currentStepNumber === 2) {
       try {
@@ -782,15 +802,25 @@ export async function decidirWorkflow(req: Request, res: Response) {
             "RPC de decisão segura da TI indisponível. Revise documentacao/SUPABASE_TI_CHAT.sql:",
             rpcError?.message || rpcError,
           );
-          const { error: stepLegacyError } = await supabaseAdmin
+          const { data: etapaLegadaPersistida, error: stepLegacyError } = await supabaseAdmin
             .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
             .update(stepUpdatePayload)
-            .eq("id", currentStepData.id);
-          garantirGravacaoSupabase({ error: stepLegacyError }, "Não foi possível registrar a decisão da etapa");
+            .eq("id", currentStepData.id)
+            .eq("status", "aguardando")
+            .eq("assigned_user_id", user.id)
+            .select("id")
+            .limit(1);
+          garantirGravacaoSupabase(
+            { error: stepLegacyError, data: etapaLegadaPersistida },
+            "Não foi possível registrar a decisão da etapa",
+            true,
+          );
           const { data: workflowLegacy, error: workflowLegacyError } = await supabaseAdmin
             .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
             .update(workflowUpdatePayload)
             .eq("id", wfData.id)
+            .eq("current_step", requestedStep)
+            .eq("final_status", "pendente")
             .select("id, final_status")
             .limit(1);
           garantirGravacaoSupabase(
@@ -808,6 +838,8 @@ export async function decidirWorkflow(req: Request, res: Response) {
         .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
         .update(workflowUpdatePayload)
         .eq("id", wfData.id)
+        .eq("current_step", requestedStep)
+        .eq("final_status", "pendente")
         .select("id, final_status")
         .limit(1);
       garantirGravacaoSupabase(
@@ -832,17 +864,12 @@ export async function decidirWorkflow(req: Request, res: Response) {
     }
 
     const recordData = (iaRecord.data as Record<string, unknown> | null) || {};
-    let actionLabel = decision === "aprovado"
+    const actionLabel = decision === "aprovado"
       ? `Etapa ${currentStepNumber}/${maxStep} aprovada por ${fullName}`
       : `Etapa ${currentStepNumber}/${maxStep} negada por ${fullName}`;
 
-    if (decision === "negado" && isFinancialStep) {
-      actionLabel = `Direção Financeira: parecer desfavorável. Fluxo concluído com aprovação da Presidência.`;
-    }
-
     const updatedData: Record<string, unknown> = {
       ...recordData,
-      ...(coordinatorData || {}),
       statusAuditoria: newAuditStatus,
       statusUso: newStatusUso,
       observacoesGeraisOriginais: recordData.observacoesGeraisOriginais || recordData.observacoesGerais || "",
@@ -850,7 +877,11 @@ export async function decidirWorkflow(req: Request, res: Response) {
         date: new Date().toISOString(),
         user: fullName,
         action: actionLabel,
-        message: comment || actionLabel
+        message: comment || actionLabel,
+        stepNumber: currentStepNumber,
+        stepStatus: resultado.stepStatus,
+        isOpinionOnly: Boolean(currentStepData.is_opinion_only),
+        finalStatus,
       }, ...((recordData.historico as unknown[]) || [])]
     };
 
@@ -862,12 +893,7 @@ export async function decidirWorkflow(req: Request, res: Response) {
 
     const currentDateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-    if (decision === "negado" && isFinancialStep) {
-      updatePayload.status_uso = "Aprovado";
-      updatedData.statusUso = "Aprovado";
-      updatedData.statusAuditoria = "Aprovado";
-      updatePayload.observacoes_gerais = comment || "Direção Financeira: parecer desfavorável. Fluxo concluído com aprovação da Presidência.";
-    } else if (decision === "negado") {
+    if (decision === "negado") {
       updatePayload.status_uso = "Não aprovado";
       updatePayload.parecer_tecnico = "IA indeferida no fluxo de aprovação.";
       updatePayload.data_aprovacao = currentDateStr;
@@ -879,7 +905,7 @@ export async function decidirWorkflow(req: Request, res: Response) {
       updatedData.statusAuditoria = "Negado";
       updatedData.parecerTecnico = "IA indeferida no fluxo de aprovação.";
       updatedData.dataAprovacao = currentDateStr;
-    } else if (decision === "aprovado" && isFinalStep) {
+    } else if (resultado.completed) {
       updatePayload.status_uso = "Aprovado";
       updatePayload.parecer_tecnico = "IA aprovada no fluxo de aprovação.";
       updatePayload.data_aprovacao = currentDateStr;
@@ -906,9 +932,7 @@ export async function decidirWorkflow(req: Request, res: Response) {
     );
 
     let responseMessage = "";
-    if (decision === "negado" && isFinancialStep) {
-      responseMessage = "Parecer financeiro desfavorável registrado. Fluxo concluído com aprovação da Presidência.";
-    } else if (finalStatus === "aprovado") {
+    if (finalStatus === "aprovado") {
       responseMessage = "IA aprovada com sucesso.";
     } else if (finalStatus === "negado") {
       responseMessage = "IA indeferida.";
@@ -929,70 +953,38 @@ export async function decidirWorkflow(req: Request, res: Response) {
   }
 }
 
-export async function redefinirStatusWorkflow(req: Request, res: Response) {
+export async function redefinirStatusWorkflow(req: RequisicaoAutenticada, res: Response) {
   const { recordId, newStatus, reason } = req.body;
-  const authHeader = req.headers.authorization;
+  const user = req.usuarioAutenticado;
 
-  if (!authHeader) {
-    return res.status(401).json({ error: "Não autorizado: token ausente" });
+  if (!user?.id) {
+    return res.status(401).json({ error: "Não autorizado." });
   }
 
   try {
-    const token = authHeader.replace("Bearer ", "");
-    const supabase = obterClienteSupabase();
     const supabaseAdmin = obterClienteSupabase();
 
-    // 1. Validar autenticação
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return res.status(401).json({ error: "Token inválido ou expirado" });
-    }
-
-    // 2. Localizar ia_record
-    let iaRecord: any = null;
     const { data: directRec } = await supabaseAdmin
       .from(TABELAS_SUPABASE.REGISTROS_IA)
       .select("*")
       .eq("id", recordId)
       .maybeSingle();
 
-    iaRecord = directRec;
-
-    if (!iaRecord) {
-      const { data: allRecs } = await supabaseAdmin
-        .from(TABELAS_SUPABASE.REGISTROS_IA)
-        .select("*");
-      if (allRecs) {
-        iaRecord = allRecs.find((r: any) => r.id === recordId || r.data?.id === recordId);
-      }
-    }
+    const iaRecord = directRec;
 
     if (!iaRecord) {
       return res.status(404).json({ error: "Registro de IA não encontrado" });
     }
 
-    // 3. Validar se o usuário é admin ou o proprietário da solicitação
     const { data: profileRow } = await supabaseAdmin
       .from(TABELAS_SUPABASE.PERFIS)
       .select("role, full_name")
       .eq("id", user.id)
       .maybeSingle();
 
-    const userRole = (profileRow?.role || (user.user_metadata as any)?.role || "").toLowerCase().trim();
-    const isAdmin = userRole === "admin" || 
-                    userRole === "administrador" || 
-                    userRole.includes("admin") || 
-                    userRole.includes("nit") || 
-                    userRole.includes("gerente") ||
-                    userRole.includes("presidência") ||
-                    userRole.includes("presidencia");
-
-    const isOwner = iaRecord.user_id === user.id || 
-                    iaRecord.data?.userId === user.id || 
-                    iaRecord.data?.solicitanteEmail === user.email;
-
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({ error: "Acesso proibido: Apenas administradores ou o proprietário da solicitação podem redefinir o status." });
+    const userRole = String(profileRow?.role || "").toLowerCase().trim();
+    if (!papelPodeRedefinirWorkflow(userRole)) {
+      return res.status(403).json({ error: "Acesso proibido: apenas administradores podem redefinir o status." });
     }
 
     const userFullName = profileRow?.full_name || user.email || "Usuário";

@@ -305,12 +305,10 @@ export function usuarioPodeConsultarInteracoesTI(dados: {
   userId: string;
   role?: string | null;
   ownerId?: string | null;
-  ownerIdLegado?: string | null;
   responsavelTiId?: string | null;
 }): boolean {
   return papelEhAdmin(dados.role)
     || dados.ownerId === dados.userId
-    || dados.ownerIdLegado === dados.userId
     || dados.responsavelTiId === dados.userId;
 }
 
@@ -596,7 +594,6 @@ export async function listarInteracoesTI(req: Request, res: Response) {
       userId: user.id,
       role,
       ownerId: registro.owner_id,
-      ownerIdLegado: registro.data?.ownerId || registro.data?.userId,
       responsavelTiId,
     });
 
@@ -803,12 +800,12 @@ async function criarSolicitacaoLegadaTI(
   );
   const { data: registro, error: recordError } = await supabaseAdmin
     .from(TABELAS_SUPABASE.REGISTROS_IA)
-    .select("owner_id, data")
+    .select("owner_id")
     .eq("id", dados.recordId)
     .maybeSingle();
 
   if (recordError || !registro) throw new Error("Solicitação de IA não encontrada.");
-  const solicitanteId = registro.owner_id || registro.data?.ownerId;
+  const solicitanteId = registro.owner_id;
   if (!solicitanteId) throw new Error("A solicitação não possui um solicitante válido.");
 
   const { data: pendente, error: pendingError } = await supabaseAdmin

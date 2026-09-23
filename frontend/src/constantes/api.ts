@@ -1,6 +1,7 @@
 export const ROTAS_API = {
   WORKFLOW_CONFIG: "/api/workflow/config",
   WORKFLOW_LIST: "/api/workflow/list",
+  WORKFLOW_SUMMARY: "/api/workflow/summary",
   WORKFLOW_INIT: "/api/workflow/init",
   WORKFLOW_DECIDE: "/api/workflow/decide",
   WORKFLOW_RESET_STATUS: "/api/workflow/reset-status",

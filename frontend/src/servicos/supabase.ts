@@ -9,4 +9,10 @@ if (typeof window !== "undefined") {
   inicializarRecuperacaoSenhaDaUrl(window.location.href, window.localStorage);
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});

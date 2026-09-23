@@ -30,6 +30,7 @@ export function obterObservacoesOriginais(record: IARecord | null | undefined): 
     observacoes.includes("Parecer Final da Etapa:") ||
     observacoes.startsWith("Direção Financeira:") ||
     observacoes.includes("Relatório do Período de Teste:") ||
+    observacoes.includes("Parecer justificativo:") ||
     observacoes.includes("Parecer:");
 
   return ehRegistroDeDecisao ? "Não preenchido" : record.observacoesGerais;
@@ -78,6 +79,10 @@ export function interpretarComentarioAprovacao(rawComment?: string): ParecerInte
       extrairParecer(/^parecer técnico justificado:\s*/i);
       return;
     }
+    if (/^parecer justificativo:/i.test(cleanLine)) {
+      extrairParecer(/^parecer justificativo:\s*/i);
+      return;
+    }
     if (/^parecer:/i.test(cleanLine)) {
       extrairParecer(/^parecer:\s*/i);
       return;
@@ -118,4 +123,40 @@ export function interpretarComentarioAprovacao(rawComment?: string): ParecerInte
     criteria,
     parecer: obterUltimoParecerLimpo(parecer || rawComment),
   };
+}
+
+export const MENSAGEM_PARECER_JUSTIFICATIVO_OBRIGATORIO =
+  "Informe o parecer justificativo para negar esta etapa.";
+
+export function etapaEhDecisaoExecutiva(stepNumber: number): boolean {
+  return stepNumber === 4 || stepNumber === 5;
+}
+
+export function nomeEtapaExecutiva(stepNumber: number): "Presidência" | "Direção Financeira" {
+  return stepNumber === 4 ? "Presidência" : "Direção Financeira";
+}
+
+export function placeholderParecerJustificativo(stepNumber: number): string {
+  return stepNumber === 4
+    ? "Descreva a justificativa da decisão da Presidência..."
+    : "Descreva a justificativa da decisão da Direção Financeira...";
+}
+
+export function validarEnvioParecerJustificativo(
+  stepNumber: number,
+  estaNegando: boolean,
+  parecer: string,
+): string | null {
+  if (etapaEhDecisaoExecutiva(stepNumber) && estaNegando && !parecer.trim()) {
+    return MENSAGEM_PARECER_JUSTIFICATIVO_OBRIGATORIO;
+  }
+  return null;
+}
+
+export function montarComentarioParecerJustificativo(
+  stepNumber: number,
+  parecer: string,
+): string {
+  const texto = parecer.trim() || "Nenhum parecer complementar informado.";
+  return `Etapa: ${nomeEtapaExecutiva(stepNumber)}\nParecer justificativo: ${texto}`;
 }

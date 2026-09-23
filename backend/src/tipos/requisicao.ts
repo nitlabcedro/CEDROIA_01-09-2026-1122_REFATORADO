@@ -5,5 +5,6 @@ export interface RequisicaoAutenticada extends Request {
   usuarioAutenticado?: User;
   perfilAutenticado?: {
     role?: string | null;
+    setor?: string | null;
   };
 }

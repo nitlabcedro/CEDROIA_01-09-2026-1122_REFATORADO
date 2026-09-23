@@ -52,9 +52,8 @@ describe("integração RPC das interações TI", () => {
       userId: "solicitante-1",
       role: "user",
       ownerId: null,
-      ownerIdLegado: "solicitante-1",
       responsavelTiId: "ti-1",
-    }), true);
+    }), false);
     assert.equal(usuarioPodeConsultarInteracoesTI({
       userId: "ti-1",
       role: "user",

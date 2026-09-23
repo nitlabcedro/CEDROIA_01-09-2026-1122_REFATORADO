@@ -118,8 +118,7 @@ export function obterStatusPorWorkflow(
 }
 
 /**
- * Etapa decisória com "negado" encerra o fluxo, exceto parecer desfavorável
- * da etapa financeira (somente opinião — não reprova a IA).
+ * Etapa com "negado" encerra o fluxo. Todas as 5 etapas oficiais são decisórias.
  */
 export function obterStatusPorNegacaoEmEtapas(
   workflow?: WorkflowStatusInput | null,
@@ -129,11 +128,19 @@ export function obterStatusPorNegacaoEmEtapas(
   for (const step of workflow.steps) {
     const statusEtapa = normalizarTexto(step.status || "");
     if (statusEtapa !== "negado") continue;
-    if (step.isOpinionOnly) continue;
     return "Não aprovada";
   }
 
   return null;
+}
+
+export function rotuloStatusEtapa(step: WorkflowStepStatusInput): string {
+  const status = normalizarTexto(step.status || "");
+
+  if (status === "negado") return "Negado";
+  if (status === "aprovado" || status === "opiniao") return "Aprovado";
+  if (status === "aguardando") return "Em avaliação";
+  return "Pendente";
 }
 
 function obterStatusNormalizadoDoRegistro(record: {
@@ -201,16 +208,17 @@ export function obterStatusGeralDoRegistro(
   const statusNormalizado = obterStatusNormalizadoDoRegistro(record);
   const finalWorkflow = normalizarTexto(workflow?.finalStatus || "");
 
-  if (finalWorkflow === "aprovado") return "Aprovada";
   if (finalWorkflow === "negado") return "Não aprovada";
   if (finalWorkflow === "cancelado") return "Cancelada";
 
   if (statusNormalizado === "Cancelada") return "Cancelada";
   if (statusNormalizado === "Não aprovada") return "Não aprovada";
-  if (statusNormalizado === "Aprovada") return "Aprovada";
 
   const negacaoEtapa = obterStatusPorNegacaoEmEtapas(workflow);
   if (negacaoEtapa) return negacaoEtapa;
+
+  if (finalWorkflow === "aprovado") return "Aprovada";
+  if (statusNormalizado === "Aprovada") return "Aprovada";
 
   const statusWorkflow = obterStatusPorWorkflow(workflow);
   if (statusWorkflow) return statusWorkflow;

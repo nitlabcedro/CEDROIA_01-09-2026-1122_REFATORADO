@@ -18,6 +18,7 @@ import {
 import {
   fluxoEstaCancelado,
   normalizarNumeroEtapa,
+  obterNomeEtapaAtualInventario,
   obterEstadoVisualEtapaFluxo,
 } from "@/utilitarios/etapa-atual-workflow";
 import { encontrarWorkflowDoRegistro } from "@/utilitarios/workflows-aprovacao";
@@ -407,8 +408,7 @@ export default function Inventory({
 
     }
 
-    const activeStepDef = stepsDef.find((s: any) => normalizarNumeroEtapa(s.stepNumber) === currentStepNum);
-    const stepLabel = activeStepDef ? activeStepDef.roleName : `Etapa ${currentStepNum}`;
+    const stepLabel = obterNomeEtapaAtualInventario(currentStepNum);
 
     return (
       <div className="inventario__grupo-aprovada-final">

@@ -5,7 +5,7 @@ import {
 } from "@/utilitarios/polling-visibilidade";
 import { usuarioEhAdmin, usuarioEhModerador, usuarioEhPrivilegiado } from "@/utilitarios/permissoes";
 import { ABAS_APLICACAO, ROTA_REDEFINIR_SENHA, type AbaAplicacao } from "@/constantes/navegacao";
-import { RELACOES_SUPABASE, TABELAS_SUPABASE } from "@/constantes/supabase";
+import { TABELAS_SUPABASE } from "@/constantes/supabase";
 import { ETAPAS_APROVACAO_OFICIAIS, NOMES_ETAPAS_CURTOS, criarConfiguracaoAprovacaoPadrao } from "@/constantes/fluxo-aprovacao";
 import { CHAVES_ARMAZENAMENTO_LOCAL, EVENTOS_APLICACAO } from "@/constantes/armazenamento-local";
 import React, { useEffect, useMemo, useState } from "react";
@@ -62,7 +62,6 @@ import { aplicarPapelNaListaPerfis } from "@/utilitarios/perfil-usuario";
 import {
   decidirAtualizacaoWorkflows,
   encontrarWorkflowDoRegistro,
-  mesclarEtapasEmFluxos,
   normalizarListaWorkflows,
 } from "@/utilitarios/workflows-aprovacao";
 import { useNotifications } from "./useNotificacoes";
@@ -130,6 +129,7 @@ export function useAplicacao() {
   const [records, setRecords] = useState<IARecord[]>([]);
   const [recordsCarregados, setRecordsCarregados] = useState(false);
   const [workflows, setWorkflows] = useState<ApprovalWorkflow[]>([]);
+  const [workflowSummaries, setWorkflowSummaries] = useState<ApprovalWorkflow[]>([]);
   const [approvalConfig, setApprovalConfig] = useState<ApprovalConfig>(() => criarConfiguracaoAprovacaoPadrao());
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [profilesCatalog, setProfilesCatalog] = useState<UserProfile[]>([]);
@@ -615,17 +615,11 @@ export function useAplicacao() {
         const configRes = await requisicaoApi(ROTAS_API.WORKFLOW_CONFIG);
         if (configRes.ok) {
           configData = await configRes.json();
+        } else {
+          console.warn(`API de configuração do workflow respondeu ${configRes.status}; mantendo o cache seguro.`);
         }
       } catch (err) {
-        console.warn("API de config indisponível, tentando Supabase direto:", err);
-      }
-
-      if (!configData) {
-        const { data: dbConfigData } = await supabase
-          .from(TABELAS_SUPABASE.CONFIGURACAO_APROVACAO)
-          .select("*")
-          .order("step_number");
-        configData = dbConfigData;
+        console.warn("API de configuração do workflow indisponível; mantendo o cache seguro:", err);
       }
 
       const FIXED_NAMES = NOMES_ETAPAS_CURTOS;
@@ -643,7 +637,6 @@ export function useAplicacao() {
       }
 
       let wfData: any[] | null = null;
-      // A leitura direta é filtrada por RLS e devolve [] sem erro: só a API é fonte confiável.
       let origemWorkflowsConfiavel = false;
       try {
         const listRes = await requisicaoApi(ROTAS_API.WORKFLOW_LIST);
@@ -654,34 +647,40 @@ export function useAplicacao() {
             origemWorkflowsConfiavel = true;
           }
         } else {
-          console.warn(`API de workflows respondeu ${listRes.status}; tentando Supabase direto.`);
+          console.warn(`API de workflows respondeu ${listRes.status}; mantendo o cache seguro.`);
         }
       } catch (err) {
-        console.warn("API de workflows indisponível, tentando Supabase direto:", err);
+        console.warn("API de workflows indisponível; mantendo o cache seguro:", err);
       }
 
-      if (!origemWorkflowsConfiavel) {
-        // Obter do supabase diretamente
-        const { data: dbWf } = await supabase
-          .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
-          .select(`*, ${RELACOES_SUPABASE.ETAPAS_DO_FLUXO}`);
-        
-        if (!dbWf || dbWf.length === 0 || dbWf[0].steps === undefined) {
-          const { data: rawWfs } = await supabase.from(TABELAS_SUPABASE.FLUXOS_APROVACAO).select("*");
-          const { data: rawSteps } = await supabase.from(TABELAS_SUPABASE.ETAPAS_APROVACAO).select("*");
-          wfData = rawWfs ? mesclarEtapasEmFluxos(rawWfs, rawSteps || []) : null;
+      let summaryData: any[] | null = null;
+      let origemResumosConfiavel = false;
+      try {
+        const summaryRes = await requisicaoApi(ROTAS_API.WORKFLOW_SUMMARY);
+        if (summaryRes.ok) {
+          const payload = await summaryRes.json();
+          if (Array.isArray(payload)) {
+            summaryData = payload;
+            origemResumosConfiavel = true;
+          }
         } else {
-          wfData = dbWf;
+          console.warn(`API de resumo dos workflows respondeu ${summaryRes.status}; mantendo o cache visual.`);
         }
+      } catch (err) {
+        console.warn("API de resumo dos workflows indisponível; mantendo o cache visual:", err);
       }
 
       const workflowsCarregados = normalizarListaWorkflows(wfData);
+      const resumosCarregados = normalizarListaWorkflows(summaryData);
       if (!origemWorkflowsConfiavel && workflowsCarregados.length === 0) {
         console.warn("Nenhum fluxo de aprovação legível; mantendo os fluxos já carregados.");
       }
       if (!controleAprovacoes.estaAtual(requisicao)) return;
       setWorkflows((atuais) =>
         decidirAtualizacaoWorkflows(atuais, workflowsCarregados, origemWorkflowsConfiavel),
+      );
+      setWorkflowSummaries((atuais) =>
+        decidirAtualizacaoWorkflows(atuais, resumosCarregados, origemResumosConfiavel),
       );
     } catch (e) {
       console.warn("Erro ao carregar dados de aprovação:", e);
@@ -1154,7 +1153,7 @@ export function useAplicacao() {
     }
   };
 
-  const handleUpdateStatus = async (recordId: string, status: any, comment?: string, extraFields?: any) => {
+  const handleUpdateStatus = async (recordId: string, status: any, comment?: string) => {
     const record = records.find(r => r.id === recordId);
     if (!record) {
       throw new Error("Registro não encontrado para registrar a decisão.");
@@ -1163,9 +1162,8 @@ export function useAplicacao() {
     // Verificar se o usuário atual é o responsável designado para a etapa atual, um admin ou moderador
     const wf = encontrarWorkflowDoRegistro(workflows, recordId);
     const currentStepNum = wf ? wf.currentStep : 1;
-    const configStep = approvalConfig?.steps?.find(s => s.stepNumber === currentStepNum);
     const wfStep = wf?.steps?.find(s => s.stepNumber === currentStepNum);
-    const assignedUserId = configStep?.userId || wfStep?.assignedUserId;
+    const assignedUserId = wfStep?.assignedUserId;
 
     const isAssignedToMe = assignedUserId === user?.id;
 
@@ -1182,7 +1180,7 @@ export function useAplicacao() {
     try {
       const response = await requisicaoApi(ROTAS_API.WORKFLOW_DECIDE, {
         method: "POST",
-        body: JSON.stringify({ recordId, decision, comment, coordinatorData: extraFields })
+        body: JSON.stringify({ recordId, stepNumber: currentStepNum, decision, comment })
       });
 
       if (!response.ok) {
@@ -1313,19 +1311,11 @@ export function useAplicacao() {
 
     try {
       console.log(`🚀 Solicitando alteração de cargo para usuário ${userId} para: ${newRole}`);
-      
-      // Get the session token for authentication
-      const { data, error: sessionErr } = await supabase.auth.getSession();
-      if (sessionErr) {
-        throw new Error(`Erro ao recuperar sessão: ${sessionErr.message}`);
-      }
-      const session = data?.session;
-      
+
       const response = await requisicaoApi(ROTAS_API.ADMIN_ATUALIZAR_ROLE, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session?.access_token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ userId, newRole })
       });
@@ -1374,16 +1364,10 @@ export function useAplicacao() {
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      const { data, error: sessionErr } = await supabase.auth.getSession();
-      if (sessionErr) {
-        throw new Error(`Erro ao recuperar sessão: ${sessionErr.message}`);
-      }
-      const session = data?.session;
       const response = await requisicaoApi(ROTAS_API.ADMIN_EXCLUIR_USUARIO, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session?.access_token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ userId })
       });
@@ -1419,6 +1403,7 @@ export function useAplicacao() {
     navegarPara,
     records,
     workflows,
+    workflowSummaries,
     approvalConfig,
     profiles,
     profilesCatalog,

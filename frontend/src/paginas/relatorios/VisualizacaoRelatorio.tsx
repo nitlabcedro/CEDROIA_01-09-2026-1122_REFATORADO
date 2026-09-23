@@ -286,9 +286,9 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
         aguardando: "Aguardando deliberação da Presidência.",
       },
       5: {
-        aprovado: "Parecer financeiro registrado.",
-        negado: "Aguardando parecer financeiro.",
-        aguardando: "Aguardando parecer financeiro.",
+        aprovado: "Aprovação da Direção Financeira registrada.",
+        negado: "Solicitação indeferida pela Direção Financeira.",
+        aguardando: "Aguardando deliberação da Direção Financeira.",
       },
     };
 

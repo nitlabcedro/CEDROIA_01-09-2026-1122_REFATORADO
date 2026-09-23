@@ -1,4 +1,5 @@
 import type { ApprovalWorkflow, ApprovalStep } from "@/tipos";
+import { NOMES_ETAPAS_EXIBICAO } from "@/constantes/fluxo-aprovacao";
 
 export type EstadoVisualEtapaFluxo = "aprovado" | "negado" | "atual" | "neutro";
 
@@ -6,6 +7,11 @@ export function normalizarNumeroEtapa(valor: unknown): number | null {
   const numero = Number(valor);
   if (!Number.isInteger(numero) || numero < 1) return null;
   return numero;
+}
+
+export function obterNomeEtapaAtualInventario(valor: unknown): string {
+  const etapa = normalizarNumeroEtapa(valor);
+  return etapa === null ? "Análise inicial" : NOMES_ETAPAS_EXIBICAO[etapa] || `Etapa ${etapa}`;
 }
 
 export function fluxoEstaPendente(workflow?: Pick<ApprovalWorkflow, "finalStatus"> | null): boolean {

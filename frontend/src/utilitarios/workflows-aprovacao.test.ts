@@ -24,7 +24,7 @@ const RESPOSTA_API_LISTA = [
       { id: "s2", step_number: 2, role_name: "Gerente TI", status: "aguardando", workflow_id: "ace48cff-3204-40f0-a707-d95a20ca3109", ia_record_id: "IA-00000023", is_opinion_only: false },
       { id: "s3", step_number: 3, role_name: "Período de Teste", status: "aguardando", workflow_id: "ace48cff-3204-40f0-a707-d95a20ca3109", ia_record_id: "IA-00000023", is_opinion_only: false },
       { id: "s4", step_number: 4, role_name: "Presidência", status: "aguardando", workflow_id: "ace48cff-3204-40f0-a707-d95a20ca3109", ia_record_id: "IA-00000023", is_opinion_only: false },
-      { id: "s5", step_number: 5, role_name: "Direção Financeira", status: "aguardando", workflow_id: "ace48cff-3204-40f0-a707-d95a20ca3109", ia_record_id: "IA-00000023", is_opinion_only: true },
+      { id: "s5", step_number: 5, role_name: "Direção Financeira", status: "aguardando", workflow_id: "ace48cff-3204-40f0-a707-d95a20ca3109", ia_record_id: "IA-00000023", is_opinion_only: false },
     ],
   },
   {
