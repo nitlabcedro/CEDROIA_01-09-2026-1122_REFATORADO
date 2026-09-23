@@ -3,6 +3,7 @@ import { papelEhAdmin } from "../utilitarios/permissoes";
 import type { Request, Response } from "express";
 
 import { obterClienteSupabase } from "../configuracoes/supabase";
+import type { RequisicaoAutenticada } from "../tipos/requisicao";
 
 const LIMITE_MENSAGEM_COMUNICACAO_TI = 1000;
 const MAXIMO_PERGUNTAS_BLOCO_TI = 10;
@@ -267,13 +268,10 @@ export function estruturaChatAusente(error: any) {
 }
 
 async function obterUsuarioAutenticado(req: Request) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) throw new Error("UNAUTHORIZED");
+  const usuario = (req as RequisicaoAutenticada).usuarioAutenticado;
+  if (!usuario?.id) throw new Error("UNAUTHORIZED");
 
-  const token = authHeader.replace("Bearer ", "");
   const supabaseAdmin = obterClienteSupabase();
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !user) throw new Error("UNAUTHORIZED");
 
   let profile: { role?: string | null; full_name?: string | null } | null = null;
   let profileError: { message?: string } | null = null;
@@ -282,7 +280,7 @@ async function obterUsuarioAutenticado(req: Request) {
     const resultado = await supabaseAdmin
       .from(TABELAS_SUPABASE.PERFIS)
       .select("role, full_name")
-      .eq("id", user.id)
+      .eq("id", usuario.id)
       .maybeSingle();
     profile = resultado.data;
     profileError = resultado.error;
@@ -295,9 +293,9 @@ async function obterUsuarioAutenticado(req: Request) {
   }
 
   return {
-    user,
+    user: usuario,
     role: profile?.role?.toLowerCase().trim() || "user",
-    fullName: profile?.full_name || user.email || "Usuário",
+    fullName: profile?.full_name || usuario.email || "Usuário",
   };
 }
 
