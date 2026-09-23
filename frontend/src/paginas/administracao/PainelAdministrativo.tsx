@@ -1830,11 +1830,6 @@ export default function AdminPanel({
                               <span className="administracao__texto-etapa">
                                 Etapa {step.stepNumber}: {step.roleName}
                               </span>
-                              {step.isOpinionOnly &&
-                            <span className="administracao__texto-opinativo">
-                                  Opinativo
-                                </span>
-                            }
                               {isPending && step.stepNumber === (activeFlowWf?.currentStep || 1) &&
                             <span className="administracao__texto-aguardando-decisao">
                                   Aguardando Decisão

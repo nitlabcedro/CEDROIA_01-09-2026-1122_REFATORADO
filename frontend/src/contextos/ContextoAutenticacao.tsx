@@ -130,38 +130,10 @@ export const AuthProvider: React.FC<{children: React.ReactNode;}> = ({ children 
     supabase.auth.getSession().then(({ data, error }) => {
       if (error) {
         console.error("Erro na sessão inicial:", error);
-        // Se o erro for de token inválido/expirado, limpamos os tokens locais e forçamos logout
-        const errMsg = String(error.message || "").toLowerCase();
-        if (
-        errMsg.includes("refresh token") ||
-        errMsg.includes("not found") ||
-        error.status === 400 ||
-        error.status === 401)
-        {
-          try {
-            // Limpa chaves do Supabase no localStorage para evitar loop infinito
-            const keysToRemove: string[] = [];
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key && (key.startsWith("sb-") || key.includes("supabase.auth") || key.includes("-auth-token"))) {
-                keysToRemove.push(key);
-              }
-            }
-            keysToRemove.forEach((k) => {
-              try {
-                localStorage.removeItem(k);
-              } catch (e) {}
-            });
-          } catch (e) {
-            console.error("Erro ao limpar localStorage:", e);
-          }
-          supabase.auth.signOut().catch(() => {});
-          invalidarSessaoNavegacao();
-          setSession(null);
-          setUser(null);
-          setLoading(false);
-          return;
-        }
+        // Um erro isolado pode ser apenas rede ou concorrência com o
+        // autoRefreshToken. O SDK confirmará uma sessão encerrada por SIGNED_OUT.
+        setLoading(false);
+        return;
       }
 
       const session = data?.session ?? null;
@@ -203,28 +175,10 @@ export const AuthProvider: React.FC<{children: React.ReactNode;}> = ({ children 
       }
       setLoading(false);
     }).catch((err) => {
-      console.error("Erro fatal ao carregar getSession:", err);
-      // Fallback em caso de erro de Refresh Token ou similar na Promise rejeitada
-      const errMsg = String(err?.message || err || "").toLowerCase();
-      if (errMsg.includes("refresh token") || errMsg.includes("not found")) {
-        try {
-          const keysToRemove: string[] = [];
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && (key.startsWith("sb-") || key.includes("supabase.auth") || key.includes("-auth-token"))) {
-              keysToRemove.push(key);
-            }
-          }
-          keysToRemove.forEach((k) => {
-            try {
-              localStorage.removeItem(k);
-            } catch (e) {}
-          });
-        } catch (e) {}
-      }
-      invalidarSessaoNavegacao();
-      setSession(null);
-      setUser(null);
+      console.error("Erro ao carregar getSession:", err);
+      // Não destrua uma sessão persistida por uma falha transitória. Eventos
+      // posteriores do SDK (INITIAL_SESSION/TOKEN_REFRESHED/SIGNED_OUT)
+      // continuam sendo a fonte de verdade.
       setLoading(false);
     });
 

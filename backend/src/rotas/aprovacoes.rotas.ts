@@ -5,6 +5,7 @@ import {
   inicializar,
   listar,
   obterConfiguracao,
+  resumir,
   salvarConfiguracao,
   redefinirStatus,
   cancelar,
@@ -31,9 +32,10 @@ aprovacoesRotas.use(autenticar);
 aprovacoesRotas.get("/config", obterConfiguracao);
 aprovacoesRotas.put("/config", autorizarPapeis("admin"), salvarConfiguracao);
 aprovacoesRotas.get("/list", listar);
+aprovacoesRotas.get("/summary", resumir);
 aprovacoesRotas.post("/init", inicializar);
 aprovacoesRotas.post("/decide", decidir);
-aprovacoesRotas.post("/reset-status", redefinirStatus);
+aprovacoesRotas.post("/reset-status", autorizarPapeis("admin"), redefinirStatus);
 aprovacoesRotas.post("/cancel", cancelar);
 aprovacoesRotas.get("/ti-interactions/pending", listarPendenciasTI);
 aprovacoesRotas.get("/ti-interactions/pending-ti", listarPendenciasResponsavelTI);

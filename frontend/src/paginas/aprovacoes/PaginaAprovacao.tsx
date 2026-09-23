@@ -5,7 +5,13 @@ import {
   impressaoDigitalEtapasFluxo,
   normalizarEtapasFluxoLocal,
 } from "./configuracao-fluxo.util";
-import { interpretarComentarioAprovacao, obterObservacoesOriginais } from "./aprovacoes.utilitarios";
+import {
+  interpretarComentarioAprovacao,
+  montarComentarioParecerJustificativo,
+  obterObservacoesOriginais,
+  placeholderParecerJustificativo,
+  validarEnvioParecerJustificativo,
+} from "./aprovacoes.utilitarios";
 import {
   MENSAGEM_LIMITE_TEXTO_FLUXO_APROVACAO,
   NOMES_ETAPAS_CURTOS,
@@ -47,7 +53,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { IARecord, StatusAuditoria, UserProfile, ApprovalConfig, ApprovalWorkflow, SolicitacaoInformacoesTI } from "@/tipos";
 import { listarInteracoesTI } from "@/servicos/interacoes-ti";
-import { fluxoEncerrado, obterStatusGeralDoRegistro } from "@/utilitarios/status-solicitacao";
+import { fluxoEncerrado, obterStatusGeralDoRegistro, rotuloStatusEtapa } from "@/utilitarios/status-solicitacao";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 import {
   INTERVALO_PENDENCIAS_TI_MS,
@@ -76,7 +82,7 @@ export default function ApprovalPage({
       { stepNumber: 2, roleName: FIXED_STEP_NAMES[2], isOpinionOnly: false },
       { stepNumber: 3, roleName: FIXED_STEP_NAMES[3], isOpinionOnly: false },
       { stepNumber: 4, roleName: FIXED_STEP_NAMES[4], isOpinionOnly: false },
-      { stepNumber: 5, roleName: FIXED_STEP_NAMES[5], isOpinionOnly: true },
+      { stepNumber: 5, roleName: FIXED_STEP_NAMES[5], isOpinionOnly: false },
     ],
     [],
   );
@@ -254,7 +260,7 @@ export default function ApprovalPage({
     { stepNumber: 2, roleName: FIXED_STEP_NAMES[2], isOpinionOnly: false, userId: "", userName: "" },
     { stepNumber: 3, roleName: FIXED_STEP_NAMES[3], isOpinionOnly: false, userId: "", userName: "" },
     { stepNumber: 4, roleName: FIXED_STEP_NAMES[4], isOpinionOnly: false, userId: "", userName: "" },
-    { stepNumber: 5, roleName: FIXED_STEP_NAMES[5], isOpinionOnly: true, userId: "", userName: "" }];
+    { stepNumber: 5, roleName: FIXED_STEP_NAMES[5], isOpinionOnly: false, userId: "", userName: "" }];
 
 
     return rawSteps.map((s) => ({
@@ -270,13 +276,6 @@ export default function ApprovalPage({
     step.userId === currentUserId
     );
   }, [currentSteps, currentUserId]);
-
-  // Força o filtro "Minha vez" para usuários das etapas finais
-  useEffect(() => {
-    if (isFinalApprovalUser && queueFilter !== "my_turn") {
-      setQueueFilter("my_turn");
-    }
-  }, [isFinalApprovalUser, queueFilter]);
 
   // Encontra o fluxo de processo real para cada IA
   const getRecordWf = (recordId: string) => {
@@ -341,6 +340,8 @@ export default function ApprovalPage({
 
   const filteredRecords = useMemo(() => {
     let list = records.filter((r) => {
+      const workflow = getRecordWf(r.id);
+      if (!workflow || workflow.finalStatus !== "pendente") return false;
       const status = getRecordStatus(r);
       if (status === "Cancelada") return false;
       if (queueFilter !== "all" && status === "Não aprovada") return false;
@@ -360,9 +361,8 @@ export default function ApprovalPage({
         // Deve estar exatamente na etapa dele (4 ou 5)
         if (currentStepNum !== 4 && currentStepNum !== 5) return false;
 
-        const stepDef = currentSteps.find((s) => s.stepNumber === currentStepNum);
         const wfStep = wf?.steps?.find((s) => s.stepNumber === currentStepNum);
-        const stepUserId = stepDef?.userId || wfStep?.assignedUserId;
+        const stepUserId = wfStep?.assignedUserId;
 
         // O usuário logado deve ser o responsável designado por esta etapa
         return stepUserId === currentUserId;
@@ -402,20 +402,12 @@ export default function ApprovalPage({
           if (fluxoEncerrado(r, wf)) return false;
 
           const currentStepNum = wf ? wf.currentStep : 1;
-          const stepDef = currentSteps.find((s) => s.stepNumber === currentStepNum);
-
           const wfStep = wf?.steps?.find((s) => s.stepNumber === currentStepNum);
-          const stepUserId = stepDef?.userId || wfStep?.assignedUserId;
+          const stepUserId = wfStep?.assignedUserId;
 
-          const currentUserProfile = profiles.find((p) => p.id === currentUserId);
-          const isUserAdmin = isAdmin;
-          const isUserModerator = currentUserProfile?.role?.toLowerCase().trim() === "moderator";
-          const isUserPrivileged = isUserAdmin || isUserModerator;
-
-          const isStepUnassigned = !stepUserId;
           const isAssignedToMe = stepUserId === currentUserId;
 
-          return isAssignedToMe || isStepUnassigned && isUserPrivileged;
+          return isAssignedToMe;
         });
       }
     }
@@ -435,20 +427,12 @@ export default function ApprovalPage({
       if (fluxoEncerrado(r, wf)) return false;
 
       const currentStepNum = wf ? wf.currentStep : 1;
-      const stepDef = currentSteps.find((s) => s.stepNumber === currentStepNum);
-
       const wfStep = wf?.steps?.find((s) => s.stepNumber === currentStepNum);
-      const stepUserId = stepDef?.userId || wfStep?.assignedUserId;
+      const stepUserId = wfStep?.assignedUserId;
 
-      const currentUserProfile = profiles.find((p) => p.id === currentUserId);
-      const isUserAdmin = isAdmin;
-      const isUserModerator = currentUserProfile?.role?.toLowerCase().trim() === "moderator";
-      const isUserPrivileged = isUserAdmin || isUserModerator;
-
-      const isStepUnassigned = !stepUserId;
       const isAssignedToMe = stepUserId === currentUserId;
 
-      return isAssignedToMe || isStepUnassigned && isUserPrivileged;
+      return isAssignedToMe;
     }).length;
 
     const totalPending = isFinalApprovalUser ?
@@ -484,7 +468,6 @@ export default function ApprovalPage({
           </div>
 
           {/* Filtros compactos - Minha vez, Pendentes, Todos */}
-          {!isFinalApprovalUser ?
           <div className="aprovacao-filtros cedro-segmented aprovacoes__grupo">
               {[
             { label: "Minha vez", value: "my_turn" },
@@ -506,14 +489,7 @@ export default function ApprovalPage({
                   {opt.label}
                 </button>
             )}
-            </div> :
-
-          <div className="aprovacoes__grupo-apenas-solicitacoes-aguardando">
-              <span className="aprovacoes__texto-apenas-solicitacoes-aguardando">
-                Apenas solicitações aguardando sua decisão
-              </span>
             </div>
-          }
 
           {/* Campo de Busca */}
           <div className="aprovacoes__grupo-2">
@@ -535,7 +511,7 @@ export default function ApprovalPage({
               const currentStepNum = wf ? wf.currentStep : 1;
               const activeStepDef = currentSteps.find((s) => s.stepNumber === currentStepNum);
               const wfStep = wf?.steps?.find((s) => s.stepNumber === currentStepNum);
-              const stepUserId = activeStepDef?.userId || wfStep?.assignedUserId;
+              const stepUserId = wfStep?.assignedUserId;
 
               const currentUserProfile = profiles.find((p) => p.id === currentUserId);
               const isUserAdmin = isAdmin;
@@ -746,7 +722,6 @@ export default function ApprovalPage({
                     </div>
 
                     {/* Filtros compactos - Minha vez, Pendentes, Todos */}
-                    {!isFinalApprovalUser ?
                     <div className="aprovacoes__grupo-7">
                         {[
                       { label: "Minha vez", value: "my_turn" },
@@ -768,14 +743,7 @@ export default function ApprovalPage({
                             {opt.label}
                           </button>
                       )}
-                      </div> :
-
-                    <div className="aprovacoes__grupo-apenas-solicitacoes-aguardando-2">
-                        <span className="aprovacoes__texto-apenas-solicitacoes-aguardando-2">
-                          Apenas solicitações aguardando sua decisão
-                        </span>
                       </div>
-                    }
 
                     {/* Barra de busca compacta */}
                     <div className="aprovacoes__grupo-2">
@@ -809,8 +777,7 @@ export default function ApprovalPage({
                         const wfStep = wf?.steps?.find(
                           (s) => s.stepNumber === currentStepNum
                         );
-                        const stepUserId =
-                        activeStepDef?.userId || wfStep?.assignedUserId;
+                      const stepUserId = wfStep?.assignedUserId;
 
                         const currentUserProfile = profiles.find(
                           (p) => p.id === currentUserId
@@ -926,8 +893,7 @@ export default function ApprovalPage({
                       const wfStep = wf?.steps?.find(
                         (s) => s.stepNumber === currentStepNum
                       );
-                      const stepUserId =
-                      activeStepDef?.userId || wfStep?.assignedUserId;
+                    const stepUserId = wfStep?.assignedUserId;
                       const displayedRoleName =
                       activeStepDef?.roleName || wfStep?.roleName || "N/A";
                       const displayedUserName =
@@ -1153,7 +1119,12 @@ export default function ApprovalPage({
                                         isCurrent ? "aprovacao-fluxo-etapas__status--atual" :
                                         "aprovacao-fluxo-etapas__status--pendente"
                                       }`}>
-                                        {isPassed ? "Concluído" : isFailed ? "Negado" : isCurrent ? "Em avaliação" : "Pendente"}
+                                        {hasWfStepDecision
+                                          ? rotuloStatusEtapa({
+                                              status: wfStep.status,
+                                              isOpinionOnly: step.isOpinionOnly || wfStep.isOpinionOnly,
+                                            })
+                                          : isCurrent ? "Em avaliação" : "Pendente"}
                                       </span>
                                     </div>);
 
@@ -1201,10 +1172,11 @@ export default function ApprovalPage({
                                     !isCompleted &&
                                     !isRejected;
 
-                                  const statusLabel = isRejected
-                                    ? "Negado"
-                                    : isCompleted
-                                    ? "Concluído"
+                                  const statusLabel = wfStep && wfStep.status !== "aguardando"
+                                    ? rotuloStatusEtapa({
+                                        status: wfStep.status,
+                                        isOpinionOnly: step.isOpinionOnly || wfStep.isOpinionOnly,
+                                      })
                                     : isCurrentStep
                                     ? "Em avaliação"
                                     : "Pendente";
@@ -1293,7 +1265,7 @@ export default function ApprovalPage({
                                             <div className="aprovacao-responsavel-acordeao__parecer">
                                               <div className="aprovacao-responsavel-acordeao__parecer-titulo">
                                                 <MessageSquare size={15} />
-                                                <span>Parecer técnico justificado</span>
+                                                <span>{step.stepNumber === 4 || step.stepNumber === 5 ? "Parecer justificativo" : "Parecer técnico justificado"}</span>
                                               </div>
                                               <TextoExibicaoFluxoAprovacao>
                                                 {parsedOpinion.parecer}
@@ -1677,6 +1649,16 @@ export default function ApprovalPage({
               return;
             }
 
+            const erroParecerJustificativo = validarEnvioParecerJustificativo(
+              currentStepNum,
+              status === StatusAuditoria.NEGADO,
+              auditComment,
+            );
+            if (erroParecerJustificativo) {
+              setErroInteracoesTi(erroParecerJustificativo);
+              return;
+            }
+
             let finalComment = "";
             let extraFields: any = undefined;
 
@@ -1699,12 +1681,7 @@ export default function ApprovalPage({
               auditComment || "Nenhuma observação informada."}`;
 
             } else {
-              // Etapas 4 e 5
-              finalComment =
-              auditComment || (
-              status === StatusAuditoria.APROVADO ?
-              "Parecer estratégico aprovado na íntegra." :
-              "Recusado.");
+              finalComment = montarComentarioParecerJustificativo(currentStepNum, auditComment);
             }
 
             setSalvandoDecisaoEtapa(true);
@@ -2227,6 +2204,25 @@ export default function ApprovalPage({
                                   )}
                                 </div>
                               </section>
+
+                              <div className="aprovacao-parecer aprovacoes__grupo-usuario-responsavel-admin-mode">
+                                <label className="aprovacoes__rotulo-parecer-tecnico-justificado-2">
+                                  <MessageSquare size={14} className="aprovacoes__descricao-etapa-atual" /> Parecer justificativo
+                                </label>
+                                <CampoTextoLongoFluxoAprovacao
+                                  id="campoParecerJustificativo"
+                                  value={auditComment}
+                                  onChange={(e) => {
+                                    setAuditComment(e.target.value);
+                                    setErroInteracoesTi("");
+                                  }}
+                                  placeholder={placeholderParecerJustificativo(currentStepNum)}
+                                  className="aprovacao-campo-parecer"
+                                />
+                                {erroInteracoesTi ?
+                                  <p className="aprovacoes__descricao-13">{erroInteracoesTi}</p> :
+                                  null}
+                              </div>
                             </div>
                           </div> :
                       currentStepNum !== 3 ? (
@@ -2551,26 +2547,39 @@ export default function ApprovalPage({
 
                       {currentStepNum === 2 && renderPainelInteracoesTi(true)}
 
-                      {/* Parecer Técnico textarea */}
+                      {/* Parecer da etapa atual */}
                       <div className="aprovacao-parecer aprovacoes__grupo-97">
                         <label className="aprovacoes__rotulo-parecer-tecnico-justificado-2">
-                          <MessageSquare size={14} className="aprovacoes__descricao-etapa-atual" /> {currentStepNum === 3 ? "Relatório Geral do Período de Teste e Observações" : "Parecer Técnico Justificado"}
+                          <MessageSquare size={14} className="aprovacoes__descricao-etapa-atual" /> {
+                            currentStepNum === 3
+                              ? "Relatório Geral do Período de Teste e Observações"
+                              : currentStepNum === 4 || currentStepNum === 5
+                                ? "Parecer justificativo"
+                                : "Parecer Técnico Justificado"
+                          }
                         </label>
                         <CampoTextoLongoFluxoAprovacao
                           id="campoParecerTecnicoMobile"
                           value={auditComment}
-                          onChange={(e) => setAuditComment(e.target.value)}
+                          onChange={(e) => {
+                            setAuditComment(e.target.value);
+                            setErroInteracoesTi("");
+                          }}
                           placeholder={
                           currentStepNum === 1 ?
                           "Registre o parecer técnico justificado do Coordenador NIT..." :
                           currentStepNum === 3 ?
                           "Registre o relatório geral do período de teste e as observações..." :
+                          currentStepNum === 4 || currentStepNum === 5 ?
+                          placeholderParecerJustificativo(currentStepNum) :
                           "Descreva aqui sua justificativa técnica detalhada corporativa. Seus argumentos de parecer fundamentarão documentalmente o histórico desta IA no banco do Cedro..."
                           }
                           className="aprovacao-campo-parecer"
-                          required
+                          required={currentStepNum !== 3 && currentStepNum !== 4 && currentStepNum !== 5}
                         />
-                        
+                        {(currentStepNum === 4 || currentStepNum === 5) && erroInteracoesTi ?
+                          <p className="aprovacoes__descricao-13">{erroInteracoesTi}</p> :
+                          null}
                       </div>
                     </div>
                   </div>

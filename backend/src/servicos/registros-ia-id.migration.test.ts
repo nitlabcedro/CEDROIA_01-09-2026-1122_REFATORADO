@@ -51,7 +51,7 @@ describe("formato de IDs novos — IA-NNNNNNNN", () => {
     const servico = ler("backend/src/servicos/aprovacao.servico.ts");
     const inicializar = servico.slice(servico.indexOf("export async function inicializarWorkflow"));
     const cancelar = servico.slice(servico.indexOf("export async function cancelarSolicitacao"));
-    assert.match(inicializar, /const \{ recordId \} = req\.body/);
+    assert.match(inicializar, /typeof req\.body\?\.recordId === "string"/);
     assert.match(cancelar, /typeof req\.body\?\.recordId === "string"/);
     assert.doesNotMatch(cancelar, /IA-CEDRO-/);
     assert.doesNotMatch(cancelar, /PADRAO_ID_REGISTRO/);

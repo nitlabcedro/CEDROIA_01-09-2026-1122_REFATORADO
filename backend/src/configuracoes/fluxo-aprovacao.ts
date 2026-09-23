@@ -3,7 +3,7 @@ export const ETAPAS_PADRAO_APROVACAO = [
   { step_number: 2, role_name: "Gerente TI", is_opinion_only: false },
   { step_number: 3, role_name: "Período de Teste", is_opinion_only: false },
   { step_number: 4, role_name: "Presidência", is_opinion_only: false },
-  { step_number: 5, role_name: "Direção Financeira", is_opinion_only: true },
+  { step_number: 5, role_name: "Direção Financeira", is_opinion_only: false },
 ] as const;
 
 export const TOTAL_ETAPAS_APROVACAO = ETAPAS_PADRAO_APROVACAO.length;

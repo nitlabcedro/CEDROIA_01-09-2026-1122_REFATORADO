@@ -6,6 +6,7 @@ import {
   inicializarWorkflow,
   listarWorkflows,
   obterConfiguracaoWorkflow,
+  resumirWorkflowsVisiveis,
   salvarConfiguracaoWorkflow,
   redefinirStatusWorkflow,
 } from "../servicos/aprovacao.servico";
@@ -20,6 +21,10 @@ export function salvarConfiguracao(req: Request, res: Response) {
 
 export function listar(req: Request, res: Response) {
   return listarWorkflows(req, res);
+}
+
+export function resumir(req: Request, res: Response) {
+  return resumirWorkflowsVisiveis(req, res);
 }
 
 export function inicializar(req: Request, res: Response) {

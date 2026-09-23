@@ -11,7 +11,7 @@ export const ETAPAS_APROVACAO_OFICIAIS = [
   { stepNumber: 2, roleName: "Gerente TI", shortName: "TI", displayName: "TI", isOpinionOnly: false },
   { stepNumber: 3, roleName: "Período de Teste", shortName: "PERÍODO DE TESTE", displayName: "Período de teste", isOpinionOnly: false },
   { stepNumber: 4, roleName: "Presidência", shortName: "PRESIDÊNCIA", displayName: "Presidência", isOpinionOnly: false },
-  { stepNumber: 5, roleName: "Direção Financeira", shortName: "FINANCEIRO", displayName: "Financeiro", isOpinionOnly: true },
+  { stepNumber: 5, roleName: "Direção Financeira", shortName: "FINANCEIRO", displayName: "Financeiro", isOpinionOnly: false },
 ] as const;
 
 export const TOTAL_ETAPAS_APROVACAO = ETAPAS_APROVACAO_OFICIAIS.length;

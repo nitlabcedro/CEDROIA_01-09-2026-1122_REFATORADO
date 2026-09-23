@@ -197,20 +197,11 @@ export const UserProfileView: React.FC = () => {
 
       const base64Data = await fileLoadedPromise;
 
-      // Obter o token de autenticação atualizado para validar a requisição na API
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
-      if (!token) {
-        throw new Error("Sessão não encontrada ou expirada. Faça login novamente.");
-      }
-
       // Enviar via proxy seguro no servidor
       const response = await requisicaoApi(ROTAS_API.AVATAR_UPLOAD, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           fileBase64: base64Data,

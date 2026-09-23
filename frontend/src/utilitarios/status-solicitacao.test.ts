@@ -15,6 +15,7 @@ import {
   obterStatusPorNegacaoEmEtapas,
   fluxoEncerrado,
   detectarDivergenciaEncerramentoNegado,
+  rotuloStatusEtapa,
 } from "./status-solicitacao.ts";
 
 describe("status-solicitacao", () => {
@@ -165,13 +166,35 @@ describe("status-solicitacao", () => {
     assert.equal(fluxoEncerrado({ statusUso: "Em avaliação" }, workflow), true);
   });
 
-  it("ignora negado na etapa financeira somente opinião", () => {
+  it("trata negativa da etapa financeira como Não aprovada mesmo com isOpinionOnly legado", () => {
     const workflow = {
       finalStatus: "pendente",
       currentStep: 5,
       steps: [{ stepNumber: 5, status: "negado", isOpinionOnly: true }],
     };
-    assert.equal(obterStatusPorNegacaoEmEtapas(workflow), null);
+    assert.equal(obterStatusPorNegacaoEmEtapas(workflow), "Não aprovada");
+    assert.equal(obterStatusGeralDoRegistro({ statusUso: "Em avaliação" }, workflow), "Não aprovada");
+  });
+
+  it("exibe status global Negada quando o Financeiro nega, inclusive em legado consultivo", () => {
+    const workflow = {
+      finalStatus: "aprovado",
+      currentStep: 5,
+      steps: [
+        { stepNumber: 1, status: "aprovado", isOpinionOnly: false },
+        { stepNumber: 2, status: "aprovado", isOpinionOnly: false },
+        { stepNumber: 3, status: "aprovado", isOpinionOnly: false },
+        { stepNumber: 4, status: "aprovado", isOpinionOnly: false },
+        { stepNumber: 5, status: "negado", isOpinionOnly: true },
+      ],
+    };
+    assert.equal(
+      obterStatusGeralDoRegistro({ statusUso: "Aprovado", statusAuditoria: "Aprovado" }, workflow),
+      "Não aprovada",
+    );
+    assert.equal(rotuloStatusEtapa({ status: "negado", isOpinionOnly: true }), "Negado");
+    assert.equal(rotuloStatusEtapa({ status: "aprovado", isOpinionOnly: true }), "Aprovado");
+    assert.equal(rotuloStatusEtapa({ status: "negado", isOpinionOnly: false }), "Negado");
   });
 
   it("detecta divergência crítica entre etapa negada e registro ainda em andamento", () => {
