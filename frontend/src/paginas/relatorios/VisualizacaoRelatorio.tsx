@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ETAPAS_APROVACAO_OFICIAIS } from "@/constantes/fluxo-aprovacao";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -15,19 +14,19 @@ import {
   Target,
   ShieldCheck,
   ShieldAlert,
-  HelpCircle,
-  Check,
   CheckCircle2,
-  Users,
   Cpu,
+  Clock3,
+  Landmark,
+  WalletCards,
   Lock,
   FileCheck2,
   ExternalLink } from
 "lucide-react";
-import { IARecord, StatusAuditoria, ApprovalWorkflow, ApprovalStep, ApprovalConfig, SolicitacaoInformacoesTI } from "@/tipos";
+import { IARecord, ApprovalWorkflow, ApprovalConfig, SolicitacaoInformacoesTI } from "@/tipos";
 import { IconeIA } from "@/componentes/comuns/IconeIA";
 import { listarInteracoesTI } from "@/servicos/interacoes-ti";
-import { obterUltimoParecerLimpo } from "@/utilitarios/pareceres";
+import { obterWorkflowRelatorio } from "@/servicos/workflow-relatorio";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 import {
   obterStatusGeralDoRegistro,
@@ -41,6 +40,10 @@ import {
   ESTRUTURA_ABAS_RELATORIO_SEGMENTADO,
   ESTRUTURA_FLUXO_APROVACAO_CARD,
   ESTRUTURA_FLUXO_APROVACAO_HORIZONTAL,
+  extrairTextoParecerPeriodoTeste,
+  formatarDataRelatorio,
+  obterDetalhesStatusEtapaRelatorio,
+  obterEtapasWorkflowPorNumero,
   obterRotuloEtapaFluxo,
   type AbaRelatorioId,
 } from "./relatorioVisao.util";
@@ -64,12 +67,23 @@ const ICONES_ABAS_RELATORIO: Record<TabType, React.ComponentType<{ size?: number
   "finalidade-uso": Target,
   nit: ShieldCheck,
   ti: Cpu,
+  "periodo-teste": Clock3,
+  presidencia: Landmark,
+  financeiro: WalletCards,
   relatorio: FileText,
 };
 
 // helper to format comment text
-const formatComment = (commentRaw?: string) => {
+const formatComment = (commentRaw?: string, stepNumber?: number) => {
   if (!commentRaw) return [<p key="empty" className="relatorio__descricao-nenhum-detalhe-adicional-forne">Nenhum detalhe adicional fornecido.</p>];
+
+  if (stepNumber === 3) {
+    const textoParecer = extrairTextoParecerPeriodoTeste(commentRaw);
+    if (!textoParecer) {
+      return [<p key="empty" className="relatorio__descricao-nenhum-detalhe-adicional-forne">Nenhum detalhe adicional fornecido.</p>];
+    }
+    return [<p key="periodo-teste">{textoParecer}</p>];
+  }
 
   const lines = commentRaw.split("\n").map((l) => l.trim()).filter(Boolean);
 
@@ -89,6 +103,9 @@ const formatComment = (commentRaw?: string) => {
       const parts = line.split(":");
       const key = parts[0].replace(/^[•\-\*]\s*/, "").replace(/\*\*/g, "").trim();
       const val = parts.slice(1).join(":").replace(/\*\*/g, "").trim();
+
+      // O nome da etapa já está no cabeçalho do painel/card.
+      if (key.toLowerCase() === "etapa") return null;
 
       // If it's the main parecer final, make it larger
       if (key.toLowerCase().includes("parecer final") || key.toLowerCase().includes("parecer")) {
@@ -118,17 +135,6 @@ const formatComment = (commentRaw?: string) => {
   });
 };
 
-const obterParecerJustificado = (comment?: string) => {
-  if (!comment || !comment.trim()) return "Parecer ainda não registrado.";
-
-  const parecerFinal = comment.match(/Parecer Final da Etapa:\s*([\s\S]*)/i);
-  if (parecerFinal?.[1]) {
-    return obterUltimoParecerLimpo(parecerFinal[1]);
-  }
-
-  return obterUltimoParecerLimpo(comment);
-};
-
 const formatarDataHora = (value?: string) => {
   if (!value) return "Data não registrada";
   const date = new Date(value);
@@ -142,20 +148,54 @@ const formatarDataHora = (value?: string) => {
   });
 };
 
-export default function ReportView({ record, onBack, onEdit, isAdmin, workflows, approvalConfig }: ReportViewProps) {
+export default function ReportView({ record, onBack, workflows, approvalConfig }: ReportViewProps) {
   const [activeTab, setActiveTab] = useState<TabType>("visao-geral");
   const [interacoesTiRelatorio, setInteracoesTiRelatorio] = useState<SolicitacaoInformacoesTI[]>([]);
   const [carregandoInteracoesTiRelatorio, setCarregandoInteracoesTiRelatorio] = useState(false);
   const [erroInteracoesTiRelatorio, setErroInteracoesTiRelatorio] = useState("");
+  const [workflowDetalhado, setWorkflowDetalhado] = useState<ApprovalWorkflow | null>();
+  const [carregandoWorkflowDetalhado, setCarregandoWorkflowDetalhado] = useState(true);
+  const [erroWorkflowDetalhado, setErroWorkflowDetalhado] = useState("");
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string>("relatorio-cedro-ia.pdf");
   const [pdfPreparando, setPdfPreparando] = useState(true);
   const [pdfErro, setPdfErro] = useState("");
 
-  const workflow = useMemo(
+  const workflowEmMemoria = useMemo(
     () => workflows?.find((item) => item.iaRecordId === record.id),
     [workflows, record.id],
   );
+  const workflow = workflowDetalhado ?? workflowEmMemoria;
+  const etapasWorkflow = useMemo(
+    () => [...(workflow?.steps || [])].sort((a, b) => a.stepNumber - b.stepNumber),
+    [workflow],
+  );
+
+  useEffect(() => {
+    let ativo = true;
+    setWorkflowDetalhado(undefined);
+    setCarregandoWorkflowDetalhado(true);
+    setErroWorkflowDetalhado("");
+
+    obterWorkflowRelatorio(record.id)
+      .then((workflowOficial) => {
+        if (ativo) setWorkflowDetalhado(workflowOficial);
+      })
+      .catch((error) => {
+        console.error("Erro ao carregar workflow oficial no relatório:", error);
+        if (ativo) {
+          setWorkflowDetalhado(null);
+          setErroWorkflowDetalhado(obterMensagemErroUsuario(error, "aprovacao"));
+        }
+      })
+      .finally(() => {
+        if (ativo) setCarregandoWorkflowDetalhado(false);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [record.id]);
 
   const statusGeral = useMemo(
     () => obterStatusGeralDoRegistro(record, workflow),
@@ -258,84 +298,6 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
   const currentStepNum = workflow ? workflow.currentStep : 1;
   const deniedSteps = workflow?.steps?.filter((s) => s.status === "negado") || [];
 
-  // Unified helper to obtain steps list (with dynamic fallback if no explicit workflow)
-  const getEffectiveWorkflowSteps = (): ApprovalStep[] => {
-    if (workflow && workflow.steps && workflow.steps.length > 0) {
-      return [...workflow.steps].sort((a, b) => a.stepNumber - b.stepNumber);
-    }
-
-    const comentariosPorEtapa: Record<number, { aprovado: string; negado: string; aguardando: string }> = {
-      1: {
-        aprovado: "Parecer técnico favorável emitido pelo NIT.",
-        negado: "Parecer desfavorável emitido pelo NIT.",
-        aguardando: "Aguardando parecer técnico justificado.",
-      },
-      2: {
-        aprovado: "Avaliação técnica aprovada.",
-        negado: "Avaliação técnica desfavorável.",
-        aguardando: "Aguardando avaliação técnica.",
-      },
-      3: {
-        aprovado: "Período de teste concluído.",
-        negado: "Período de teste desfavorável.",
-        aguardando: "Aguardando período de teste.",
-      },
-      4: {
-        aprovado: "Aprovação da Presidência registrada.",
-        negado: "Parecer desfavorável da Presidência.",
-        aguardando: "Aguardando deliberação da Presidência.",
-      },
-      5: {
-        aprovado: "Aprovação da Direção Financeira registrada.",
-        negado: "Solicitação indeferida pela Direção Financeira.",
-        aguardando: "Aguardando deliberação da Direção Financeira.",
-      },
-    };
-
-    return ETAPAS_APROVACAO_OFICIAIS.map((etapa): ApprovalStep => {
-      const status: ApprovalStep["status"] = "aguardando";
-
-      const comentario = comentariosPorEtapa[etapa.stepNumber];
-      const assignedUserName = etapa.stepNumber === 1
-        ? record.quemValida || etapa.roleName
-        : etapa.stepNumber === 3
-          ? "Responsável pelo Período de Teste"
-          : etapa.roleName;
-
-      return {
-        stepNumber: etapa.stepNumber,
-        roleName: etapa.roleName,
-        assignedUserName,
-        status,
-        comment: comentario.aguardando,
-        isOpinionOnly: etapa.isOpinionOnly,
-      };
-    });
-
-  };
-
-  const getStepStatusDetails = (step: ApprovalStep) => {
-    const rawStatus = (step.status || "").toLowerCase().trim();
-    const isPassed = ["aprovado", "aprovada", "opiniao", "opinado", "concluido"].includes(rawStatus);
-    const isFailed = ["negado", "indeferido", "rejeitado", "declinado", "nao_aprovado"].includes(rawStatus);
-    const isCurrent = (step.stepNumber === currentStepNum && !isWfFinished && !isPassed && !isFailed) || rawStatus === "em_avaliacao" || rawStatus === "pendente";
-    const isAwaiting = !isPassed && !isFailed && !isCurrent;
-    const variante = isPassed ? "aprovada" : isFailed ? "negada" : isCurrent ? "atual" : "aguardando";
-    const badgeText = isPassed
-      ? (rawStatus === "opiniao" || rawStatus === "opinado" ? "PARECER EMITIDO" : "APROVADA")
-      : isFailed ? "INDEFERIDA" : isCurrent ? "EM ANÁLISE" : "AGUARDANDO";
-
-    return {
-      isPassed,
-      isFailed,
-      isCurrent,
-      isAwaiting,
-      variante,
-      badgeText,
-      iconSymbol: isPassed ? "✓" : isFailed ? "✕" : String(step.stepNumber),
-    };
-  };
-
   const mapVarianteCss = (variante: VarianteStatusGeral) => {
     switch (variante) {
       case "aprovada": return "aprovado";
@@ -350,6 +312,91 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
 
   const getStatusColor = () =>
     `relatorio-status relatorio-status--${getStatusCssVariant()}`;
+
+  const renderEtapaWorkflow = (
+    stepNumber: number,
+    titulo: string,
+    rotuloParecer: string,
+    Icone: React.ComponentType<{ size?: number; className?: string }>,
+    varianteIcone?: string,
+  ) => {
+    const etapas = obterEtapasWorkflowPorNumero(workflow?.steps, stepNumber);
+
+    return (
+      <div className="relatorio-parecer-area">
+        <div className="relatorio-parecer-area__cabecalho">
+          <div className={`relatorio-parecer-area__icone ${varianteIcone || ""}`.trim()}>
+            <Icone size={19} />
+          </div>
+          <h3 className="relatorio-parecer-area__titulo">{titulo}</h3>
+        </div>
+
+        <div className="relatorio-parecer-area__lista">
+          {etapas.length > 0 ? etapas.map((step) => {
+            const status = obterDetalhesStatusEtapaRelatorio(step, currentStepNum, isWfFinished);
+            const temResponsavel = Boolean(step.assignedUserName?.trim());
+            const temDataDecisao = Boolean(step.decidedAt);
+            const temParecer = Boolean(step.comment?.trim());
+
+            return (
+              <article key={step.stepNumber} className="relatorio-parecer-card">
+                <div className="relatorio-parecer-card__topo">
+                  <span className="relatorio-parecer-card__decisao">Decisão da etapa</span>
+                  <span className={`relatorio-parecer-card__status relatorio-parecer-card__status--${status.variante}`}>
+                    {status.badgeText}
+                  </span>
+                </div>
+
+                {(temResponsavel || temDataDecisao) &&
+                  <div className="relatorio-parecer-card__metadados">
+                    {temResponsavel &&
+                      <div>
+                        <span>Responsável</span>
+                        <strong>{step.assignedUserName}</strong>
+                      </div>
+                    }
+                    {temDataDecisao &&
+                      <div>
+                        <span>Data da decisão</span>
+                        <strong>{formatarDataHora(step.decidedAt)}</strong>
+                      </div>
+                    }
+                  </div>
+                }
+
+                {temParecer &&
+                  <div className="relatorio-parecer-card__parecer">
+                    <span className="relatorio-parecer-card__parecer-label">{rotuloParecer}</span>
+                    <div className="relatorio-parecer-card__conteudo">
+                      {formatComment(step.comment, step.stepNumber)}
+                    </div>
+                  </div>
+                }
+              </article>
+            );
+          }) :
+            <div className="relatorio-parecer-vazio">
+              <Icone size={22} />
+              <div>
+                <strong>
+                  {carregandoWorkflowDetalhado
+                    ? "Carregando dados da etapa"
+                    : erroWorkflowDetalhado
+                      ? "Não foi possível carregar os dados da etapa"
+                      : "Dados da etapa ainda não disponíveis"}
+                </strong>
+                <p>
+                  {carregandoWorkflowDetalhado
+                    ? "Consultando o workflow oficial."
+                    : erroWorkflowDetalhado || "Esta etapa não existe no workflow da solicitação."}
+                </p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div
@@ -433,7 +480,7 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
                       <div className="relatorio__grupo-fundamentacao-tecnica-e-justif">
                         <span className="relatorio__texto-fundamentacao-tecnica-e-justif">Fundamentação Técnica e Justificativa da Recusa</span>
                         <div className="relatorio__grupo-17">
-                          {formatComment(step.comment)}
+                          {formatComment(step.comment, step.stepNumber)}
                         </div>
                       </div>
                     </div>
@@ -468,8 +515,8 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
           <ol
             className="relatorio-detalhes__fluxo"
             data-estrutura={ESTRUTURA_FLUXO_APROVACAO_HORIZONTAL}>
-            {getEffectiveWorkflowSteps().map((step) => {
-              const details = getStepStatusDetails(step);
+            {etapasWorkflow.length > 0 ? etapasWorkflow.map((step) => {
+              const details = obterDetalhesStatusEtapaRelatorio(step, currentStepNum, isWfFinished);
               const signerName = step.assignedUserName || "Aprovação livre";
 
               return (
@@ -487,7 +534,13 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
                   <span className="relatorio-detalhes__fluxo-resp-nome">{signerName}</span>
                 </li>
               );
-            })}
+            }) :
+              <li className="relatorio-detalhes__fluxo-estado">
+                {carregandoWorkflowDetalhado
+                  ? "Carregando etapas do workflow..."
+                  : erroWorkflowDetalhado || "Workflow não disponível para esta solicitação."}
+              </li>
+            }
           </ol>
         </div>
       </section>
@@ -587,7 +640,9 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
                 </div>
                 <div className="relatorio-detalhes__linha relatorio-detalhes__linha--ultima">
                   <span className="relatorio-detalhes__linha-label">Data de cadastro</span>
-                  <p className="relatorio-detalhes__linha-valor">{record.dataRegistro || "Não preenchido"}</p>
+                  <p className="relatorio-detalhes__linha-valor">
+                    {formatarDataRelatorio(record.dataRegistro) || "Não preenchido"}
+                  </p>
                 </div>
               </section>
             </div>
@@ -602,21 +657,13 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
               <Target size={19} />
             </div>
             <div>
-              <span className="relatorio-uso-ia__rotulo">Etapa 2 da Nova Solicitação</span>
               <h3 className="relatorio-uso-ia__titulo">Finalidade e Objetivos</h3>
-              <p className="relatorio-uso-ia__subtitulo">
-                Informações declaradas pelo solicitante sobre onde a IA será utilizada, seus objetivos e os benefícios esperados.
-              </p>
             </div>
           </div>
 
           <section className="relatorio-uso-ia__card relatorio-uso-ia__card--destaque">
             <div className="relatorio-uso-ia__card-cabecalho">
-              <span className="relatorio-uso-ia__numero">01</span>
-              <div>
-                <span className="relatorio-uso-ia__campo-rotulo">Descrição da atividade</span>
-                <h4>Onde e como a IA será utilizada</h4>
-              </div>
+              <span className="relatorio-uso-ia__campo-rotulo">Onde e como a IA será utilizada</span>
             </div>
             <p className={`relatorio-uso-ia__texto ${!record.descricaoAtividade ? "relatorio-uso-ia__texto--vazio" : ""}`}>
               {record.descricaoAtividade || "Não preenchido"}
@@ -626,11 +673,7 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
           <div className="relatorio-uso-ia__grade">
             <section className="relatorio-uso-ia__card">
               <div className="relatorio-uso-ia__card-cabecalho">
-                <span className="relatorio-uso-ia__numero">02</span>
-                <div>
-                  <span className="relatorio-uso-ia__campo-rotulo">Utilizações selecionadas</span>
-                  <h4>Opções escolhidas no formulário</h4>
-                </div>
+                <span className="relatorio-uso-ia__campo-rotulo">Utilizações selecionadas</span>
               </div>
 
               {record.objetivos && record.objetivos.length > 0 ?
@@ -654,11 +697,7 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
 
             <section className="relatorio-uso-ia__card">
               <div className="relatorio-uso-ia__card-cabecalho">
-                <span className="relatorio-uso-ia__numero">03</span>
-                <div>
-                  <span className="relatorio-uso-ia__campo-rotulo">Benefícios esperados</span>
-                  <h4>Resultados esperados com o uso da IA</h4>
-                </div>
+                <span className="relatorio-uso-ia__campo-rotulo">Benefícios e resultados esperados</span>
               </div>
               <p className={`relatorio-uso-ia__texto ${!record.beneficiosEsperados ? "relatorio-uso-ia__texto--vazio" : ""}`}>
                 {record.beneficiosEsperados || "Não preenchido"}
@@ -670,125 +709,13 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
 
         {/* TAB 3: PARECER DO NIT */}
         {activeTab === "nit" &&
-        <div className="relatorio-parecer-area">
-          <div className="relatorio-parecer-area__cabecalho">
-            <div className="relatorio-parecer-area__icone">
-              <ShieldCheck size={19} />
-            </div>
-            <div>
-              <span className="relatorio-parecer-area__rotulo">Governança da solicitação</span>
-              <h3 className="relatorio-parecer-area__titulo">Parecer do NIT</h3>
-              <p className="relatorio-parecer-area__descricao">
-                Parecer justificado registrado pela etapa do Núcleo de Inovação e Tecnologia no fluxo de aprovação.
-              </p>
-            </div>
-          </div>
-
-          <div className="relatorio-parecer-area__lista">
-            {(workflow?.steps || []).filter((step) => /\bNIT\b/i.test(step.roleName)).length > 0 ?
-              (workflow?.steps || []).filter((step) => /\bNIT\b/i.test(step.roleName)).map((step) => {
-                const status = getStepStatusDetails(step);
-                return (
-                  <article key={step.stepNumber} className="relatorio-parecer-card">
-                    <div className="relatorio-parecer-card__topo">
-                      <div>
-                        <span className="relatorio-parecer-card__etapa">Etapa {step.stepNumber}</span>
-                        <h4 className="relatorio-parecer-card__responsavel">{step.roleName}</h4>
-                      </div>
-                      <span className={`relatorio-parecer-card__status relatorio-parecer-card__status--${status.variante}`}>
-                        {status.badgeText}
-                      </span>
-                    </div>
-
-                    <div className="relatorio-parecer-card__metadados">
-                      <div>
-                        <span>Responsável</span>
-                        <strong>{step.assignedUserName || "Não identificado"}</strong>
-                      </div>
-                      <div>
-                        <span>Registro da decisão</span>
-                        <strong>{formatarDataHora(step.decidedAt)}</strong>
-                      </div>
-                    </div>
-
-                    <div className="relatorio-parecer-card__parecer">
-                      <span className="relatorio-parecer-card__parecer-label">Parecer justificado</span>
-                      <p>{obterParecerJustificado(step.comment)}</p>
-                    </div>
-                  </article>
-                );
-              }) :
-              <div className="relatorio-parecer-vazio">
-                <ShieldCheck size={22} />
-                <div>
-                  <strong>Parecer do NIT ainda não disponível</strong>
-                  <p>Quando a etapa do NIT registrar sua decisão, a justificativa será apresentada aqui.</p>
-                </div>
-              </div>
-            }
-          </div>
-        </div>
+          renderEtapaWorkflow(1, "NIT", "Parecer e dados da etapa", ShieldCheck)
         }
 
         {/* TAB 4: PARECER E INTERAÇÕES DA TI */}
         {activeTab === "ti" &&
         <div className="relatorio-parecer-area">
-          <div className="relatorio-parecer-area__cabecalho">
-            <div className="relatorio-parecer-area__icone relatorio-parecer-area__icone--ti">
-              <Cpu size={19} />
-            </div>
-            <div>
-              <span className="relatorio-parecer-area__rotulo">Avaliação técnica</span>
-              <h3 className="relatorio-parecer-area__titulo">Parecer da TI</h3>
-              <p className="relatorio-parecer-area__descricao">
-                Decisão justificada da etapa de TI e histórico das solicitações de informação trocadas com o usuário.
-              </p>
-            </div>
-          </div>
-
-          <div className="relatorio-parecer-area__lista">
-            {(workflow?.steps || []).filter((step) => /\bTI\b/i.test(step.roleName)).length > 0 ?
-              (workflow?.steps || []).filter((step) => /\bTI\b/i.test(step.roleName)).map((step) => {
-                const status = getStepStatusDetails(step);
-                return (
-                  <article key={step.stepNumber} className="relatorio-parecer-card">
-                    <div className="relatorio-parecer-card__topo">
-                      <div>
-                        <span className="relatorio-parecer-card__etapa">Etapa {step.stepNumber}</span>
-                        <h4 className="relatorio-parecer-card__responsavel">{step.roleName}</h4>
-                      </div>
-                      <span className={`relatorio-parecer-card__status relatorio-parecer-card__status--${status.variante}`}>
-                        {status.badgeText}
-                      </span>
-                    </div>
-
-                    <div className="relatorio-parecer-card__metadados">
-                      <div>
-                        <span>Responsável</span>
-                        <strong>{step.assignedUserName || "Não identificado"}</strong>
-                      </div>
-                      <div>
-                        <span>Registro da decisão</span>
-                        <strong>{formatarDataHora(step.decidedAt)}</strong>
-                      </div>
-                    </div>
-
-                    <div className="relatorio-parecer-card__parecer">
-                      <span className="relatorio-parecer-card__parecer-label">Parecer justificado</span>
-                      <p>{obterParecerJustificado(step.comment)}</p>
-                    </div>
-                  </article>
-                );
-              }) :
-              <div className="relatorio-parecer-vazio">
-                <Cpu size={22} />
-                <div>
-                  <strong>Parecer da TI ainda não disponível</strong>
-                  <p>Quando a etapa de TI registrar sua decisão, a justificativa será apresentada aqui.</p>
-                </div>
-              </div>
-            }
-          </div>
+          {renderEtapaWorkflow(2, "TI", "Análise técnica, parecer e dados da etapa", Cpu, "relatorio-parecer-area__icone--ti")}
 
           <section className="relatorio-ti-conversas">
             <div className="relatorio-ti-conversas__cabecalho">
@@ -865,6 +792,21 @@ export default function ReportView({ record, onBack, onEdit, isAdmin, workflows,
             ))}
           </section>
         </div>
+        }
+
+        {/* TAB 5: PERÍODO DE TESTE */}
+        {activeTab === "periodo-teste" &&
+          renderEtapaWorkflow(3, "Período de Teste", "Informações registradas durante a etapa", Clock3)
+        }
+
+        {/* TAB 6: PRESIDÊNCIA */}
+        {activeTab === "presidencia" &&
+          renderEtapaWorkflow(4, "Presidência", "Parecer e justificativa", Landmark)
+        }
+
+        {/* TAB 7: DIREÇÃO FINANCEIRA */}
+        {activeTab === "financeiro" &&
+          renderEtapaWorkflow(5, "Financeiro", "Parecer, justificativa e informações financeiras", WalletCards)
         }
 
         {/* ABA RELATÓRIO — O MESMO PDF ESTRUTURADO USADO NO DOWNLOAD */}

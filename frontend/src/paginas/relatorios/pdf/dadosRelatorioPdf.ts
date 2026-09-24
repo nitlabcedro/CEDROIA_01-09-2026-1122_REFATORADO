@@ -1,4 +1,5 @@
 import { ETAPAS_APROVACAO_OFICIAIS } from "@/constantes/fluxo-aprovacao";
+import { formatarDataRelatorio } from "@/paginas/relatorios/relatorioVisao.util";
 import { ApprovalConfig, ApprovalStep, ApprovalWorkflow, IARecord } from "@/tipos";
 import { obterStatusGeralDoRegistro } from "@/utilitarios/status-solicitacao";
 
@@ -30,10 +31,7 @@ const FALLBACK_PARECER = "Parecer ainda não registrado.";
 const FALLBACK_RESPONSAVEL = "Responsável não identificado";
 
 const formatarData = (valor?: string) => {
-  if (!valor) return "Não informado";
-  const data = new Date(valor);
-  if (Number.isNaN(data.getTime())) return valor;
-  return data.toLocaleDateString("pt-BR");
+  return formatarDataRelatorio(valor) || "Não informado";
 };
 
 const formatarDataHora = (valor?: string) => {

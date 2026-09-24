@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import {
   decidir,
+  detalhar,
   inicializar,
   listar,
   obterConfiguracao,
@@ -33,6 +34,7 @@ aprovacoesRotas.get("/config", obterConfiguracao);
 aprovacoesRotas.put("/config", autorizarPapeis("admin"), salvarConfiguracao);
 aprovacoesRotas.get("/list", listar);
 aprovacoesRotas.get("/summary", resumir);
+aprovacoesRotas.get("/detail/:recordId", detalhar);
 aprovacoesRotas.post("/init", inicializar);
 aprovacoesRotas.post("/decide", decidir);
 aprovacoesRotas.post("/reset-status", autorizarPapeis("admin"), redefinirStatus);

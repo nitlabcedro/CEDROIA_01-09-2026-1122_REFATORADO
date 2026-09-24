@@ -93,4 +93,16 @@ describe("GET /api/workflow/summary", () => {
     assert.match(listar, /filtrarWorkflowsVisiveis/);
     assert.doesNotMatch(listar, /REGISTROS_IA|WORKFLOW_SUMMARY/);
   });
+
+  it("/workflow/detail retorna o fluxo oficial completo apenas para solicitação visível", () => {
+    const inicio = servico.indexOf("export async function obterWorkflowVisivel");
+    const fim = servico.indexOf("export async function inicializarWorkflow", inicio);
+    const detalhe = servico.slice(inicio, fim);
+
+    assert.match(detalhe, /usuarioPodeVisualizarResumoWorkflow/);
+    assert.match(detalhe, /TABELAS_SUPABASE\.FLUXOS_APROVACAO/);
+    assert.match(detalhe, /RELACOES_SUPABASE\.ETAPAS_DO_FLUXO/);
+    assert.match(detalhe, /\.eq\("ia_record_id", recordId\)/);
+    assert.match(rotas, /aprovacoesRotas\.get\("\/detail\/:recordId", detalhar\)/);
+  });
 });

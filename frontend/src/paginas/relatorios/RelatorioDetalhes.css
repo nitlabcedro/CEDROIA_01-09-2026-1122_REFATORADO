@@ -186,6 +186,15 @@
   scroll-snap-stop: normal;
 }
 
+.relatorio-detalhes__fluxo-estado {
+  width: 100%;
+  padding: 1rem;
+  color: #64748b;
+  font-size: 0.8125rem;
+  text-align: center;
+  list-style: none;
+}
+
 /* Conector horizontal alinhado ao centro do círculo (2.5rem) */
 .relatorio-detalhes__fluxo-etapa:not(:last-child)::after {
   content: "";
@@ -386,6 +395,78 @@
 /* Abas segmentadas: visual em estilos/componentes/cedro-segment-nav.css */
 .pagina-relatorio.relatorio-detalhes .cedro-segment-nav--largo {
   min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .pagina-relatorio.relatorio-detalhes
+    .cedro-segment-nav--largo
+    .cedro-segment-nav__grupo--rolagem {
+    grid-template-columns: repeat(8, minmax(7.25rem, 1fr));
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+  }
+
+  .pagina-relatorio.relatorio-detalhes
+    .cedro-segment-nav--largo
+    .cedro-segment-nav__grupo--rolagem
+    .cedro-segment-nav__item {
+    white-space: nowrap;
+  }
+}
+
+/* Dados das etapas: omite campos ausentes sem deixar colunas vazias. */
+.pagina-relatorio.relatorio-detalhes .relatorio-parecer-card__decisao {
+  align-self: center;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  color: #475569;
+}
+
+.pagina-relatorio.relatorio-detalhes .relatorio-parecer-card__metadados {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+/* Pareceres longos: quebra por palavras dentro do card.
+   `anywhere` é herdado e zera o min-content dos itens flex rótulo/valor,
+   o que fazia o texto quebrar letra a letra. */
+.pagina-relatorio.relatorio-detalhes .relatorio-parecer-card__conteudo {
+  min-width: 0;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.pagina-relatorio.relatorio-detalhes .relatorio-parecer-card__conteudo > :last-child {
+  margin-bottom: 0;
+}
+
+.pagina-relatorio.relatorio-detalhes .relatorio-parecer-card__parecer p,
+.pagina-relatorio.relatorio-detalhes .relatorio-parecer-card__conteudo h5,
+.pagina-relatorio.relatorio-detalhes .relatorio-parecer-card__conteudo span {
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.pagina-relatorio.relatorio-detalhes .relatorio-parecer-card__parecer p {
+  white-space: pre-wrap;
+}
+
+/* Linha rótulo/valor (só existe em linha a partir de 640px):
+   o valor desce para a própria linha quando sobra pouco espaço. */
+@media (min-width: 640px) {
+  .pagina-relatorio.relatorio-detalhes .relatorio-parecer-card__conteudo .relatorio__grupo-2 {
+    flex-wrap: wrap;
+    gap: 0.15rem 0.75rem;
+  }
+
+  .pagina-relatorio.relatorio-detalhes .relatorio-parecer-card__conteudo .relatorio__texto-2 {
+    flex: 0 0 auto;
+  }
+
+  .pagina-relatorio.relatorio-detalhes .relatorio-parecer-card__conteudo .relatorio__texto-3 {
+    flex: 1 1 14rem;
+    min-width: 0;
+  }
 }
 
 /* —— Ficha técnica —— */
