@@ -27,6 +27,8 @@ import {
   obterConversaAbertaTI,
   perguntasBlocoTIValidas,
   respostaBlocoTIValida,
+  respostasLocaisBlocoTIValidas,
+  salvarEFinalizarRespostasBlocoTI,
   usuarioPodeEscreverComunicacaoTI,
 } from "@/utilitarios/comunicacao-ti";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
@@ -68,9 +70,6 @@ export default function ModalComunicacaoTI({
   const [mensagem, setMensagem] = useState("");
   const [perguntasNovoBloco, setPerguntasNovoBloco] = useState([""]);
   const [respostas, setRespostas] = useState<Record<string, string>>({});
-  const [estadoSalvamento, setEstadoSalvamento] = useState<
-    Record<string, "nao_respondida" | "salvando" | "salva" | "erro">
-  >({});
   const [carregando, setCarregando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [finalizando, setFinalizando] = useState(false);
@@ -78,7 +77,6 @@ export default function ModalComunicacaoTI({
   const [erro, setErro] = useState("");
   const travaEnvioRef = useRef(criarTravaEnvioComunicacaoTI());
   const travaFinalizacaoRef = useRef(criarTravaEnvioComunicacaoTI());
-  const salvamentosEmAndamentoRef = useRef(new Set<string>());
   const fimHistoricoRef = useRef<HTMLDivElement | null>(null);
 
   const carregar = useCallback(async () => {
@@ -129,19 +127,19 @@ export default function ModalComunicacaoTI({
   useEffect(() => {
     if (!blocoAberto) {
       setRespostas({});
-      setEstadoSalvamento({});
       return;
     }
     setRespostas(Object.fromEntries(
       blocoAberto.perguntas.map((pergunta) => [pergunta.id, pergunta.resposta || ""]),
     ));
-    setEstadoSalvamento(Object.fromEntries(
-      blocoAberto.perguntas.map((pergunta) => [
-        pergunta.id,
-        pergunta.resposta?.trim() ? "salva" : "nao_respondida",
-      ]),
-    ));
   }, [blocoAberto?.id]);
+
+  const totalRespostasLocaisValidas = blocoAberto?.perguntas.filter(
+    (pergunta) => respostaBlocoTIValida(respostas[pergunta.id] || ""),
+  ).length ?? 0;
+  const todasRespostasLocaisValidas = blocoAberto
+    ? respostasLocaisBlocoTIValidas(blocoAberto.perguntas, respostas)
+    : false;
 
   useEffect(() => {
     if (!aberto) return;
@@ -212,34 +210,13 @@ export default function ModalComunicacaoTI({
     }
   };
 
-  const salvarResposta = async (perguntaId: string) => {
-    if (!blocoAberto || blocoAberto.estado !== "aguardando_solicitante") return;
-    const resposta = respostas[perguntaId] || "";
-    if (!respostaBlocoTIValida(resposta) || salvamentosEmAndamentoRef.current.has(perguntaId)) {
-      if (!respostaBlocoTIValida(resposta)) {
-        setEstadoSalvamento((anterior) => ({ ...anterior, [perguntaId]: "erro" }));
-        setErro("A resposta deve ter entre 1 e 1000 caracteres.");
-      }
-      return;
-    }
-    salvamentosEmAndamentoRef.current.add(perguntaId);
-    setEstadoSalvamento((anterior) => ({ ...anterior, [perguntaId]: "salvando" }));
-    setErro("");
-    try {
-      const atualizada = await salvarRespostaBlocoTI(blocoAberto.id, perguntaId, resposta);
-      setEstadoSalvamento((anterior) => ({ ...anterior, [perguntaId]: "salva" }));
-      await aplicarInteracaoAtualizada(atualizada);
-    } catch (error: unknown) {
-      console.error("Erro ao salvar resposta do bloco TI:", error);
-      setEstadoSalvamento((anterior) => ({ ...anterior, [perguntaId]: "erro" }));
-      setErro(obterMensagemErroUsuario(error, "aprovacao"));
-    } finally {
-      salvamentosEmAndamentoRef.current.delete(perguntaId);
-    }
-  };
-
   const finalizarBloco = async () => {
-    if (!blocoAberto?.todasRespondidas || !travaFinalizacaoRef.current.tentarIniciar()) return;
+    if (
+      !blocoAberto
+      || blocoAberto.estado !== "aguardando_solicitante"
+      || !todasRespostasLocaisValidas
+      || !travaFinalizacaoRef.current.tentarIniciar()
+    ) return;
     if (!window.confirm("Após enviar, as respostas não poderão mais ser alteradas.")) {
       travaFinalizacaoRef.current.liberar();
       return;
@@ -247,7 +224,13 @@ export default function ModalComunicacaoTI({
     try {
       setFinalizando(true);
       setErro("");
-      const atualizada = await finalizarBlocoRespostasTI(blocoAberto.id);
+      const atualizada = await salvarEFinalizarRespostasBlocoTI({
+        perguntas: blocoAberto.perguntas,
+        respostas,
+        salvar: (perguntaId, resposta) =>
+          salvarRespostaBlocoTI(blocoAberto.id, perguntaId, resposta),
+        finalizar: () => finalizarBlocoRespostasTI(blocoAberto.id),
+      });
       await aplicarInteracaoAtualizada(atualizada);
     } catch (error: unknown) {
       console.error("Erro ao finalizar bloco TI:", error);
@@ -351,7 +334,6 @@ export default function ModalComunicacaoTI({
                       const editavel = interacao.id === blocoAberto?.id
                         && papelUsuario === "solicitante"
                         && interacao.estado === "aguardando_solicitante";
-                      const status = estadoSalvamento[pergunta.id] || "nao_respondida";
                       return (
                         <section key={pergunta.id} className="comunicacao-ti-bloco__pergunta">
                           <label htmlFor={`resposta-bloco-${pergunta.id}`}>
@@ -368,35 +350,19 @@ export default function ModalComunicacaoTI({
                                     ...anterior,
                                     [pergunta.id]: event.target.value,
                                   }));
-                                  setEstadoSalvamento((anterior) => ({
-                                    ...anterior,
-                                    [pergunta.id]: "nao_respondida",
-                                  }));
                                   if (erro) setErro("");
                                 }}
                                 maxLength={LIMITE_RESPOSTA_BLOCO_TI}
                                 rows={3}
-                                disabled={status === "salvando" || finalizando}
+                                disabled={finalizando}
                               />
                               <div className="comunicacao-ti-bloco__resposta-acoes">
                                 <span>{(respostas[pergunta.id] || "").length} / {LIMITE_RESPOSTA_BLOCO_TI}</span>
                                 <span role="status">
-                                  {status === "salvando" ? "Salvando..."
-                                    : status === "salva" ? "Salva"
-                                      : status === "erro" ? "Erro ao salvar"
-                                        : "Não respondida"}
+                                  {respostaBlocoTIValida(respostas[pergunta.id] || "")
+                                    ? "Respondida"
+                                    : "Não respondida"}
                                 </span>
-                                <button
-                                  type="button"
-                                  onClick={() => void salvarResposta(pergunta.id)}
-                                  disabled={
-                                    status === "salvando"
-                                    || finalizando
-                                    || !respostaBlocoTIValida(respostas[pergunta.id] || "")
-                                  }
-                                >
-                                  {status === "salvando" ? "Salvando..." : "Salvar resposta"}
-                                </button>
                               </div>
                             </>
                           ) : (
@@ -410,9 +376,11 @@ export default function ModalComunicacaoTI({
                     })}
                   </div>
                   <footer className="comunicacao-ti-bloco__status">
-                    {interacao.totalRespondidas} de {interacao.totalPerguntas} respondidas
+                    {interacao.id === blocoAberto?.id && interacao.estado === "aguardando_solicitante"
+                      ? totalRespostasLocaisValidas
+                      : interacao.totalRespondidas} de {interacao.totalPerguntas} respondidas
                     {interacao.estado === "aguardando_solicitante"
-                      ? " • Aguardando respostas do solicitante"
+                      ? " • Aguardando envio para a TI"
                       : interacao.estado === "aguardando_ti"
                         ? " • Respostas enviadas para a TI"
                         : ""}
@@ -507,12 +475,12 @@ export default function ModalComunicacaoTI({
           {blocoAberto?.estado === "aguardando_solicitante" && papelUsuario === "solicitante" && (
             <div className="comunicacao-ti-bloco__finalizacao">
               <span>
-                {blocoAberto.totalRespondidas} de {blocoAberto.totalPerguntas} respondidas
+                {totalRespostasLocaisValidas} de {blocoAberto.totalPerguntas} respondidas
               </span>
               <button
                 type="button"
                 onClick={() => void finalizarBloco()}
-                disabled={!blocoAberto.todasRespondidas || finalizando}
+                disabled={!todasRespostasLocaisValidas || finalizando}
                 className="comunicacao-ti-modal__enviar"
               >
                 {finalizando

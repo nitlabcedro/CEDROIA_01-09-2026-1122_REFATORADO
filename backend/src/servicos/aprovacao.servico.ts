@@ -1221,6 +1221,9 @@ export async function redefinirStatusWorkflow(req: RequisicaoAutenticada, res: R
 
 export async function cancelarSolicitacao(req: RequisicaoAutenticada, res: Response) {
   const recordId = typeof req.body?.recordId === "string" ? req.body.recordId.trim() : "";
+  const justificativa = typeof req.body?.justificativa === "string"
+    ? req.body.justificativa.trim()
+    : "";
   const user = req.usuarioAutenticado;
 
   if (!user?.id) {
@@ -1228,6 +1231,9 @@ export async function cancelarSolicitacao(req: RequisicaoAutenticada, res: Respo
   }
   if (!recordId) {
     return res.status(400).json({ error: "Identificador da solicitação ausente." });
+  }
+  if (!justificativa) {
+    return res.status(400).json({ error: "A justificativa do cancelamento é obrigatória." });
   }
 
   const supabaseAdmin = obterClienteSupabase();
@@ -1289,7 +1295,12 @@ export async function cancelarSolicitacao(req: RequisicaoAutenticada, res: Respo
     const dadosAtuais = (registro.data && typeof registro.data === "object")
       ? { ...(registro.data as Record<string, unknown>) }
       : {};
-    const dadosCancelados = montarDadosRegistroCancelado(dadosAtuais, agora, nomeAtor);
+    const dadosCancelados = montarDadosRegistroCancelado(
+      dadosAtuais,
+      agora,
+      nomeAtor,
+      justificativa,
+    );
 
     const { data: workflowPersistido, error: workflowUpdateError } = await supabaseAdmin
       .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)

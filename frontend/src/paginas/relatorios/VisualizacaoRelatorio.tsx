@@ -576,6 +576,40 @@ export default function ReportView({ record, onBack, workflows, approvalConfig }
         {/* TAB 1: RESUMO / VISÃO GERAL */}
         {activeTab === "visao-geral" &&
         <div className="relatorio-detalhes__ficha">
+            {record.cancelamento &&
+              <section
+                className="relatorio-detalhes__cancelamento"
+                aria-labelledby="relatorio-cancelamento-titulo">
+                <h2 id="relatorio-cancelamento-titulo" className="relatorio-detalhes__cancelamento-titulo">
+                  Cancelamento da solicitação
+                </h2>
+                <div className="relatorio-detalhes__cancelamento-grade">
+                  <div>
+                    <span>Status</span>
+                    <strong>Cancelada</strong>
+                  </div>
+                  {record.cancelamento.canceladoPor &&
+                    <div>
+                      <span>Cancelado por</span>
+                      <strong>{record.cancelamento.canceladoPor}</strong>
+                    </div>
+                  }
+                  {record.cancelamento.canceladoEm &&
+                    <div>
+                      <span>Data do cancelamento</span>
+                      <strong>{formatarDataHora(record.cancelamento.canceladoEm)}</strong>
+                    </div>
+                  }
+                </div>
+                {record.cancelamento.justificativa &&
+                  <div className="relatorio-detalhes__cancelamento-parecer">
+                    <span>Parecer justificado</span>
+                    <p>{record.cancelamento.justificativa}</p>
+                  </div>
+                }
+              </section>
+            }
+
             <h2 className="relatorio-detalhes__ficha-titulo">Ficha técnica</h2>
 
             <div className="relatorio-detalhes__ficha-grade">

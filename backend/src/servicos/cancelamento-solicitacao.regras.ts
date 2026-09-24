@@ -95,19 +95,26 @@ export function montarDadosRegistroCancelado(
   dadosAtuais: Record<string, unknown>,
   agora: string,
   nomeAtor: string,
+  justificativa: string,
 ): Record<string, unknown> {
   const historicoAtual = Array.isArray(dadosAtuais.historico) ? dadosAtuais.historico : [];
+  const justificativaNormalizada = justificativa.trim();
   return {
     ...dadosAtuais,
     statusUso: STATUS_USO_CANCELADA,
     updatedAt: agora,
+    cancelamento: {
+      justificativa: justificativaNormalizada,
+      canceladoEm: agora,
+      canceladoPor: nomeAtor,
+    },
     historico: [
       ...historicoAtual,
       {
         date: agora,
         action: ACAO_HISTORICO_CANCELAMENTO,
         user: nomeAtor,
-        message: MENSAGEM_HISTORICO_CANCELAMENTO,
+        message: `${MENSAGEM_HISTORICO_CANCELAMENTO} Motivo: ${justificativaNormalizada}`,
       },
     ],
   };

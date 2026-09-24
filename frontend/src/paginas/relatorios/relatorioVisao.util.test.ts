@@ -24,6 +24,10 @@ describe("relatorioVisao.util — estrutura da página de detalhes", () => {
     fileURLToPath(new URL("./VisualizacaoRelatorio.tsx", import.meta.url)),
     "utf8",
   );
+  const estilos = readFileSync(
+    fileURLToPath(new URL("./RelatorioDetalhes.css", import.meta.url)),
+    "utf8",
+  );
 
   it("define marcadores de estrutura para card do fluxo, lista horizontal e abas segmentadas", () => {
     assert.equal(ESTRUTURA_FLUXO_APROVACAO_CARD, "fluxo-aprovacao-card");
@@ -148,5 +152,17 @@ describe("relatorioVisao.util — estrutura da página de detalhes", () => {
     assert.match(visualizacao, /stepNumber === 3/);
     assert.match(visualizacao, /extrairTextoParecerPeriodoTeste\(commentRaw\)/);
     assert.match(visualizacao, /renderEtapaWorkflow\(3, "Período de Teste"/);
+  });
+
+  it("exibe cancelamento estruturado no Resumo sem interferir nas etapas ou no legado", () => {
+    assert.match(visualizacao, /activeTab === "visao-geral"/);
+    assert.match(visualizacao, /\{record\.cancelamento &&/);
+    assert.match(visualizacao, /Cancelamento da solicitação/);
+    assert.match(visualizacao, /record\.cancelamento\.canceladoPor/);
+    assert.match(visualizacao, /formatarDataHora\(record\.cancelamento\.canceladoEm\)/);
+    assert.match(visualizacao, /record\.cancelamento\.justificativa/);
+    assert.doesNotMatch(visualizacao, /record\.cancelamento \|\|/);
+    assert.match(estilos, /\.relatorio-detalhes__cancelamento-parecer p[\s\S]*?white-space:\s*pre-wrap/);
+    assert.match(estilos, /\.relatorio-detalhes__cancelamento-parecer p[\s\S]*?overflow-wrap:\s*break-word/);
   });
 });

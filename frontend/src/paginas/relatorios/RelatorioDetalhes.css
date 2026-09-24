@@ -483,6 +483,68 @@
   color: #0f172a;
 }
 
+.relatorio-detalhes__cancelamento {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid #f2d4a0;
+  border-radius: 12px;
+  background: #fffaf0;
+  box-sizing: border-box;
+}
+
+.relatorio-detalhes__cancelamento-titulo {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: #80500b;
+}
+
+.relatorio-detalhes__cancelamento-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+}
+
+.relatorio-detalhes__cancelamento-grade > div,
+.relatorio-detalhes__cancelamento-parecer {
+  min-width: 0;
+}
+
+.relatorio-detalhes__cancelamento span {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #93631b;
+}
+
+.relatorio-detalhes__cancelamento strong {
+  display: block;
+  overflow-wrap: break-word;
+  word-break: normal;
+  font-size: 0.8125rem;
+  color: #3f321e;
+}
+
+.relatorio-detalhes__cancelamento-parecer {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f2dfbd;
+}
+
+.relatorio-detalhes__cancelamento-parecer p {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: break-word;
+  word-break: normal;
+  white-space: pre-wrap;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: #3f321e;
+}
+
 .relatorio-detalhes__ficha-grade {
   display: grid;
   grid-template-columns: 1fr;
