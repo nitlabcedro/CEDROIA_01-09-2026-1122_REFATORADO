@@ -28,6 +28,7 @@ describe("API de blocos estruturados TI", () => {
       const fim = servico.indexOf("\nexport async function ", inicio + 1);
       const corpo = servico.slice(inicio, fim > inicio ? fim : undefined);
       assert.match(corpo, /obterUsuarioAutenticado\(req\)/);
+      assert.doesNotMatch(corpo, /auth\.getUser/);
       assert.doesNotMatch(corpo, /req\.body\?\.(userId|requesterId|authorRole|isAdmin)/);
     }
   });
