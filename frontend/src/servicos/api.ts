@@ -18,6 +18,13 @@ interface DependenciasRequisicaoApi {
   urlBase?: string;
 }
 
+function lerBearer(headers: Headers): string | null {
+  const cabecalho = headers.get("Authorization");
+  if (!cabecalho?.startsWith("Bearer ")) return null;
+  const token = cabecalho.slice("Bearer ".length).trim();
+  return token || null;
+}
+
 export function criarRequisicaoApi({
   obterToken,
   fetch: executarFetchHttp,
@@ -46,14 +53,23 @@ export function criarRequisicaoApi({
       headers,
     });
 
-    let response = await executarFetch();
+    const response = await executarFetch();
+
+    if (response.status === 503) {
+      return response;
+    }
 
     if (response.status === 401 && !headers.get("X-Auth-Retry")) {
-      const tokenRenovado = await obterToken({ forcarRenovacao: true });
-      if (tokenRenovado) {
-        headers.set("Authorization", `Bearer ${tokenRenovado}`);
+      const tokenUsado = lerBearer(headers);
+      const tokenAtual = await obterToken();
+      if (tokenAtual && tokenAtual !== tokenUsado) {
+        headers.set("Authorization", `Bearer ${tokenAtual}`);
         headers.set("X-Auth-Retry", "1");
-        response = await executarFetch();
+        const respostaRetry = await executarFetch();
+        if (respostaRetry.status === 401) {
+          registrarFalha();
+        }
+        return respostaRetry;
       }
     }
 

@@ -60,19 +60,29 @@ export function criarObterAccessTokenParaApi(auth: ClienteAutenticacaoApi) {
 
     const refreshAtual = (async () => {
       try {
-        const { data, error } = await auth.refreshSession();
-        if (!error && data.session?.access_token) {
+        const { data: recente } = await auth.getSession();
+        const sessaoRecente = recente.session;
+        if (
+          sessaoRecente?.access_token
+          && !sessaoPrecisaRenovarToken(sessaoRecente.expires_at)
+        ) {
           liberarBloqueioAutenticacaoApi();
-          return data.session.access_token;
+          return sessaoRecente.access_token;
         }
 
-        // O autoRefreshToken do SDK pode ter concluído enquanto o refresh manual
-        // falhava. Releia a sessão antes de considerar que não existe token útil.
+        try {
+          await auth.refreshSession();
+        } catch {
+          // Falha de rede/refresh não apaga a sessão local.
+        }
+
         const { data: atual } = await auth.getSession();
-        return tokenLocalAindaValido(atual.session)
+        const token = tokenLocalAindaValido(atual.session)
+          ?? tokenLocalAindaValido(sessaoRecente)
           ?? tokenLocalAindaValido(sessaoAnterior);
+        if (token) liberarBloqueioAutenticacaoApi();
+        return token;
       } catch {
-        // Erros de rede não encerram uma sessão local que ainda é utilizável.
         return tokenLocalAindaValido(sessaoAnterior);
       }
     })();
@@ -83,9 +93,7 @@ export function criarObterAccessTokenParaApi(auth: ClienteAutenticacaoApi) {
     });
   };
 
-  return async function obterToken(
-    opcoes: { forcarRenovacao?: boolean } = {},
-  ): Promise<string | null> {
+  return async function obterToken(): Promise<string | null> {
     let resultadoSessao: Awaited<ReturnType<ClienteAutenticacaoApi["getSession"]>>;
     try {
       resultadoSessao = await auth.getSession();
@@ -96,10 +104,7 @@ export function criarObterAccessTokenParaApi(auth: ClienteAutenticacaoApi) {
     const session = resultadoSessao.data.session;
     if (!session?.access_token) return null;
 
-    if (
-      opcoes.forcarRenovacao
-      || sessaoPrecisaRenovarToken(session.expires_at)
-    ) {
+    if (sessaoPrecisaRenovarToken(session.expires_at)) {
       return renovarTokenSingleFlight(session);
     }
 
