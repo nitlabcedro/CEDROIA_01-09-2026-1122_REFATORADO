@@ -6,6 +6,7 @@ import {
   inicializarWorkflow,
   listarWorkflows,
   obterConfiguracaoWorkflow,
+  obterWorkflowVisivel,
   resumirWorkflowsVisiveis,
   salvarConfiguracaoWorkflow,
   redefinirStatusWorkflow,
@@ -25,6 +26,10 @@ export function listar(req: Request, res: Response) {
 
 export function resumir(req: Request, res: Response) {
   return resumirWorkflowsVisiveis(req, res);
+}
+
+export function detalhar(req: Request, res: Response) {
+  return obterWorkflowVisivel(req, res);
 }
 
 export function inicializar(req: Request, res: Response) {

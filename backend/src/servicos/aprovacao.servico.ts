@@ -399,6 +399,52 @@ export async function resumirWorkflowsVisiveis(req: RequisicaoAutenticada, res: 
   }
 }
 
+export async function obterWorkflowVisivel(req: RequisicaoAutenticada, res: Response) {
+  try {
+    const userId = req.usuarioAutenticado?.id;
+    const recordId = typeof req.params?.recordId === "string" ? req.params.recordId.trim() : "";
+    if (!userId) return res.status(401).json({ error: "Não autorizado." });
+    if (!recordId) return res.status(400).json({ error: "Identificador da solicitação ausente." });
+
+    const supabaseAdmin = obterClienteSupabase();
+    const [{ data: perfil, error: perfilError }, { data: registro, error: registroError }] = await Promise.all([
+      supabaseAdmin
+        .from(TABELAS_SUPABASE.PERFIS)
+        .select("role, setor")
+        .eq("id", userId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from(TABELAS_SUPABASE.REGISTROS_IA)
+        .select("id, owner_id, unidade_setor")
+        .eq("id", recordId)
+        .maybeSingle(),
+    ]);
+
+    if (perfilError) return res.status(500).json({ error: perfilError.message });
+    if (registroError) return res.status(500).json({ error: registroError.message });
+    if (!registro) return res.status(404).json({ error: "Registro de IA não encontrado." });
+    if (!usuarioPodeVisualizarResumoWorkflow({
+      userId,
+      role: perfil?.role,
+      setores: perfil?.setor,
+      registro,
+    })) {
+      return res.status(403).json({ error: "Você não possui acesso a esta solicitação." });
+    }
+
+    const { data: workflow, error: workflowError } = await supabaseAdmin
+      .from(TABELAS_SUPABASE.FLUXOS_APROVACAO)
+      .select(`*, ${RELACOES_SUPABASE.ETAPAS_DO_FLUXO}`)
+      .eq("ia_record_id", recordId)
+      .maybeSingle();
+
+    if (workflowError) return res.status(500).json({ error: workflowError.message });
+    return res.json({ workflow: workflow || null });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || "Não foi possível carregar o workflow da solicitação." });
+  }
+}
+
 export async function inicializarWorkflow(req: RequisicaoAutenticada, res: Response) {
   const recordId = typeof req.body?.recordId === "string" ? req.body.recordId.trim() : "";
   const user = req.usuarioAutenticado;

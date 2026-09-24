@@ -45,6 +45,43 @@ describe("dadosRelatorioPdf", () => {
     assert.equal(montarDadosRelatorioPdf(record, workflow).status, "Aprovada");
   });
 
+  it("usa responsável, parecer, decisão e data do mesmo workflow oficial", () => {
+    const workflow: ApprovalWorkflow = {
+      iaRecordId: record.id,
+      currentStep: 5,
+      finalStatus: "aprovado",
+      steps: [1, 2, 3, 4, 5].map((stepNumber) => ({
+        ...step(stepNumber, "aprovado"),
+        assignedUserName: `Responsável ${stepNumber}`,
+        comment: `Parecer: Parecer ${stepNumber}`,
+        decidedAt: "2026-09-23T15:00:00Z",
+      })),
+    };
+
+    const dados = montarDadosRelatorioPdf(
+      { ...record, dataRegistro: "2026-09-23" },
+      workflow,
+    );
+
+    assert.equal(dados.dataCadastro, "23/09/2026");
+    assert.deepEqual(
+      dados.assinaturas.map(({ stepNumber, status, responsavel, parecer, data }) => ({
+        stepNumber,
+        status,
+        responsavel,
+        parecer,
+        data,
+      })),
+      [1, 2, 3, 4, 5].map((stepNumber) => ({
+        stepNumber,
+        status: "Aprovado",
+        responsavel: `Responsável ${stepNumber}`,
+        parecer: `Parecer ${stepNumber}`,
+        data: "23/09/2026",
+      })),
+    );
+  });
+
   it("preserva reprovação na etapa 1 sem inventar decisões posteriores", () => {
     const workflow: ApprovalWorkflow = {
       iaRecordId: record.id,
