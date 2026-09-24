@@ -14,6 +14,7 @@ export const CHAVES_ARMAZENAMENTO_LOCAL = {
   MODO_DESEMPENHO: "system_performance_mode",
   RASCUNHO_SOLICITACAO_PREFIXO: "cedro_nova_solicitacao_draft_",
   ATRIBUICOES_PERFIL_PENDENTES_PREFIXO: "cedro_profile_assignments_pending_",
+  ULTIMA_ATIVIDADE: "cedro_ultima_atividade",
 } as const;
 
 export const EVENTOS_APLICACAO = {

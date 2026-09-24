@@ -31,6 +31,7 @@ import {
 } from "@/paginas/lazyPaginas";
 import NotificacaoPerguntasTI from "@/componentes/aprovacoes/NotificacaoPerguntasTI";
 import NotificacaoRespostaTI from "@/componentes/aprovacoes/NotificacaoRespostaTI";
+import { useTimeoutInatividade } from "@/hooks/useTimeoutInatividade";
 import {
   atualizarMensagemTransitoriaLogin,
   decidirTelaAplicacao,
@@ -80,6 +81,10 @@ export default function Aplicacao() {
     refreshRecords,
     signOut
   } = useAplicacao();
+  useTimeoutInatividade({
+    ativo: Boolean(user),
+    encerrarSessao: () => signOut({ somenteLocal: true }),
+  });
   const [isDesktopViewport, setIsDesktopViewport] = useState(() =>
   window.matchMedia("(min-width: 1024px)").matches
   );
