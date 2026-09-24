@@ -51,6 +51,26 @@ export function respostaBlocoTIValida(resposta: string): boolean {
   return texto.length >= 1 && texto.length <= LIMITE_RESPOSTA_BLOCO_TI;
 }
 
+export function respostasLocaisBlocoTIValidas(
+  perguntas: Array<{ id: string }>,
+  respostas: Record<string, string>,
+): boolean {
+  return perguntas.length > 0
+    && perguntas.every((pergunta) => respostaBlocoTIValida(respostas[pergunta.id] || ""));
+}
+
+export async function salvarEFinalizarRespostasBlocoTI<T>(params: {
+  perguntas: Array<{ id: string }>;
+  respostas: Record<string, string>;
+  salvar: (perguntaId: string, resposta: string) => Promise<unknown>;
+  finalizar: () => Promise<T>;
+}): Promise<T> {
+  for (const pergunta of params.perguntas) {
+    await params.salvar(pergunta.id, params.respostas[pergunta.id]);
+  }
+  return params.finalizar();
+}
+
 export function calcularProgressoBlocoTI(
   perguntas: Array<{ resposta?: string }>,
 ) {

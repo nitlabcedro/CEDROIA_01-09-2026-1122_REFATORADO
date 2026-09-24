@@ -31,6 +31,17 @@ describe("POST /api/workflow/cancel", () => {
     assert.doesNotMatch(cancelar, /emailSolicitante|nome_solicitante|responsavelPreenchimento/);
   });
 
+  it("rejeita justificativa ausente ou vazia antes de persistir", () => {
+    assert.match(cancelar, /typeof req\.body\?\.justificativa === "string"/);
+    assert.match(cancelar, /req\.body\.justificativa\.trim\(\)/);
+    assert.match(cancelar, /if \(!justificativa\)/);
+    assert.match(cancelar, /A justificativa do cancelamento é obrigatória/);
+    assert.match(
+      cancelar,
+      /montarDadosRegistroCancelado\([\s\S]*?dadosAtuais,[\s\S]*?agora,[\s\S]*?nomeAtor,[\s\S]*?justificativa/,
+    );
+  });
+
   it("A/B — cancelamento não referencia registros_ia.status e usa status_uso", () => {
     assert.doesNotMatch(cancelar, /\bregistro\.status\b/);
     assert.doesNotMatch(cancelar, /owner_id, status,/);

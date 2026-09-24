@@ -105,15 +105,22 @@ describe("montarDadosRegistroCancelado", () => {
       },
       agora,
       "Maria",
+      "  Motivo detalhado do cancelamento.  ",
     );
 
     assert.equal(resultado.ownerId, "user-1");
     assert.equal(resultado.statusUso, STATUS_USO_CANCELADA);
     assert.equal(resultado.updatedAt, agora);
-    const historico = resultado.historico as Array<{ action: string; user: string }>;
+    assert.deepEqual(resultado.cancelamento, {
+      justificativa: "Motivo detalhado do cancelamento.",
+      canceladoEm: agora,
+      canceladoPor: "Maria",
+    });
+    const historico = resultado.historico as Array<{ action: string; user: string; message: string }>;
     assert.equal(historico.length, 2);
     assert.equal(historico[1].action, "Solicitação cancelada");
     assert.equal(historico[1].user, "Maria");
+    assert.match(historico[1].message, /Motivo detalhado do cancelamento/);
     assert.equal(obterStatusGeralCancelamento({ statusUso: STATUS_USO_CANCELADA }), "Cancelada");
   });
 });

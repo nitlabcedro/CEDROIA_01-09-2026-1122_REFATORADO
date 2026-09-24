@@ -18,6 +18,8 @@ import {
   mensagemComunicacaoTIValida,
   perguntasBlocoTIValidas,
   respostaBlocoTIValida,
+  respostasLocaisBlocoTIValidas,
+  salvarEFinalizarRespostasBlocoTI,
   usuarioPodeEscreverComunicacaoTI,
 } from "./comunicacao-ti";
 
@@ -96,6 +98,52 @@ describe("comunicação TI", () => {
       ]),
       { totalPerguntas: 5, totalRespondidas: 3, todasRespondidas: false },
     );
+  });
+
+  it("habilita envio apenas quando todas as respostas locais são válidas", () => {
+    const perguntas = [{ id: "p1" }, { id: "p2" }];
+    assert.equal(respostasLocaisBlocoTIValidas(perguntas, { p1: "R1", p2: "R2" }), true);
+    assert.equal(respostasLocaisBlocoTIValidas(perguntas, { p1: "R1", p2: " " }), false);
+    assert.equal(respostasLocaisBlocoTIValidas(perguntas, { p1: "R1" }), false);
+    assert.equal(respostasLocaisBlocoTIValidas([], {}), false);
+  });
+
+  it("salva todas as respostas sequencialmente antes de finalizar", async () => {
+    const eventos: string[] = [];
+    const resultado = await salvarEFinalizarRespostasBlocoTI({
+      perguntas: [{ id: "p1" }, { id: "p2" }],
+      respostas: { p1: "R1", p2: "R2" },
+      salvar: async (id, resposta) => {
+        eventos.push(`salvar:${id}:${resposta}`);
+      },
+      finalizar: async () => {
+        eventos.push("finalizar");
+        return "enviado";
+      },
+    });
+
+    assert.equal(resultado, "enviado");
+    assert.deepEqual(eventos, ["salvar:p1:R1", "salvar:p2:R2", "finalizar"]);
+  });
+
+  it("falha em um salvamento impede a finalização", async () => {
+    const eventos: string[] = [];
+    await assert.rejects(
+      salvarEFinalizarRespostasBlocoTI({
+        perguntas: [{ id: "p1" }, { id: "p2" }],
+        respostas: { p1: "R1", p2: "R2" },
+        salvar: async (id) => {
+          eventos.push(`salvar:${id}`);
+          if (id === "p2") throw new Error("falha");
+        },
+        finalizar: async () => {
+          eventos.push("finalizar");
+          return "enviado";
+        },
+      }),
+      /falha/,
+    );
+    assert.deepEqual(eventos, ["salvar:p1", "salvar:p2"]);
   });
 
   it("aceita 1000 caracteres e bloqueia 1001", () => {

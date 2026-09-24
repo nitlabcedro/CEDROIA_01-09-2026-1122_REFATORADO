@@ -35,7 +35,7 @@ interface InventoryProps {
   workflows?: ApprovalWorkflow[];
   currentUser?: any;
   currentUserProfile?: any;
-  onCancelRequest?: (id: string) => Promise<void>;
+  onCancelRequest?: (id: string, justificativa: string) => Promise<void>;
 }
 
 export default function Inventory({
@@ -63,7 +63,13 @@ export default function Inventory({
   const actionMenuButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const [cancelTargetRecord, setCancelTargetRecord] = useState<IARecord | null>(null);
+  const [cancelJustificativa, setCancelJustificativa] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
+
+  const fecharModalCancelamento = () => {
+    setCancelTargetRecord(null);
+    setCancelJustificativa("");
+  };
 
   useEffect(() => {
     if (!actionMenuId) return;
@@ -99,7 +105,7 @@ export default function Inventory({
     const fecharComEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || isCancelling) return;
       setWarningMessage(null);
-      setCancelTargetRecord(null);
+      fecharModalCancelamento();
     };
     window.addEventListener("keydown", fecharComEscape);
     return () => window.removeEventListener("keydown", fecharComEscape);
@@ -969,7 +975,7 @@ export default function Inventory({
       <div
         className="cedro-modal-overlay inventario__grupo-19"
         onClick={(event) => {
-          if (event.target === event.currentTarget && !isCancelling) setCancelTargetRecord(null);
+          if (event.target === event.currentTarget && !isCancelling) fecharModalCancelamento();
         }}
       >
           <div className="cedro-modal-painel cedro-modal-painel--compacto inventario__grupo-24" onClick={(event) => event.stopPropagation()}>
@@ -983,12 +989,22 @@ export default function Inventory({
                 </h3>
               </div>
               <p className="inventario__descricao-esta-acao-ira-cancelar-a-solic">
-                Após o cancelamento, ela não seguirá para aprovação.
+                Informe o motivo do cancelamento. Após o cancelamento, ela não seguirá para aprovação.
               </p>
+              <label className="inventario__cancelamento-campo">
+                <span>Motivo do cancelamento</span>
+                <textarea
+                  value={cancelJustificativa}
+                  onChange={(event) => setCancelJustificativa(event.target.value)}
+                  disabled={isCancelling}
+                  rows={5}
+                  required
+                />
+              </label>
             </div>
             <div className="inventario__grupo-voltar">
               <button
-              onClick={() => setCancelTargetRecord(null)}
+              onClick={fecharModalCancelamento}
               disabled={isCancelling}
               className="inventario__botao-voltar">
               
@@ -996,17 +1012,20 @@ export default function Inventory({
               </button>
               <button
               onClick={async () => {
+                const justificativa = cancelJustificativa.trim();
+                if (!justificativa || !onCancelRequest) return;
                 setIsCancelling(true);
-                if (onCancelRequest) {
-                  await onCancelRequest(cancelTargetRecord.id);
+                try {
+                  await onCancelRequest(cancelTargetRecord.id, justificativa);
+                  fecharModalCancelamento();
+                } finally {
+                  setIsCancelling(false);
                 }
-                setIsCancelling(false);
-                setCancelTargetRecord(null);
               }}
-              disabled={isCancelling}
+              disabled={isCancelling || !cancelJustificativa.trim()}
               className="inventario__botao-6">
               
-                {isCancelling ? "Cancelando..." : "Sim, cancelar"}
+                {isCancelling ? "Cancelando..." : "Confirmar cancelamento"}
               </button>
             </div>
           </div>

@@ -86,6 +86,12 @@ export interface RecordHistoryItem {
   message?: string;
 }
 
+export interface CancelamentoSolicitacao {
+  justificativa: string;
+  canceladoEm: string;
+  canceladoPor: string;
+}
+
 export interface IARecord {
   statusAuditoria?: StatusAuditoria;
   id: string; // Ex: IA-00000001
@@ -185,6 +191,7 @@ export interface IARecord {
   documentoNome?: string;
   documentoTamanho?: number;
   documentoTipo?: string;
+  cancelamento?: CancelamentoSolicitacao;
   historico: RecordHistoryItem[];
 }
 

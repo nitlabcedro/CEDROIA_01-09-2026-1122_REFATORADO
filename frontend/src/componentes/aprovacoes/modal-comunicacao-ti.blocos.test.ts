@@ -20,20 +20,26 @@ describe("ModalComunicacaoTI — blocos estruturados", () => {
     assert.match(componente, /LIMITE_PERGUNTA_BLOCO_TI/);
   });
 
-  it("usa labels reais e salvamento individual explícito", () => {
+  it("usa labels reais sem botão ou estado de salvamento individual", () => {
     assert.match(componente, /htmlFor=\{`resposta-bloco-/);
     assert.match(componente, /id=\{`resposta-bloco-/);
-    assert.match(componente, /Salvar resposta/);
-    assert.match(componente, /Salvando\.\.\./);
-    assert.match(componente, /Erro ao salvar/);
+    assert.doesNotMatch(componente, />Salvar resposta</);
+    assert.doesNotMatch(componente, /"Salvando\.\.\."/);
+    assert.doesNotMatch(componente, /Erro ao salvar/);
     assert.doesNotMatch(componente, /setTimeout[\s\S]*salvarRespostaBlocoTI/);
   });
 
-  it("só finaliza bloco completo após confirmação e bloqueia repetição", () => {
-    assert.match(componente, /blocoAberto\?\.todasRespondidas/);
+  it("salva respostas locais válidas antes de finalizar e bloqueia repetição", () => {
+    assert.match(componente, /respostasLocaisBlocoTIValidas/);
+    assert.match(componente, /salvarEFinalizarRespostasBlocoTI/);
+    assert.match(componente, /salvarRespostaBlocoTI\(blocoAberto\.id, perguntaId, resposta\)/);
+    assert.match(componente, /finalizarBlocoRespostasTI\(blocoAberto\.id\)/);
+    assert.doesNotMatch(componente, /blocoAberto\?\.todasRespondidas/);
     assert.match(componente, /Após enviar, as respostas não poderão mais ser alteradas/);
     assert.match(componente, /travaFinalizacaoRef/);
     assert.match(componente, /Enviar respostas para a TI/);
+    assert.match(componente, /disabled=\{!todasRespostasLocaisValidas \|\| finalizando\}/);
+    assert.match(componente, /disabled=\{finalizando\}/);
   });
 
   it("preserva chat, legado e vários blocos no histórico", () => {

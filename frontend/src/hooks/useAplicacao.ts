@@ -1027,7 +1027,7 @@ export function useAplicacao() {
     }
   };
 
-  const handleCancelRequest = async (recordId: string) => {
+  const handleCancelRequest = async (recordId: string, justificativa: string) => {
     try {
       const record = records.find(r => r.id === recordId);
       if (!record) {
@@ -1037,7 +1037,7 @@ export function useAplicacao() {
 
       const response = await requisicaoApi(ROTAS_API.WORKFLOW_CANCEL, {
         method: "POST",
-        body: JSON.stringify({ recordId }),
+        body: JSON.stringify({ recordId, justificativa: justificativa.trim() }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
