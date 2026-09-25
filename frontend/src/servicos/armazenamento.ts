@@ -9,6 +9,7 @@ import { usuarioEhAdmin } from "@/utilitarios/permissoes";
 import { supabase } from "./supabase";
 import { obterColunaLegadaRemovivel } from "./compatibilidade-registros";
 import {
+  AVISO_METADADOS_NAO_PERSISTIDOS,
   carregarSetoresGestaoDoSupabase,
   persistirSetoresGestaoNoSupabase,
   type MapaDetalhesSetor,
@@ -434,7 +435,6 @@ const SECTOR_DETAILS_STORAGE_KEY = CHAVES_ARMAZENAMENTO_LOCAL.DETALHES_SETORES;
 const SECTORS_CACHE_MS = 300000;
 
 export interface SectorMetadataDetail {
-  description?: string;
   responsible?: string;
   status?: "Ativo" | "Inativo";
   cargos?: string[];
@@ -457,8 +457,19 @@ export const getSectorDetails = (): SectorDetailsMap => {
   }
 };
 
-export const getSectors = async (): Promise<string[]> => {
-  if (sectorsCache && Date.now() - sectorsCacheEm < SECTORS_CACHE_MS) return [...sectorsCache];
+export const invalidarCacheSetores = (): void => {
+  sectorsCache = null;
+  sectorsCacheEm = 0;
+};
+
+export const getSectors = async (forcarAtualizacao = false): Promise<string[]> => {
+  if (
+    !forcarAtualizacao &&
+    sectorsCache &&
+    Date.now() - sectorsCacheEm < SECTORS_CACHE_MS
+  ) {
+    return [...sectorsCache];
+  }
   if (sectorsRequest) return sectorsRequest;
 
   sectorsRequest = (async () => {
@@ -484,26 +495,41 @@ export const getSectors = async (): Promise<string[]> => {
   return sectorsRequest;
 };
 
-export const saveSectors = async (sectors: string[], details?: SectorDetailsMap): Promise<boolean> => {
+export interface ResultadoSaveSectors {
+  ok: boolean;
+  avisoMetadados?: string;
+}
+
+export const saveSectors = async (
+  sectors: string[],
+  details?: SectorDetailsMap,
+): Promise<ResultadoSaveSectors> => {
   const sectorDetails = details || getSectorDetails();
-  try {
-    localStorage.setItem(SECTORS_STORAGE_KEY, JSON.stringify(sectors));
-    localStorage.setItem(SECTOR_DETAILS_STORAGE_KEY, JSON.stringify(sectorDetails));
-    sectorsCache = [...sectors];
-    sectorsCacheEm = Date.now();
-  } catch (e) {
-    console.error(e);
-  }
 
   try {
     const persistidoOficial = await persistirSetoresGestaoNoSupabase(sectors, sectorDetails);
-    if (!persistidoOficial) {
-      console.error("Erro ao salvar setores na tabela oficial do Supabase.");
-      return false;
+    if (!persistidoOficial.sucesso) {
+      console.error("Erro ao salvar setores na tabela oficial do Supabase.", persistidoOficial.erro);
+      return { ok: false };
     }
-    return true;
+
+    try {
+      localStorage.setItem(SECTORS_STORAGE_KEY, JSON.stringify(sectors));
+      localStorage.setItem(SECTOR_DETAILS_STORAGE_KEY, JSON.stringify(sectorDetails));
+      sectorsCache = [...sectors];
+      sectorsCacheEm = Date.now();
+    } catch (e) {
+      console.error(e);
+    }
+
+    return {
+      ok: true,
+      avisoMetadados: persistidoOficial.metadadosParciais ?
+        AVISO_METADADOS_NAO_PERSISTIDOS :
+        undefined,
+    };
   } catch (err) {
     console.error("Erro crítico ao salvar setores:", err);
-    return false;
+    return { ok: false };
   }
 };

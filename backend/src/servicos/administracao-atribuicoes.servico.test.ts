@@ -43,6 +43,16 @@ describe("atribuições administrativas de usuário", () => {
     });
   });
 
+  it("3b. serializa o mesmo setor e cargo para um usuário sem consultar ocupação de outras contas", () => {
+    const dados = validarPayloadAtualizacaoAtribuicoes(
+      payload([{ setor: "NIT", cargo: "Analista" }]),
+    );
+    assert.deepEqual(validarESerializarAtribuicoes(dados.atribuicoes, setores), {
+      setor: "NIT",
+      cargo: "Analista",
+    });
+  });
+
   it("3. permite o mesmo cargo em setores diferentes", () => {
     const dados = validarPayloadAtualizacaoAtribuicoes(
       payload([

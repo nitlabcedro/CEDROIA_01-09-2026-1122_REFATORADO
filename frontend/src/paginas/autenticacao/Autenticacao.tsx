@@ -45,6 +45,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const paginaAutenticacaoRef = useRef<HTMLDivElement | null>(null);
+  const conteudoAutenticacaoRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     obterSetoresAtivos().then(setSectors).catch((erro) => {
@@ -67,6 +68,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
     // modo, navegadores mobile podem preservar a posicao anterior e esconder
     // o inicio ou o fim do formulario.
     const frame = window.requestAnimationFrame(() => {
+      conteudoAutenticacaoRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
       paginaAutenticacaoRef.current?.scrollTo({ top: 0, left: 0, behavior: "auto" });
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
       document.documentElement.scrollTop = 0;
@@ -236,7 +238,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
         </div>
       </aside>
 
-      <main className="pagina-autenticacao__conteudo">
+      <main ref={conteudoAutenticacaoRef} className="pagina-autenticacao__conteudo">
         <div className="pagina-autenticacao__halo pagina-autenticacao__halo--superior" />
         <div className="pagina-autenticacao__halo pagina-autenticacao__halo--inferior" />
 
@@ -311,6 +313,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
                             )))}
                           size="lg"
                           className="autenticacao-dropdown"
+                          optionsClassName="autenticacao-dropdown__painel"
                           onChange={(sec) => {
                             const newCombos = [...combos];
                             newCombos[index] = {
@@ -330,6 +333,7 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
                           options={sectors.find((setor) => setor.name === combo.setor)?.cargos || []}
                           size="lg"
                           className="autenticacao-dropdown"
+                          optionsClassName="autenticacao-dropdown__painel"
                           onChange={(carg) => {
                             const newCombos = [...combos];
                             newCombos[index].cargo = carg;

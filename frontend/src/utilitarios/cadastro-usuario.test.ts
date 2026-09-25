@@ -232,4 +232,19 @@ describe("cadastro de usuário", () => {
       cargo: "Coordenador",
     });
   });
+
+  it("permite o mesmo setor e o mesmo cargo em contas independentes", () => {
+    const par = { setor: "NIT", cargo: "Gerente" };
+    assert.equal(validarAtribuicaoCadastro(par, setores), null);
+    assert.equal(validarAtribuicaoCadastro(par, setores), null);
+    assert.equal(podeEnviarCadastro(par, setores), true);
+    assert.equal(
+      criarMetadataCadastro({ fullName: "Usuário A", atribuicoes: [par] }, setores).cargo,
+      "Gerente",
+    );
+    assert.equal(
+      criarMetadataCadastro({ fullName: "Usuário B", atribuicoes: [par] }, setores).cargo,
+      "Gerente",
+    );
+  });
 });

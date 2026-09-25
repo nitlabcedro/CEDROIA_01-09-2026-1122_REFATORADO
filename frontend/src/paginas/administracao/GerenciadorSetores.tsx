@@ -20,7 +20,6 @@ import {
   ChevronRight,
   User,
   Activity,
-  FileText,
   SlidersHorizontal,
   CircleDot,
   Briefcase,
@@ -36,6 +35,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import "@/estilos/paginas/setores-referencia.css";
 import { IARecord, UserProfile } from "@/tipos";
 import { getSectorDetails, getSectors, saveSectors } from "@/servicos/armazenamento";
+import { normalizarDetalhesSetor } from "@/utilitarios/detalhes-setor-gestao";
+import {
+  agruparOcupantesPorCargo,
+  perfilPertenceAoSetor,
+  setorCorrespondeBusca,
+  textoMinusculoSeguro,
+} from "@/utilitarios/setores-ocupantes";
 
 interface SectorsProps {
   records: IARecord[];
@@ -46,70 +52,58 @@ interface SectorsProps {
 }
 
 interface SectorDetail {
-  description: string;
   responsible: string;
   status: "Ativo" | "Inativo";
   cargos?: string[];
 }
 
-// Predefined detailed description & representatives mapping of institutional sectors
 const PRESET_SECTORS_DETAILS: Record<string, SectorDetail> = {
   "NIT": {
-    description: "Núcleo de Inovação e Tecnologia responsável por pesquisa, desenvolvimento e inovação estruturada do laboratório.",
     responsible: "Ricardo Almeida",
     status: "Ativo",
     cargos: ["Pesquisador de IA", "Analista de Inovação", "Gestor de Portfólio", "Engenheiro de Processos"]
   },
   "TI": {
-    description: "Gerencia a infraestrutura cibernética, servidores locais, sistemas internos e suporte tecnológico de alta performance.",
     responsible: "Mariana Souza",
     status: "Ativo",
     cargos: ["Analista de Suporte", "Administrador de Sistemas", "Desenvolvedor de Software", "Engenheiro de Dados"]
   },
   "Marketing": {
-    description: "Responsável pela comunicação institucional, reputação de marca e relacionamento estratégico com o público.",
     responsible: "Juliana Martins",
     status: "Ativo",
     cargos: ["Analista de Comunicação", "Designer Gráfico", "Especialista em SEO", "Social Media"]
   },
   "Administrativo": {
-    description: "Cuida do planejamento estratégico administrativo, fluxos financeiros e suporte de governança corporativa.",
     responsible: "Carlos Henrique",
     status: "Ativo",
     cargos: ["Auxiliar Administrativo", "Assistente Financeiro", "Gerente de Operações", "Analista de Contratos"]
   },
   "Jurídico": {
-    description: "Responsável pelo suporte legal, conformidade com a LGPD, redação de contratos e assessoria regulatória geral.",
     responsible: "Beatriz Lima",
     status: "Ativo",
     cargos: ["Advogado Integrado", "Assessor LGPD", "Consultor Regulatório", "Assistente Jurídico"]
   },
   "Direção Técnica": {
-    description: "Liderança médica, supervisão de laudos técnicos e garantia irrestrita de qualidade analítica laboratorial.",
     responsible: "Dr. Felipe Costa",
     status: "Ativo",
     cargos: ["Diretor Técnico", "Supervisor Analítico", "Responsável Técnico", "Auditor Médico"]
   },
   "Qualidade": {
-    description: "Coordena acreditações de qualidade, aplicação jurídica de normas ISO e planos de verificação de processos sanitários.",
     responsible: "Ana Teresa",
     status: "Ativo",
     cargos: ["Gestor de Qualidade", "Analista de Qualidade", "Auditor de Processos", "Inspetor Sanitário"]
   },
   "Atendimento / Recepção": {
-    description: "Suporte direto do público na triagem, agendamentos presenciais e pesquisa ativa de satisfação clínica.",
     responsible: "Fernanda Costa",
     status: "Ativo",
     cargos: ["Recepcionista", "Atendente Técnico", "Supervisor de Relacionamento", "Auxiliar de Caixa"]
   },
   "Laboratório de Patologia": {
-    description: "Preparação macroscópica de biópsias, análises citológicas detalhadas e controle de laudos imuno-histoquímicos.",
     responsible: "Dr. Sergio Morais",
     status: "Ativo",
     cargos: ["Médico Patologista", "Técnico em Histologia", "Citotécnico", "Auxiliar de Laboratório"]
   },
   "Laboratório Central": {
-    description: "Processamento automatizado de exames bioquímicos e hematológicos de rotina clínica emergencial ou diagnóstica.",
     responsible: "Dra. Heloísa Abreu",
     status: "Ativo",
     cargos: ["Biomédico Palestrante", "Técnico em Análises Clínicas", "Farmacêutico Bioquímico", "Auxiliar de Coleta"]
@@ -119,8 +113,12 @@ const PRESET_SECTORS_DETAILS: Record<string, SectorDetail> = {
 /**
  * Returns dynamic professional icons styled for standard department designations
  */
+function mensagemSucessoComAviso(mensagem: string, avisoMetadados?: string): string {
+  return avisoMetadados ? `${mensagem} ${avisoMetadados}` : mensagem;
+}
+
 function getSectorIcon(name: string) {
-  const norm = name.toLowerCase().trim();
+  const norm = textoMinusculoSeguro(name).trim();
   if (norm.includes("nit") || norm.includes("inovação") || norm.includes("tecnologia")) return Lightbulb;
   if (norm.includes("ti") || norm.includes("tecnologia da informação") || norm.includes("infraestrutura") || norm.includes("suporte")) return Cpu;
   if (norm.includes("marketing") || norm.includes("comunicação")) return Megaphone;
@@ -160,7 +158,6 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
   const [deleteConfirmSector, setDeleteConfirmSector] = useState<string | null>(null);
 
   const [formName, setFormName] = useState("");
-  const [formDescription, setFormDescription] = useState("");
   const [formResponsible, setFormResponsible] = useState("");
   const [formStatus, setFormStatus] = useState<"Ativo" | "Inativo">("Ativo");
   const [formCargos, setFormCargos] = useState<string[]>([]);
@@ -177,16 +174,16 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
 
   const isNameDuplicate =
   modalMode === "create" ?
-  formName.trim() !== "" && sectors.some((s) => s.toLowerCase().trim() === formName.toLowerCase().trim()) :
+  formName.trim() !== "" && sectors.some((s) => textoMinusculoSeguro(s).trim() === textoMinusculoSeguro(formName).trim()) :
   modalMode === "edit" ?
-  selectedSectorName !== null && formName.trim() !== "" && formName.toLowerCase().trim() !== selectedSectorName.toLowerCase().trim() && sectors.some((s) => s.toLowerCase().trim() === formName.toLowerCase().trim()) :
+  selectedSectorName !== null && formName.trim() !== "" && textoMinusculoSeguro(formName).trim() !== textoMinusculoSeguro(selectedSectorName).trim() && sectors.some((s) => textoMinusculoSeguro(s).trim() === textoMinusculoSeguro(formName).trim()) :
   false;
 
   // Load baseline sector names from DB / storage
   const fetchSectorsList = async () => {
     setLoading(true);
     try {
-      const list = await getSectors();
+      const list = await getSectors(true);
       setSectors(list);
       setSectorDetails((current) => ({
         ...current,
@@ -206,22 +203,22 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
   // Merge dynamic properties and metrics with sector names
   const sectorsWithMetrics = useMemo(() => {
     return sectors.map((sectorName) => {
-      const sectorIAs = records.filter((r) => (r.unidadeSetor || "").trim().toLowerCase() === sectorName.trim().toLowerCase());
-      const sectorProfiles = profiles.filter((p) => (p.setor || "").trim().toLowerCase() === sectorName.trim().toLowerCase());
+      const alvo = textoMinusculoSeguro(sectorName).trim();
+      const sectorIAs = records.filter((r) => textoMinusculoSeguro(r.unidadeSetor).trim() === alvo);
+      const sectorProfiles = profiles.filter((p) => perfilPertenceAoSetor(p, sectorName));
 
-      const details = sectorDetails[sectorName] || PRESET_SECTORS_DETAILS[sectorName] || {
-        description: `Setor estratégico para suporte analítico e operações do Laboratório Cedro.`,
-        responsible: "Gestor Cedro",
-        status: "Ativo" as const
-      };
+      const details = normalizarDetalhesSetor(
+        sectorDetails[sectorName],
+        PRESET_SECTORS_DETAILS[sectorName],
+      );
 
       return {
         name: sectorName,
         iaCount: sectorIAs.length,
         userCount: sectorProfiles.length,
-        description: details.description,
         responsible: details.responsible,
-        status: details.status
+        status: details.status,
+        cargos: details.cargos,
       };
     });
   }, [sectors, records, profiles, sectorDetails]);
@@ -229,11 +226,13 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
   // Unified filtering: statusSelect, quickFilter, searchTerm
   const filteredSectors = useMemo(() => {
     return sectorsWithMetrics.filter((sec) => {
-      // 1. Search term (matches name, description or responsible)
-      const matchesSearch = !searchTerm.trim() ||
-      sec.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sec.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sec.responsible.toLowerCase().includes(searchTerm.toLowerCase());
+      const ocupantes = agruparOcupantesPorCargo(sec.name, sec.cargos || [], profiles)
+        .flatMap((item) => [item.cargo, ...item.usuarios]);
+      const matchesSearch = setorCorrespondeBusca(searchTerm, [
+        sec.name,
+        sec.responsible,
+        ...ocupantes,
+      ]);
 
       // 2. Status Select filter
       const matchesStatusSelect = statusSelect === "All" || sec.status === statusSelect;
@@ -311,7 +310,6 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
     setModalMode("create");
     setSelectedSectorName(null);
     setFormName("");
-    setFormDescription("");
     setFormResponsible("");
     setFormStatus("Ativo");
     setFormCargos(["Colaborador"]);
@@ -324,12 +322,10 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
     setModalMode("edit");
     setSelectedSectorName(sec.name);
     setFormName(sec.name);
-    setFormDescription(sec.description);
     setFormResponsible(sec.responsible);
     setFormStatus(sec.status);
 
-    const details = sectorDetails[sec.name] || PRESET_SECTORS_DETAILS[sec.name] || {};
-    setFormCargos(details.cargos || ["Colaborador"]);
+    setFormCargos(sec.cargos || ["Colaborador"]);
     setNewCargoInput("");
 
     setErrorMsg(null);
@@ -340,14 +336,10 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
     setModalMode("view");
     setSelectedSectorName(sec.name);
     setFormName(sec.name);
-    setFormDescription(sec.description);
     setFormResponsible(sec.responsible);
     setFormStatus(sec.status);
-
-    const details = sectorDetails[sec.name] || PRESET_SECTORS_DETAILS[sec.name] || {};
-    setFormCargos(details.cargos || ["Colaborador"]);
+    setFormCargos(sec.cargos || ["Colaborador"]);
     setNewCargoInput("");
-
     setErrorMsg(null);
     setIsModalOpen(true);
   };
@@ -355,11 +347,10 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
   const handleToggleStatus = async (sectorName: string) => {
     setErrorMsg(null);
     setSuccessMsg(null);
-    const current = sectorDetails[sectorName] || PRESET_SECTORS_DETAILS[sectorName] || {
-      description: "Setor estratégico Cedro.",
-      responsible: "Gestor Cedro",
-      status: "Ativo"
-    };
+    const current = normalizarDetalhesSetor(
+      sectorDetails[sectorName],
+      PRESET_SECTORS_DETAILS[sectorName],
+    );
 
     const newStatus = current.status === "Ativo" ? "Inativo" : "Ativo";
     const previousDetails = sectorDetails;
@@ -372,14 +363,19 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
     };
 
     setSectorDetails(nextDetails);
-    const ok = await saveSectors(sectors, nextDetails);
-    if (!ok) {
+    const resultado = await saveSectors(sectors, nextDetails);
+    if (!resultado.ok) {
       setSectorDetails(previousDetails);
       setErrorMsg("Não foi possível atualizar o status do setor.");
       return;
     }
 
-    setSuccessMsg(`O status do setor "${sectorName}" foi alterado para ${newStatus}.`);
+    setSuccessMsg(
+      mensagemSucessoComAviso(
+        `O status do setor "${sectorName}" foi alterado para ${newStatus}.`,
+        resultado.avisoMetadados,
+      ),
+    );
   };
 
   const handleDeleteSector = async (sectorName: string) => {
@@ -395,9 +391,11 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
     setSectorDetails(nextDetails);
 
     try {
-      const ok = await saveSectors(updatedSectors, nextDetails);
-      if (ok) {
-        setSuccessMsg(`Setor "${sectorName}" removido com sucesso.`);
+      const resultado = await saveSectors(updatedSectors, nextDetails);
+      if (resultado.ok) {
+        setSuccessMsg(
+          mensagemSucessoComAviso(`Setor "${sectorName}" removido com sucesso.`, resultado.avisoMetadados),
+        );
         if (onRefresh) onRefresh();
       } else {
         setErrorMsg("Erro ao atualizar os metadados de setores após a exclusão.");
@@ -421,7 +419,7 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
 
     if (modalMode === "create") {
       // Check duplicate
-      if (sectors.some((s) => s.toLowerCase().trim() === sName.toLowerCase())) {
+      if (sectors.some((s) => textoMinusculoSeguro(s).trim() === textoMinusculoSeguro(sName).trim())) {
         setErrorMsg("Este setor já existe.");
         return;
       }
@@ -430,7 +428,6 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
       const nextDetails = {
         ...sectorDetails,
         [sName]: {
-          description: formDescription.trim() || "Setor de saúde e governança corporativa.",
           responsible: formResponsible.trim() || "Não especificado",
           status: formStatus,
           cargos: formCargos.length > 0 ? formCargos : ["Colaborador"]
@@ -438,9 +435,11 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
       };
       setSectors(updated);
       setSectorDetails(nextDetails);
-      const ok = await saveSectors(updated, nextDetails);
-      if (ok) {
-        setSuccessMsg(`Setor "${sName}" criado com sucesso!`);
+      const resultado = await saveSectors(updated, nextDetails);
+      if (resultado.ok) {
+        setSuccessMsg(
+          mensagemSucessoComAviso(`Setor "${sName}" criado com sucesso!`, resultado.avisoMetadados),
+        );
         setIsModalOpen(false);
         if (onRefresh) onRefresh();
       } else {
@@ -451,8 +450,8 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
 
     } else if (modalMode === "edit" && selectedSectorName) {
       let updatedSectors = [...sectors];
-      if (selectedSectorName.toLowerCase() !== sName.toLowerCase()) {
-        const isDuplicateOfOther = sectors.some((s) => s.toLowerCase() === sName.toLowerCase() && s.toLowerCase() !== selectedSectorName.toLowerCase());
+      if (textoMinusculoSeguro(selectedSectorName) !== textoMinusculoSeguro(sName)) {
+        const isDuplicateOfOther = sectors.some((s) => textoMinusculoSeguro(s) === textoMinusculoSeguro(sName) && textoMinusculoSeguro(s) !== textoMinusculoSeguro(selectedSectorName));
         if (isDuplicateOfOther) {
           setErrorMsg("Já existe outro setor com este nome.");
           return;
@@ -466,7 +465,6 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
         delete nextDetails[selectedSectorName];
       }
       nextDetails[sName] = {
-        description: formDescription.trim() || "Setor de saúde e governança.",
         responsible: formResponsible.trim() || "Não especificado",
         status: formStatus,
         cargos: formCargos.length > 0 ? formCargos : ["Colaborador"]
@@ -474,9 +472,11 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
 
       setSectors(updatedSectors);
       setSectorDetails(nextDetails);
-      const ok = await saveSectors(updatedSectors, nextDetails);
-      if (ok) {
-        setSuccessMsg(`Setor "${sName}" atualizado com sucesso.`);
+      const resultado = await saveSectors(updatedSectors, nextDetails);
+      if (resultado.ok) {
+        setSuccessMsg(
+          mensagemSucessoComAviso(`Setor "${sName}" atualizado com sucesso.`, resultado.avisoMetadados),
+        );
         setIsModalOpen(false);
         await fetchSectorsList();
         if (onRefresh) onRefresh();
@@ -540,7 +540,7 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
           <Search size={18} />
           <input
             type="text"
-            placeholder="Buscar setores, responsáveis ou descrições..."
+            placeholder="Buscar setores ou responsáveis..."
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           />
@@ -620,7 +620,6 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
                               <span></span>{sec.status}
                             </button>
                           </div>
-                          <p className="setor-cartao__descricao">{sec.description}</p>
                         </div>
                       </div>
 
@@ -829,20 +828,6 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
                   </div>
                 </motion.div>
 
-                {/* Descrição */}
-                <motion.div variants={itemVariants} className="setores__elemento-historico-descricao-institucio">
-                  <label className="setores__rotulo-nome-do-setor">Histórico / Descrição Institucional *</label>
-                  <textarea
-                  required
-                  rows={4}
-                  placeholder="Escreva breve resumo operacional descrevendo as atribuições, pesquisa ou fluxos de negócio sob custódia operacional deste setor..."
-                  disabled={modalMode === "view"}
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  className="setores__campo-texto-escreva-breve-resumo-operacion" />
-                
-                </motion.div>
-
                 {/* Cargos / Funções no Setor */}
                 <motion.div variants={itemVariants} className="setores__elemento-cargos-funcoes-cadastrados-par">
                   <label className="setores__rotulo-nome-do-setor">
@@ -853,6 +838,24 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
                   <div className="setores__grupo-32">
                     {formCargos.length === 0 ?
                   <span className="setores__texto-nenhum-cargo-cadastrado-adicio">Nenhum cargo cadastrado. Adicione pelo menos um.</span> :
+
+                  (modalMode === "view" && selectedSectorName ?
+                  agruparOcupantesPorCargo(selectedSectorName, formCargos, profiles).map((grupo) =>
+                  <div key={grupo.cargo} className="setores-ocupantes-cargo">
+                            <div className="setores__grupo-33">
+                              <span>{grupo.cargo}</span>
+                            </div>
+                            {grupo.usuarios.length > 0 ?
+                    <ul className="setores-ocupantes-cargo__lista">
+                                {grupo.usuarios.map((nome) =>
+                      <li key={`${grupo.cargo}-${nome}`}>{nome}</li>
+                      )}
+                              </ul> :
+
+                    <span className="setores-ocupantes-cargo__vazio">Nenhum usuário neste cargo</span>
+                    }
+                          </div>
+                  ) :
 
                   formCargos.map((cargoItem, idx) =>
                   <div
@@ -870,6 +873,7 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
                             </button>
                     }
                         </div>
+                  )
                   )
                   }
                   </div>
@@ -918,23 +922,20 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
                       <div>
                         <span className="setores__texto-tecnologias-de-ia">Tecnologias de IA</span>
                         <div className="setores__grupo-34">
-                          {records.filter((r) => (r.unidadeSetor || "").trim().toLowerCase() === selectedSectorName.toLowerCase().trim()).length.toString().padStart(2, "0")}
+                          {records.filter((r) => textoMinusculoSeguro(r.unidadeSetor).trim() === textoMinusculoSeguro(selectedSectorName).trim()).length.toString().padStart(2, "0")}
                         </div>
                       </div>
                       <div className="setores__grupo-35" />
                       <div>
                         <span className="setores__texto-tecnologias-de-ia">Perfis Ativos</span>
                         <div className="setores__grupo-34">
-                          {profiles.filter((p) => (p.setor || "").trim().toLowerCase() === selectedSectorName.toLowerCase().trim()).length.toString().padStart(2, "0")}
+                          {profiles.filter((p) => perfilPertenceAoSetor(p, selectedSectorName)).length.toString().padStart(2, "0")}
                         </div>
                       </div>
                     </div>
                   </div>
               }
 
-              </form>
-
-              {/* Footer controls button */}
               <div className="setores__grupo-36">
                 <button
                 type="button"
@@ -948,13 +949,13 @@ export default function SectorsManager({ records, profiles, onRefresh }: Sectors
               <button
                 type="submit"
                 disabled={isNameDuplicate}
-                onClick={handleSaveForm}
                 className="setores__botao-salvar-alteracoes">
                 
                     Salvar alterações
                   </button>
               }
               </div>
+              </form>
 
             </motion.div>
           </div>
