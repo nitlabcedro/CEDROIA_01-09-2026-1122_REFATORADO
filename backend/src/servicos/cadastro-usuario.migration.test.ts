@@ -53,6 +53,8 @@ describe("migration do trigger de cadastro de usuário", () => {
     assert.match(sql, /setor\.cargos\s*\?\s*v_cargo_item/);
     assert.doesNotMatch(sql, /v_cargo_item = any \(v_cargos\)/);
     assert.doesNotMatch(sql, /mesmo cargo mais de uma vez/);
+    assert.doesNotMatch(sql, /from\s+public\.perfis[\s\S]{0,200}setor[\s\S]{0,80}cargo/i);
+    assert.doesNotMatch(sql, /cargo já ocupado/i);
   });
 
   it("não contém os fallbacks Geral ou Colaborador", () => {
