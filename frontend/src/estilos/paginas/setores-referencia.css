@@ -466,17 +466,6 @@
   background: #8c9691;
 }
 
-.setor-cartao__descricao {
-  display: -webkit-box;
-  margin: 7px 0 0;
-  overflow: hidden;
-  color: #69766f;
-  font-size: 12px;
-  line-height: 1.4;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
 .setor-cartao__acoes {
   position: relative;
   flex: 0 0 auto;
@@ -712,6 +701,29 @@
 .setores-pagina__paginacao button:disabled {
   opacity: .42;
   cursor: not-allowed;
+}
+
+.setores-ocupantes-cargo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.setores-ocupantes-cargo__lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #3d5a47;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.setores-ocupantes-cargo__vazio {
+  color: #7c8ca2;
+  font-size: 11px;
+  font-style: italic;
 }
 
 @media (max-width: 1260px) {

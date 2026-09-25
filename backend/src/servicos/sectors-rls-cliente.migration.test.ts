@@ -261,9 +261,10 @@ describe("Etapa 2 — RLS de cliente em public.sectors", () => {
 
     assert.match(gestao, /"sectors"/);
     assert.match(gestao, /TABELAS_SUPABASE\.SETORES/);
-    assert.match(gestao, /\.upsert\(payload,\s*\{\s*onConflict:\s*"name"\s*\}\)/);
+    assert.match(gestao, /\.update\(payload\)/);
+    assert.match(gestao, /\.insert\(payload\)/);
     assert.match(gestao, /\.delete\(\)\.in\("name"/);
-    assert.match(gestao, /name,status,cargos,description,responsible/);
+    assert.match(gestao, /name,status,cargos,responsible/);
     assert.match(armazenamento, /persistirSetoresGestaoNoSupabase/);
     assert.match(armazenamento, /carregarSetoresGestaoDoSupabase/);
   });
