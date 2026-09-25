@@ -6,7 +6,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
+import {
+  filtrarOpcoesMenuSuspenso,
+  gestoEhToqueDeSelecao,
+} from "@/utilitarios/menu-suspenso-busca";
 
 export interface DropdownOption {
   value: string;
@@ -26,6 +30,8 @@ interface CustomDropdownProps {
   triggerClassName?: string;
   optionsClassName?: string;
   size?: "sm" | "md" | "lg";
+  searchable?: boolean;
+  searchPlaceholder?: string;
 }
 
 type PosicaoPainel = {
@@ -53,14 +59,28 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
   triggerClassName = "",
   optionsClassName = "",
   size = "md",
+  searchable = false,
+  searchPlaceholder = "Digite para buscar...",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [posicaoPainel, setPosicaoPainel] = useState<PosicaoPainel | null>(null);
+  const [termoBusca, setTermoBusca] = useState("");
   const gatilhoRef = useRef<HTMLButtonElement | null>(null);
+  const buscaRef = useRef<HTMLInputElement | null>(null);
+  const inicioToqueRef = useRef<{ id: number; x: number; y: number } | null>(null);
 
   const normalizedOptions: DropdownOption[] = options.map((option) =>
     typeof option === "string" ? { value: option, label: option } : option,
   );
+
+  const opcoesVisiveis = searchable
+    ? filtrarOpcoesMenuSuspenso(normalizedOptions, termoBusca)
+    : normalizedOptions;
+
+  const selecionar = (valor: string) => {
+    onChange(valor);
+    setIsOpen(false);
+  };
 
   const selectedOption = normalizedOptions.find((option) => option.value === value);
   const displayLabel = selectedOption?.label || placeholder || value || "";
@@ -106,10 +126,20 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setPosicaoPainel(null);
+      setTermoBusca("");
+      inicioToqueRef.current = null;
       return;
     }
 
     atualizarPosicao();
+
+    // Em telas de toque o foco automático abriria o teclado sobre a lista;
+    // ali o campo de busca só recebe foco quando o usuário toca nele.
+    const ponteiroPreciso =
+      typeof window.matchMedia === "function" && window.matchMedia("(pointer: fine)").matches;
+    if (searchable && ponteiroPreciso) {
+      buscaRef.current?.focus();
+    }
 
     const reposicionar = () => atualizarPosicao();
     const fecharComEscape = (event: KeyboardEvent) => {
@@ -125,7 +155,7 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
       window.removeEventListener("scroll", reposicionar, true);
       window.removeEventListener("keydown", fecharComEscape);
     };
-  }, [isOpen]);
+  }, [isOpen, searchable]);
 
   const portalDropdown = typeof document !== "undefined"
     ? createPortal(
@@ -161,28 +191,65 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
                 role="listbox"
                 onPointerDown={(event) => event.stopPropagation()}
               >
+                {searchable && normalizedOptions.length > 0 && (
+                  <div className="menu-suspenso__busca">
+                    <Search size={14} strokeWidth={2.2} />
+                    <input
+                      ref={buscaRef}
+                      type="text"
+                      value={termoBusca}
+                      placeholder={searchPlaceholder}
+                      autoComplete="off"
+                      className="menu-suspenso__busca-campo"
+                      aria-label={label ? `Buscar ${label}` : "Buscar opção"}
+                      onChange={(event) => setTermoBusca(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          if (opcoesVisiveis.length > 0) selecionar(opcoesVisiveis[0].value);
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+
                 {normalizedOptions.length === 0 ? (
                   <div className="menu-suspenso__vazio">Nenhuma opção disponível</div>
+                ) : opcoesVisiveis.length === 0 ? (
+                  <div className="menu-suspenso__vazio">Nenhuma opção encontrada</div>
                 ) : (
-                  normalizedOptions.map((option) => {
+                  opcoesVisiveis.map((option) => {
                     const active = value === option.value;
                     return (
                       <button
                         key={option.value}
                         type="button"
+                        // A seleção acontece no pointerup e só quando o dedo não
+                        // arrastou: no pointerdown, rolar a lista já selecionava.
                         onPointerDown={(event) => {
-                          // Faz a seleção no pointerdown para evitar que eventos de
-                          // fechamento/click-outside desmontem o portal antes do click.
-                          event.preventDefault();
                           event.stopPropagation();
-                          onChange(option.value);
-                          setIsOpen(false);
+                          inicioToqueRef.current = {
+                            id: event.pointerId,
+                            x: event.clientX,
+                            y: event.clientY,
+                          };
+                        }}
+                        onPointerUp={(event) => {
+                          event.stopPropagation();
+                          const inicio = inicioToqueRef.current;
+                          const mesmoPonteiro = inicio?.id === event.pointerId;
+                          inicioToqueRef.current = null;
+                          if (!mesmoPonteiro) return;
+                          if (!gestoEhToqueDeSelecao(inicio, { x: event.clientX, y: event.clientY })) return;
+                          selecionar(option.value);
+                        }}
+                        onPointerCancel={() => {
+                          inicioToqueRef.current = null;
                         }}
                         onClick={(event) => {
-                          // Fallback de acessibilidade para ativação por teclado.
+                          // detail 0 indica ativação por teclado (Enter/Espaço).
                           event.stopPropagation();
-                          onChange(option.value);
-                          setIsOpen(false);
+                          if (event.detail === 0) selecionar(option.value);
                         }}
                         className={`menu-suspenso__opcao ${active ? "menu-suspenso__opcao--ativa" : ""}`}
                         role="option"

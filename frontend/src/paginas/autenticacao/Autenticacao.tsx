@@ -314,6 +314,8 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
                           size="lg"
                           className="autenticacao-dropdown"
                           optionsClassName="autenticacao-dropdown__painel"
+                          searchable
+                          searchPlaceholder="Buscar setor..."
                           onChange={(sec) => {
                             const newCombos = [...combos];
                             newCombos[index] = {
@@ -334,6 +336,8 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
                           size="lg"
                           className="autenticacao-dropdown"
                           optionsClassName="autenticacao-dropdown__painel"
+                          searchable
+                          searchPlaceholder="Buscar cargo..."
                           onChange={(carg) => {
                             const newCombos = [...combos];
                             newCombos[index].cargo = carg;
