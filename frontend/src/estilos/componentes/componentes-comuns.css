@@ -115,7 +115,40 @@
   border: 1px solid #cbd9cd;
   border-radius: 13px;
   box-shadow: 0 18px 42px rgba(2, 43, 13, .16);
+  /* pan-y garante a rolagem por toque da lista; contain evita que o gesto
+     vaze para a pagina quando chega ao fim do painel. */
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
+
+.menu-suspenso__busca {
+  position: sticky;
+  top: -6px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: -6px -6px 6px;
+  padding: 8px 10px;
+  color: #6b7d70;
+  background: #fff;
+  border-bottom: 1px solid #e4ece6;
+}
+
+.menu-suspenso__busca-campo {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  color: #27402f;
+  background: transparent;
+  border: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.menu-suspenso__busca-campo::placeholder { color: #93a399; font-weight: 500; }
+.menu-suspenso__busca-campo:focus { outline: 0; }
 
 .menu-suspenso__opcao {
   display: flex;
