@@ -26,7 +26,7 @@
 
 .notificacao-ti__notificacao-ti-pendente-estrutura {
   position: fixed;
-  bottom: 6rem;
+  bottom: calc(var(--cedro-altura-navegacao-inferior) + 28px + env(safe-area-inset-bottom, 0px));
   left: 1rem;
   right: 1rem;
   z-index: 65;

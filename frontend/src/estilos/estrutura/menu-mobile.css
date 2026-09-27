@@ -25,6 +25,11 @@
   padding: 0 12px;
 }
 
+.menu-mobile__equilibrio {
+  width: 44px;
+  height: 44px;
+}
+
 .menu-mobile__botao,
 .menu-mobile__perfil-botao,
 .menu-mobile__fechar {
@@ -313,7 +318,8 @@
 
   .menu-mobile__botao,
   .menu-mobile__perfil-botao,
-  .menu-mobile__fechar {
+  .menu-mobile__fechar,
+  .menu-mobile__equilibrio {
     width: 42px;
     height: 42px;
     border-radius: 12px;

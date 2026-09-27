@@ -12,6 +12,7 @@ import {
 import { Sidebar } from "@/componentes/layout/BarraLateral";
 import { Topbar } from "@/componentes/layout/BarraSuperior";
 import MenuMobile from "@/componentes/layout/MenuMobile";
+import NavegacaoInferiorMobile from "@/componentes/layout/NavegacaoInferiorMobile";
 import FundoLaboratorio from "@/componentes/fundo/FundoLaboratorio";
 import CarregamentoPagina from "@/componentes/comuns/CarregamentoPagina";
 import { useAplicacao } from "@/hooks/useAplicacao";
@@ -287,11 +288,7 @@ export default function Aplicacao() {
         <MenuMobile
           activeTab={activeTab}
           navegarPara={navegarPara}
-          profile={profile}
-          isCurrentUserAdmin={isCurrentUserAdmin}
-          isCurrentUserPrivileged={isCurrentUserPrivileged}
-          unreadChatCount={unreadChatCount} />
-        
+          profile={profile} />
 
         {/* 2. CONTEÚDO */}
         <main
@@ -300,7 +297,7 @@ export default function Aplicacao() {
           className={`aplicacao__conteudo-mobile ${
           activeTab === "chat" ?
           "aplicacao__conteudo-mobile--chat" :
-          "aplicacao__conteudo-mobile--pagina mobile-safe-bottom"}`
+          "aplicacao__conteudo-mobile--pagina"}`
           }>
           
           <div
@@ -314,6 +311,13 @@ export default function Aplicacao() {
             {renderConteudoAtivo()}
           </div>
         </main>
+
+        <NavegacaoInferiorMobile
+          activeTab={activeTab}
+          navegarPara={navegarPara}
+          isCurrentUserAdmin={isCurrentUserAdmin}
+          isCurrentUserPrivileged={isCurrentUserPrivileged}
+          unreadChatCount={unreadChatCount} />
       </div>
       }
 

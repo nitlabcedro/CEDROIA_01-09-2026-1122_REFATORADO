@@ -4,6 +4,11 @@ import {
   registrarPollingComVisibilidade,
 } from "@/utilitarios/polling-visibilidade";
 import { usuarioEhAdmin, usuarioEhModerador, usuarioEhPrivilegiado } from "@/utilitarios/permissoes";
+import {
+  ABAS_PRIVILEGIADAS,
+  ABAS_SOMENTE_ADMIN,
+  abaPermitida,
+} from "@/utilitarios/permissoes-navegacao";
 import { ABAS_APLICACAO, ROTA_REDEFINIR_SENHA, type AbaAplicacao } from "@/constantes/navegacao";
 import { TABELAS_SUPABASE } from "@/constantes/supabase";
 import { ETAPAS_APROVACAO_OFICIAIS, NOMES_ETAPAS_CURTOS, criarConfiguracaoAprovacaoPadrao } from "@/constantes/fluxo-aprovacao";
@@ -74,21 +79,8 @@ export interface OpcoesNavegarPara {
 
 export type NavegarPara = (destino: AbaAplicacao, opcoes?: OpcoesNavegarPara) => void;
 
-const ABAS_SOMENTE_ADMIN = new Set<AbaAplicacao>(["sectors", "sectors_mgr"]);
-const ABAS_PRIVILEGIADAS = new Set<AbaAplicacao>(["approval_queue", "admin"]);
-
 function abaAplicacaoValida(valor: string | null): valor is AbaAplicacao {
   return Boolean(valor && (ABAS_APLICACAO as readonly string[]).includes(valor));
-}
-
-function abaPermitida(
-  aba: AbaAplicacao,
-  isAdmin: boolean,
-  isPrivileged: boolean,
-): boolean {
-  if (ABAS_SOMENTE_ADMIN.has(aba)) return isAdmin;
-  if (ABAS_PRIVILEGIADAS.has(aba)) return isPrivileged;
-  return true;
 }
 
 export function useAplicacao() {

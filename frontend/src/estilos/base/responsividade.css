@@ -73,7 +73,7 @@ video {
 
 @media (max-width: 560px) {
   .aplicacao__conteudo-mobile--pagina {
-    padding: 10px 10px max(28px, env(safe-area-inset-bottom, 0px));
+    padding: 10px 10px 28px;
   }
 
   .pagina input:not([type="checkbox"]):not([type="radio"]),

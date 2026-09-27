@@ -37,7 +37,9 @@
 }
 
 .aplicacao__conteudo-mobile--chat {
-  padding: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 16px;
   overflow: hidden;
 }
 
@@ -52,7 +54,10 @@
 }
 
 .aplicacao__pagina-mobile--chat {
-  height: 100%;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: auto;
   min-height: 0;
   max-width: none;
   overflow: hidden;

@@ -97,8 +97,9 @@ describe("renderização segura com múltiplas atribuições", () => {
     assert.match(barraSuperior, /obterCargoPrincipal\(profile\?\.cargo\)/);
     assert.match(barraSuperior, /obterSetorPrincipal\(profile\?\.setor\)/);
     assert.match(barraLateral, /obterCargoPrincipal\(profile\?\.cargo\)/);
-    assert.match(menuMobile, /obterCargoPrincipal\(profile\?\.cargo\)/);
-    assert.match(menuMobile, /obterSetorPrincipal\(profile\?\.setor\)/);
+    assert.match(menuMobile, /id="cedro-menu-mobile"/);
+    assert.match(menuMobile, /TITULOS_ABAS\[activeTab\]/);
+    assert.doesNotMatch(menuMobile, /cedro-menu-mobile-painel/);
     assert.match(contexto, /mesclarPerfilBuscado\(prev, data as UserProfile\)/);
   });
 });

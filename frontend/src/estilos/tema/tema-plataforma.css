@@ -557,6 +557,10 @@ body {
    ------------------------------------------------------------ */
 
 @media (max-width: 1023px) {
+  .aplicacao__notificacoes {
+    right: 16px;
+    bottom: calc(var(--cedro-altura-navegacao-inferior) + 12px + env(safe-area-inset-bottom, 0px));
+  }
   .aplicacao__pagina-mobile { background: transparent; }
   .cedro-page-premium > header,
   .cedro-page-premium .inventario-cabecalho,
@@ -566,7 +570,6 @@ body {
 }
 
 @media (max-width: 767px) {
-  .aplicacao__notificacoes { right: 16px; bottom: 82px; }
   .cedro-abas { width: 100%; }
   .cedro-aba { flex: 1 0 auto; }
   .chat-avatar--principal { width: 38px; height: 38px; }
