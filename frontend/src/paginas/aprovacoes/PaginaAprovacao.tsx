@@ -269,14 +269,6 @@ export default function ApprovalPage({
     }));
   }, [approvalConfig]);
 
-  // Encontra se o usuário logado está configurado como responsável para as etapas finais (Presidência / Direção Financeira)
-  const isFinalApprovalUser = useMemo(() => {
-    return currentSteps.some((step) =>
-    (step.stepNumber === 4 || step.stepNumber === 5) &&
-    step.userId === currentUserId
-    );
-  }, [currentSteps, currentUserId]);
-
   // Encontra o fluxo de processo real para cada IA
   const getRecordWf = (recordId: string) => {
     return workflows.find((wf) => wf.iaRecordId === recordId);
@@ -348,27 +340,6 @@ export default function ApprovalPage({
       return true;
     });
 
-    // Se o usuário logado pertence às etapas finais do fluxo, ele SÓ pode ver as IAs que estão aguardando estritamente a sua aprovação
-    if (isFinalApprovalUser) {
-      list = list.filter((r) => {
-        const isPending = recordEstaPendente(r);
-        if (!isPending) return false;
-
-        const wf = getRecordWf(r.id);
-        if (fluxoEncerrado(r, wf)) return false;
-
-        const currentStepNum = wf ? wf.currentStep : 1;
-        // Deve estar exatamente na etapa dele (4 ou 5)
-        if (currentStepNum !== 4 && currentStepNum !== 5) return false;
-
-        const wfStep = wf?.steps?.find((s) => s.stepNumber === currentStepNum);
-        const stepUserId = wfStep?.assignedUserId;
-
-        // O usuário logado deve ser o responsável designado por esta etapa
-        return stepUserId === currentUserId;
-      });
-    }
-
     // Filtro de busca textual
     list = list.filter((r) => {
       const term = approvalSearchTerm.toLowerCase().trim();
@@ -389,31 +360,28 @@ export default function ApprovalPage({
       return matchesSearch;
     });
 
-    // Filtros de abas somente para usuários comuns (ou não restritos das etapas finais)
-    if (!isFinalApprovalUser) {
-      if (queueFilter === "pending") {
-        list = list.filter(recordEstaPendente);
-      } else if (queueFilter === "my_turn") {
-        list = list.filter((r) => {
-          const isPending = recordEstaPendente(r);
-          if (!isPending) return false;
+    if (queueFilter === "pending") {
+      list = list.filter(recordEstaPendente);
+    } else if (queueFilter === "my_turn") {
+      list = list.filter((r) => {
+        const isPending = recordEstaPendente(r);
+        if (!isPending) return false;
 
-          const wf = getRecordWf(r.id);
-          if (fluxoEncerrado(r, wf)) return false;
+        const wf = getRecordWf(r.id);
+        if (fluxoEncerrado(r, wf)) return false;
 
-          const currentStepNum = wf ? wf.currentStep : 1;
-          const wfStep = wf?.steps?.find((s) => s.stepNumber === currentStepNum);
-          const stepUserId = wfStep?.assignedUserId;
+        const currentStepNum = wf ? wf.currentStep : 1;
+        const wfStep = wf?.steps?.find((s) => s.stepNumber === currentStepNum);
+        const stepUserId = wfStep?.assignedUserId;
 
-          const isAssignedToMe = stepUserId === currentUserId;
+        const isAssignedToMe = stepUserId === currentUserId;
 
-          return isAssignedToMe;
-        });
-      }
+        return isAssignedToMe;
+      });
     }
 
     return list;
-  }, [records, queueFilter, approvalSearchTerm, workflows, currentSteps, currentUserId, profiles, isAdmin, isFinalApprovalUser]);
+  }, [records, queueFilter, approvalSearchTerm, workflows, currentSteps, currentUserId, profiles, isAdmin]);
 
   const stats = useMemo(() => {
     const total = records.length;
@@ -435,12 +403,8 @@ export default function ApprovalPage({
       return isAssignedToMe;
     }).length;
 
-    const totalPending = isFinalApprovalUser ?
-    myTurnCount :
-    activeRecords.length;
-
-    return { total, myTurnCount, totalPending };
-  }, [records, workflows, currentSteps, currentUserId, profiles, isAdmin, isFinalApprovalUser]);
+    return { total, myTurnCount, totalPending: activeRecords.length };
+  }, [records, workflows, currentSteps, currentUserId, profiles, isAdmin]);
 
   return (
     <div id="aprovacoes-conteudo" data-componente="pagina-aprovacoes" className="pagina-aprovacoes aprovacao-container cedro-page-premium">

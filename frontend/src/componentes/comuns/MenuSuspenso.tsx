@@ -11,6 +11,10 @@ import {
   filtrarOpcoesMenuSuspenso,
   gestoEhToqueDeSelecao,
 } from "@/utilitarios/menu-suspenso-busca";
+import {
+  calcularPosicaoMenuSuspenso,
+  type PosicaoMenuSuspenso,
+} from "@/utilitarios/menu-suspenso-posicao";
 
 export interface DropdownOption {
   value: string;
@@ -34,18 +38,6 @@ interface CustomDropdownProps {
   searchPlaceholder?: string;
 }
 
-type PosicaoPainel = {
-  top?: number;
-  bottom?: number;
-  left: number;
-  width: number;
-  maxHeight: number;
-};
-
-const MARGEM_VIEWPORT = 10;
-const ESPACO_PAINEL = 6;
-const ALTURA_MAXIMA_PAINEL = 280;
-
 export const CustomDropdown: React.FC<CustomDropdownProps> = ({
   label,
   placeholder,
@@ -63,7 +55,7 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
   searchPlaceholder = "Digite para buscar...",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [posicaoPainel, setPosicaoPainel] = useState<PosicaoPainel | null>(null);
+  const [posicaoPainel, setPosicaoPainel] = useState<PosicaoMenuSuspenso | null>(null);
   const [termoBusca, setTermoBusca] = useState("");
   const gatilhoRef = useRef<HTMLButtonElement | null>(null);
   const buscaRef = useRef<HTMLInputElement | null>(null);
@@ -99,28 +91,12 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
     if (!gatilho) return;
 
     const rect = gatilho.getBoundingClientRect();
-    const larguraDisponivel = Math.max(180, window.innerWidth - MARGEM_VIEWPORT * 2);
-    const width = Math.min(rect.width, larguraDisponivel);
-    const left = Math.min(
-      Math.max(rect.left, MARGEM_VIEWPORT),
-      Math.max(MARGEM_VIEWPORT, window.innerWidth - width - MARGEM_VIEWPORT),
+    setPosicaoPainel(
+      calcularPosicaoMenuSuspenso(
+        { top: rect.top, bottom: rect.bottom, left: rect.left, width: rect.width },
+        { largura: window.innerWidth, altura: window.innerHeight },
+      ),
     );
-
-    const espacoAbaixo = window.innerHeight - rect.bottom - MARGEM_VIEWPORT;
-    const espacoAcima = rect.top - MARGEM_VIEWPORT;
-    const abrirAcima = espacoAbaixo < 180 && espacoAcima > espacoAbaixo;
-    const maxHeight = Math.min(
-      ALTURA_MAXIMA_PAINEL,
-      Math.max(120, abrirAcima ? espacoAcima - ESPACO_PAINEL : espacoAbaixo - ESPACO_PAINEL),
-    );
-
-    setPosicaoPainel({
-      top: abrirAcima ? undefined : rect.bottom + ESPACO_PAINEL,
-      bottom: abrirAcima ? window.innerHeight - rect.top + ESPACO_PAINEL : undefined,
-      left,
-      width,
-      maxHeight,
-    });
   };
 
   useEffect(() => {
