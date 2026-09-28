@@ -661,7 +661,7 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
             <React.Fragment key={sec.label}>
               <button
                 type="button"
-                className={`nova-solicitacao__etapa ${ativa ? "nova-solicitacao__etapa--ativa" : ""} ${concluida ? "nova-solicitacao__etapa--concluida" : ""}`}
+                className={`nova-solicitacao__etapa ${ativa ? "nova-solicitacao__etapa--ativa" : ""} ${concluida ? "nova-solicitacao__etapa--concluida" : ""} ${index > activeSection ? "nova-solicitacao__etapa--futura" : ""}`}
                 onClick={() => handleStepNavigation(index)}
                 aria-current={ativa ? "step" : undefined}
               >
@@ -823,8 +823,8 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
                 </div>
 
                 {formData.objetivos?.includes(ObjetivosIA.OUTRO) && (
-                  <div className="nova-solicitacao__campo-bloco">
-                    <InputGroup label="Descreva a utilização “Outro”" required>
+                  <div className="nova-solicitacao__campo-bloco nova-solicitacao__outro-utilizacao">
+                    <InputGroup label="Informe qual utilização" required>
                       <input
                         type="text"
                         className={getInputClass(formData.objetivoOutro)}
