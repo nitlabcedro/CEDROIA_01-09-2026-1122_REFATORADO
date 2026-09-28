@@ -9,7 +9,7 @@ import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
 import { IconeIA } from "@/componentes/comuns/IconeIA";
 import {
   Save, X, Info, AlertTriangle, Zap, Database, Share2, ClipboardCheck, Scale, FileText, ChevronRight,
-  Check, UserRound, Clock3, Bookmark
+  Check, UserRound, Clock3, Bookmark, Pencil, MessageSquare
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -785,7 +785,8 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
                   <p className="nova-solicitacao__campo-ajuda" id="ajuda-descricao-atividade">
                     Descreva o contexto de uso: setor, tarefas e momento em que a ferramenta entrará no fluxo de trabalho.
                   </p>
-                  <div className="nova-solicitacao__textarea-wrap nova-solicitacao__textarea-wrap--destaque">
+                  <div className="nova-solicitacao__textarea-wrap nova-solicitacao__textarea-wrap--destaque nova-solicitacao__controle-interativo">
+                    <Pencil size={15} className="nova-solicitacao__icone-interativo" aria-hidden="true" />
                     <textarea
                       className="nova-solicitacao__textarea nova-solicitacao__textarea--objetivo"
                       value={formData.descricaoAtividade || ""}
@@ -815,34 +816,39 @@ export default function RegistrationForm({ initialData, onSave, onCancel, isAdmi
                           onClick={() => handleArrayToggle("objetivos", option)}
                           aria-pressed={selected}
                         >
-                          {option}
+                          <span className="nova-solicitacao__chip-rotulo">{option}</span>
+                          {selected && <Check size={14} className="nova-solicitacao__chip-check" aria-hidden="true" />}
                         </button>
                       );
                     })}
                   </div>
-                </div>
 
-                {formData.objetivos?.includes(ObjetivosIA.OUTRO) && (
-                  <div className="nova-solicitacao__campo-bloco nova-solicitacao__outro-utilizacao">
-                    <InputGroup label="Informe qual utilização" required>
-                      <input
-                        type="text"
-                        className={getInputClass(formData.objetivoOutro)}
-                        value={formData.objetivoOutro || ""}
-                        onChange={(event) => updateField("objetivoOutro", event.target.value)}
-                        placeholder="Informe qual utilização não está listada acima"
-                        required
-                      />
-                    </InputGroup>
-                  </div>
-                )}
+                  {formData.objetivos?.includes(ObjetivosIA.OUTRO) && (
+                    <div className="nova-solicitacao__outro-utilizacao nova-solicitacao__controle-interativo">
+                      <InputGroup label="Informe qual utilização" required>
+                        <div className="nova-solicitacao__input-interativo-wrap">
+                          <MessageSquare size={15} className="nova-solicitacao__icone-interativo" aria-hidden="true" />
+                          <input
+                            type="text"
+                            className={getInputClass(formData.objetivoOutro)}
+                            value={formData.objetivoOutro || ""}
+                            onChange={(event) => updateField("objetivoOutro", event.target.value)}
+                            placeholder="Informe qual utilização não está listada acima"
+                            required
+                          />
+                        </div>
+                      </InputGroup>
+                    </div>
+                  )}
+                </div>
 
                 <div className="nova-solicitacao__campo-bloco nova-solicitacao__campo-textarea">
                   <label id="label-beneficios">Benefícios esperados com o uso da IA <span>*</span></label>
                   <p className="nova-solicitacao__campo-ajuda" id="ajuda-beneficios">
                     Explique o ganho prático para a equipe ou para o processo (tempo, qualidade, padronização, etc.).
                   </p>
-                  <div className="nova-solicitacao__textarea-wrap nova-solicitacao__textarea-wrap--destaque">
+                  <div className="nova-solicitacao__textarea-wrap nova-solicitacao__textarea-wrap--destaque nova-solicitacao__controle-interativo">
+                    <Pencil size={15} className="nova-solicitacao__icone-interativo" aria-hidden="true" />
                     <textarea
                       className="nova-solicitacao__textarea nova-solicitacao__textarea--objetivo"
                       value={formData.beneficiosEsperados || ""}

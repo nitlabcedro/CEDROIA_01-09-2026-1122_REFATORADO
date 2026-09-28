@@ -2700,88 +2700,279 @@
     font-size: 16px;
   }
 
-  /* —— Etapa 2: Objetivo —— */
-  .nova-solicitacao__fase--objetivo {
-    gap: 12px;
-  }
-
-  .nova-solicitacao__campo-bloco {
-    padding: 12px;
-    background: #fff;
-    border: 1px solid rgba(7, 86, 24, 0.14);
-    border-radius: 16px;
-  }
-
-  .nova-solicitacao__campo-bloco > label,
-  .nova-solicitacao__campo-textarea > label,
-  .nova-solicitacao__objetivos > label {
+  /* —— Etapa 2: Objetivo (máxima ênfase nos controles interativos) —— */
+  .nova-solicitacao__principal:has(.nova-solicitacao__fase--objetivo) .nova-solicitacao__secao-cabecalho {
     margin-bottom: 6px;
-    font-size: 13px;
+    padding-bottom: 6px;
+    border-bottom-color: rgba(7, 86, 24, 0.05);
+  }
+
+  .nova-solicitacao__principal:has(.nova-solicitacao__fase--objetivo) .nova-solicitacao__secao-cabecalho h2 {
+    font-size: 14px;
+    color: #64748b !important;
+    font-weight: 700;
+  }
+
+  .nova-solicitacao__principal:has(.nova-solicitacao__fase--objetivo) .nova-solicitacao__secao-cabecalho p {
+    font-size: 11px;
+    color: #94a3b8;
+  }
+
+  .nova-solicitacao__principal:has(.nova-solicitacao__fase--objetivo) .nova-solicitacao__secao-icone {
+    color: #94a3b8;
+    background: rgba(148, 163, 184, 0.12);
+  }
+
+  .nova-solicitacao__fase--objetivo {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__campo-bloco {
+    padding: 12px;
+    background: #fdfefd;
+    border: 1px solid rgba(7, 86, 24, 0.12);
+    border-radius: 16px;
+    box-shadow: none;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__campo-ajuda {
+    margin: 2px 0 10px;
+    color: #94a3b8;
+    font-size: 11.5px;
+    font-weight: 400;
+    line-height: 1.4;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__campo-bloco > label,
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__campo-textarea > label,
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__objetivos > label {
+    display: block;
+    margin-bottom: 2px;
+    color: #111827;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.3;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__campo-bloco > label span,
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__campo-textarea > label span,
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__objetivos > label span {
+    margin-left: 2px;
+    color: #ef4444;
     font-weight: 800;
-    color: #1a2a22;
   }
 
-  .nova-solicitacao__outro-utilizacao {
-    margin-top: -4px;
-    padding-top: 10px;
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__controle-interativo {
+    position: relative;
   }
 
-  .nova-solicitacao__textarea-wrap--destaque {
-    border: 1px solid rgba(7, 86, 24, 0.18);
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__icone-interativo {
+    position: absolute;
+    top: 11px;
+    right: 11px;
+    z-index: 1;
+    color: rgba(7, 86, 24, 0.45);
+    pointer-events: none;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__textarea-wrap--destaque {
+    border: 1.5px solid rgba(7, 86, 24, 0.42);
     border-radius: 14px;
     padding: 0;
     background: #fff;
+    box-shadow: 0 2px 8px rgba(7, 86, 24, 0.08);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
   }
 
-  .nova-solicitacao__textarea-wrap--destaque:focus-within {
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__textarea-wrap--destaque:focus-within {
     border-color: #075618;
-    box-shadow: 0 0 0 3px rgba(7, 86, 24, 0.1);
+    box-shadow:
+      0 0 0 3px rgba(7, 86, 24, 0.1),
+      0 4px 12px rgba(7, 86, 24, 0.12);
   }
 
-  .nova-solicitacao__textarea,
-  .nova-solicitacao__textarea--objetivo {
-    min-height: 76px;
-    padding: 10px 12px 24px;
-    border-radius: 13px;
-    font-size: 16px;
-    line-height: 1.45;
-  }
-
-  .nova-solicitacao__contador {
-    right: 10px;
-    bottom: 6px;
-    font-size: 10px;
-    color: #64748b;
-  }
-
-  .nova-solicitacao__chips {
-    gap: 8px;
-  }
-
-  .nova-solicitacao__chip {
-    min-height: 34px;
-    padding: 0 14px;
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__textarea-wrap--destaque:focus-within .nova-solicitacao__icone-interativo {
     color: #075618;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__textarea,
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__textarea--objetivo {
+    min-height: 118px;
+    padding: 12px 36px 38px 14px;
+    border-radius: 13px;
+    color: #0f172a;
     background: #fff;
-    border: 1px solid rgba(7, 86, 24, 0.35);
-    border-radius: 999px;
-    font-size: 11.5px;
+    font-size: 16px;
+    line-height: 1.5;
+    cursor: text;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__textarea::placeholder {
+    color: #cbd5e1;
+    opacity: 1;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__contador {
+    right: 10px;
+    bottom: 9px;
+    padding: 3px 8px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 10px;
     font-weight: 700;
-    box-shadow: none;
+    line-height: 1.15;
+    pointer-events: none;
+    box-shadow: 0 0 0 1px rgba(7, 86, 24, 0.08);
   }
 
-  .nova-solicitacao__chip:hover {
-    transform: none;
-    background: rgba(7, 86, 24, 0.06);
-    border-color: #075618;
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__objetivos .nova-solicitacao__chips {
+    gap: 10px;
+    margin-top: 4px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
   }
 
-  .nova-solicitacao__chip--selecionado,
-  .nova-solicitacao__chip--selecionado:hover {
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 16px;
+    color: #064d18;
+    background: #fff;
+    border: 1.5px solid rgba(7, 86, 24, 0.48);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(7, 86, 24, 0.1);
+    transition: transform 120ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__chip-rotulo {
+    min-width: 0;
+    text-align: center;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__chip-check {
+    flex-shrink: 0;
+    opacity: 0.95;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__chip:active {
+    transform: scale(0.97);
+    background: rgba(7, 86, 24, 0.08);
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__chip--selecionado,
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__chip--selecionado:hover {
     color: #fff;
     background: #075618;
     border-color: #075618;
+    box-shadow: 0 3px 10px rgba(7, 86, 24, 0.28);
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__chip--selecionado:active {
+    transform: scale(0.98);
+    background: #054d17;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__outro-utilizacao {
+    margin-top: 12px;
+    padding: 12px;
+    background: #fff;
+    border: 1.5px solid rgba(7, 86, 24, 0.42);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(7, 86, 24, 0.08);
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__outro-utilizacao .cadastro__rotulo {
+    color: #111827;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__input-interativo-wrap {
+    position: relative;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__input-interativo-wrap .nova-solicitacao__icone-interativo {
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__outro-utilizacao .cadastro-campo {
+    min-height: 48px;
+    padding-right: 40px;
+    border: 1.5px solid rgba(7, 86, 24, 0.42);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(7, 86, 24, 0.08);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__outro-utilizacao .cadastro-campo:focus {
+    border-color: #075618;
+    box-shadow:
+      0 0 0 3px rgba(7, 86, 24, 0.1),
+      0 4px 12px rgba(7, 86, 24, 0.12);
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__input-interativo-wrap:focus-within .nova-solicitacao__icone-interativo {
+    color: #075618;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__outro-utilizacao .cadastro-campo::placeholder {
+    color: #cbd5e1;
+    opacity: 1;
+  }
+
+  .nova-solicitacao__formulario:has(.nova-solicitacao__fase--objetivo) .nova-solicitacao__acoes {
+    padding: 16px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+    background: #fafcfb;
+    border-top: 1px solid rgba(7, 86, 24, 0.1);
+  }
+
+  .nova-solicitacao__formulario:has(.nova-solicitacao__fase--objetivo) .nova-solicitacao__botao--cancelar {
+    border: 1.5px solid #d1d9d4;
+    background: #fff;
+    color: #475569;
+    font-weight: 600;
     box-shadow: none;
+  }
+
+  .nova-solicitacao__formulario:has(.nova-solicitacao__fase--objetivo) .nova-solicitacao__botao--secundario {
+    border: 1.5px solid rgba(7, 86, 24, 0.35);
+    background: #fff;
+    color: #075618;
+    font-weight: 600;
+    box-shadow: none;
+  }
+
+  .nova-solicitacao__formulario:has(.nova-solicitacao__fase--objetivo) .nova-solicitacao__botao--primario {
+    color: #fff;
+    font-weight: 800;
+    background: #075618;
+    border-color: #075618;
+    box-shadow: 0 4px 14px rgba(7, 86, 24, 0.28);
+  }
+
+  .nova-solicitacao__formulario:has(.nova-solicitacao__fase--objetivo) .nova-solicitacao__botao--primario:disabled {
+    color: #fff;
+    background: #94a3b8;
+    border-color: #94a3b8;
+    box-shadow: none;
+    opacity: 0.72;
   }
 
   /* —— Ações (coluna, largura total) —— */
@@ -2852,5 +3043,16 @@
   .pagina-nova-solicitacao.nova-solicitacao .nova-solicitacao__protocolo {
     font-size: 10.5px;
     padding-inline: 8px;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__chip {
+    min-height: 38px;
+    padding-inline: 12px;
+    font-size: 11px;
+  }
+
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__textarea,
+  .nova-solicitacao__fase--objetivo .nova-solicitacao__textarea--objetivo {
+    min-height: 110px;
   }
 }
