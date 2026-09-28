@@ -28,7 +28,8 @@ import {
   AppWindow,
   Sparkles,
   CheckCircle2,
-  X } from
+  X,
+  Pencil } from
 "lucide-react";
 import { obterCargosDoSetor, obterSetoresAtivos } from "@/servicos/setores";
 import { usuarioEhAdmin } from "@/utilitarios/permissoes";
@@ -36,7 +37,6 @@ import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 import { validarDuplicidadesAtribuicoesCadastro } from "@/utilitarios/cadastro-usuario";
 import {
   contarAtribuicoesPerfil,
-  obterCargoPrincipal,
   obterRotuloNivelAcesso,
   resolverAtribuicoesPerfil,
   serializarAtribuicoesPerfil,
@@ -371,6 +371,11 @@ export const UserProfileView: React.FC = () => {
     user?.user_metadata as { setor?: string; cargo?: string } | undefined,
   );
   const contagemAtribuicoes = contarAtribuicoesPerfil(atribuicoesExibidas);
+  const atribuicaoPrincipal = atribuicoesExibidas[0];
+
+  const rolarParaInformacoesPessoais = () => {
+    document.getElementById("perfil-informacoes-pessoais")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 6 },
@@ -419,11 +424,22 @@ export const UserProfileView: React.FC = () => {
               transition: { type: "spring", stiffness: 180, damping: 20 }
             }
           }}
-          className="perfil-cabecalho cedro-profile-hero perfil__perfil-cabecalho-estrutura">
+          className="perfil-cabecalho cedro-profile-hero perfil__perfil-cabecalho-estrutura perfil__hero-principal">
           
           {/* Subtle decorative glowing background blur */}
           <div className="perfil__grupo-2" />
           <div className="perfil__grupo-3" />
+
+          <div className="perfil__hero-acoes-mobile">
+            <button
+              type="button"
+              className="perfil__botao-editar-perfil"
+              onClick={rolarParaInformacoesPessoais}
+            >
+              <Pencil size={14} aria-hidden="true" />
+              Editar perfil
+            </button>
+          </div>
 
           <div className="perfil__grupo-4">
             {/* Avatar container with solid green border */}
@@ -487,15 +503,25 @@ export const UserProfileView: React.FC = () => {
                 <h2 className="perfil__titulo-secao">
                   {formData.full_name || user?.email?.split("@")[0] || "Membro Cedro"}
                 </h2>
-                <motion.span
-                  whileHover={{ scale: 1.05 }}
-                  className="perfil__elemento">
-                  
-                  {obterCargoPrincipal(profile?.cargo) || "Cargo não informado"}
-                </motion.span>
+                <span className="perfil__elemento-ativo">Ativo</span>
               </div>
+
+              <div className="perfil__faixa-setor-cargo">
+                {atribuicaoPrincipal ? (
+                  <>
+                    <span className="perfil__faixa-setor">{atribuicaoPrincipal.setor}</span>
+                    <span className="perfil__faixa-cargo">
+                      {atribuicaoPrincipal.cargo || "Cargo não informado"}
+                    </span>
+                  </>
+                ) : (
+                  <span className="perfil__faixa-sem-atribuicao">Nenhuma atribuição declarada</span>
+                )}
+              </div>
+
+              <span className="perfil__badge-ativo">Ativo</span>
               
-              <div className="perfil__grupo-10" data-contagem-pares={contagemAtribuicoes.pares} data-contagem-setores={contagemAtribuicoes.setores} data-contagem-cargos={contagemAtribuicoes.cargos}>
+              <div className="perfil__grupo-10 perfil__atribuicoes-hero-detalhe" data-contagem-pares={contagemAtribuicoes.pares} data-contagem-setores={contagemAtribuicoes.setores} data-contagem-cargos={contagemAtribuicoes.cargos}>
                 {atribuicoesExibidas.length === 0 ?
                   <span className="perfil__texto-nenhuma-atribuicao-declarada">
                     Nenhuma atribuição declarada
@@ -515,7 +541,7 @@ export const UserProfileView: React.FC = () => {
           </div>
 
           {/* Sair da Conta Button right-aligned with red outline styling */}
-          <div className="perfil__grupo-sair-da-conta">
+          <div className="perfil__grupo-sair-da-conta perfil__grupo-sair-da-conta--hero">
             <motion.button
               whileHover={{ scale: 1.03, backgroundColor: "#FEE4E2" }}
               whileTap={{ scale: 0.98 }}
@@ -531,85 +557,10 @@ export const UserProfileView: React.FC = () => {
         {/* COMPOSIÇÃO DE DUAS COLUNAS ABAIXO DO HERO */}
         <div className="perfil-dados perfil__perfil-dados-estrutura" style={{ perspective: 1200 }}>
           
-          {/* COLUNA ESQUERDA: CARDS MENORES */}
-          <div className="perfil__grupo-11">
-            
-            {/* CARD 1: RESUMO DO PERFIL */}
-            <motion.div
-              variants={{
-                hidden: { opacity: 0, y: 12 },
-                visible: {
-                  opacity: 1,
-                  y: 0,
-                  transition: { type: "spring", stiffness: 180, damping: 20 }
-                }
-              }}
-              className="cedro-card-premium perfil__elemento-resumo-do-perfil">
-              
-              <div className="perfil__grupo-resumo-do-perfil">
-                <div>
-                  <h4 className="perfil__titulo-item-resumo-do-perfil">Resumo da conta</h4>
-                </div>
-              </div>
-
-              <div className="perfil__grupo-12">
-                {/* Usuário desde */}
-                <motion.div variants={itemVariants} className="perfil__elemento-3">
-                  <div className="perfil__grupo-13">
-                    <Calendar size={18} />
-                  </div>
-                  <div>
-                    <p className="perfil__descricao-usuario-desde">Usuário desde</p>
-                    <p className="perfil__descricao">{formattedCreatedDate}</p>
-                  </div>
-                </motion.div>
-
-                {/* Autorização de acesso */}
-                <motion.div variants={itemVariants} className="perfil__elemento-3">
-                  <div className="perfil__grupo-13">
-                    <ShieldCheck size={18} />
-                  </div>
-                  <div>
-                    <p className="perfil__descricao-usuario-desde">Autorização de acesso</p>
-                    <p className="perfil__descricao">Sessão estabelecida e ativa</p>
-                  </div>
-                </motion.div>
-
-                {/* Último acesso */}
-                <motion.div variants={itemVariants} className="perfil__elemento-3">
-                  <div className="perfil__grupo-13">
-                    <Clock3 size={18} />
-                  </div>
-                  <div>
-                    <p className="perfil__descricao-usuario-desde">Último acesso</p>
-                    <p className="perfil__descricao">{formattedLastAccess}</p>
-                  </div>
-                </motion.div>
-
-                {/* Nível de acesso */}
-                <motion.div variants={itemVariants} className="perfil__elemento-3">
-                  <div className="perfil__grupo-13">
-                    <Fingerprint size={18} />
-                  </div>
-                  <div>
-                    <p className="perfil__descricao-usuario-desde">Nível de acesso</p>
-                    <span className="perfil__nivel-acesso">
-                      {obterRotuloNivelAcesso(profile?.role)}
-                    </span>
-                  </div>
-                </motion.div>
-
-
-
-
-              </div>
-            </motion.div>
-
-          </div>
-
-          {/* COLUNA DIREITA: CARD GRANDE DE INFORMAÇÕES PESSOAIS */}
+          {/* COLUNA DIREITA: INFORMAÇÕES PESSOAIS (primeiro no mobile via CSS order) */}
           <div className="perfil__grupo-informacoes-pessoais">
             <motion.div
+              id="perfil-informacoes-pessoais"
               variants={{
                 hidden: { opacity: 0, y: 12 },
                 visible: {
@@ -794,13 +745,88 @@ export const UserProfileView: React.FC = () => {
 
                     <>
                         <Save size={18} />
-                        Salvar Alterações
+                        Salvar alterações
                       </>
                     }
                   </motion.button>
                 </motion.div>
               </form>
             </motion.div>
+          </div>
+
+          {/* COLUNA ESQUERDA: RESUMO DA CONTA */}
+          <div className="perfil__grupo-11">
+            
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 12 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { type: "spring", stiffness: 180, damping: 20 }
+                }
+              }}
+              className="cedro-card-premium perfil__elemento-resumo-do-perfil perfil__bloco-resumo-conta">
+              
+              <div className="perfil__grupo-resumo-do-perfil">
+                <div>
+                  <h4 className="perfil__titulo-item-resumo-do-perfil">Resumo da conta</h4>
+                </div>
+              </div>
+
+              <div className="perfil__grupo-12 perfil__lista-resumo">
+                {/* Usuário desde */}
+                <motion.div variants={itemVariants} className="perfil__elemento-3">
+                  <div className="perfil__grupo-13">
+                    <Calendar size={18} />
+                  </div>
+                  <div>
+                    <p className="perfil__descricao-usuario-desde">Usuário desde</p>
+                    <p className="perfil__descricao">{formattedCreatedDate}</p>
+                  </div>
+                </motion.div>
+
+                {/* Autorização de acesso */}
+                <motion.div variants={itemVariants} className="perfil__elemento-3">
+                  <div className="perfil__grupo-13">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <div>
+                    <p className="perfil__descricao-usuario-desde">Autorização de acesso</p>
+                    <p className="perfil__descricao">Sessão estabelecida e ativa</p>
+                  </div>
+                </motion.div>
+
+                {/* Último acesso */}
+                <motion.div variants={itemVariants} className="perfil__elemento-3">
+                  <div className="perfil__grupo-13">
+                    <Clock3 size={18} />
+                  </div>
+                  <div>
+                    <p className="perfil__descricao-usuario-desde">Último acesso</p>
+                    <p className="perfil__descricao">{formattedLastAccess}</p>
+                  </div>
+                </motion.div>
+
+                {/* Nível de acesso */}
+                <motion.div variants={itemVariants} className="perfil__elemento-3">
+                  <div className="perfil__grupo-13">
+                    <Fingerprint size={18} />
+                  </div>
+                  <div>
+                    <p className="perfil__descricao-usuario-desde">Nível de acesso</p>
+                    <span className="perfil__nivel-acesso">
+                      {obterRotuloNivelAcesso(profile?.role)}
+                    </span>
+                  </div>
+                </motion.div>
+
+
+
+
+              </div>
+            </motion.div>
+
           </div>
 
         </div>

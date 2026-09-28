@@ -1232,15 +1232,17 @@
   margin-top: 18px;
 }
 
-#perfil-conteudo .perfil-cabecalho {
-  min-height: 172px;
-  height: auto;
-  overflow: visible;
-  padding: 18px 30px !important;
-  border: 1px solid rgba(4, 74, 24, 0.44);
-  border-radius: 17px;
-  background: linear-gradient(102deg, #063c16 0%, #07571d 57%, #087127 100%) !important;
-  box-shadow: 0 14px 30px rgba(18, 56, 28, 0.12);
+@media (min-width: 1024px) {
+  #perfil-conteudo .perfil-cabecalho {
+    min-height: 172px;
+    height: auto;
+    overflow: visible;
+    padding: 18px 30px;
+    border: 1px solid rgba(4, 74, 24, 0.44);
+    border-radius: 17px;
+    background: linear-gradient(102deg, #063c16 0%, #07571d 57%, #087127 100%);
+    box-shadow: 0 14px 30px rgba(18, 56, 28, 0.12);
+  }
 }
 
 #perfil-conteudo .perfil__grupo-2,
@@ -1288,20 +1290,22 @@
 }
 
 #perfil-conteudo .perfil__grupo-9 {
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  flex-wrap: wrap;
+  display: block;
+  margin-bottom: 2px;
 }
 
 #perfil-conteudo .perfil__titulo-secao {
-  color: #ffffff !important;
   font-size: clamp(23px, 2vw, 30px);
   line-height: 1.1;
   font-weight: 800;
   letter-spacing: -0.035em;
   text-transform: none !important;
+}
+
+@media (min-width: 1024px) {
+  #perfil-conteudo .perfil-cabecalho .perfil__titulo-secao {
+    color: #ffffff;
+  }
 }
 
 #perfil-conteudo .perfil__elemento,
@@ -1647,26 +1651,7 @@
   justify-content: flex-end;
 }
 
-@media (max-width: 1023px) {
-  #perfil-conteudo.pagina-perfil {
-    padding: 22px 20px 30px;
-  }
-
-  #perfil-conteudo .perfil__perfil-dados-estrutura {
-    grid-template-columns: 1fr;
-  }
-
-  #perfil-conteudo .perfil__grupo-informacoes-pessoais,
-  #perfil-conteudo .perfil__grupo-11 {
-    grid-column: auto;
-  }
-}
-
 @media (max-width: 767px) {
-  #perfil-conteudo.pagina-perfil {
-    padding: 16px 14px 24px;
-  }
-
   #perfil-conteudo .perfil__cabecalho-pagina {
     gap: 12px;
     margin-bottom: 14px;
@@ -1686,66 +1671,19 @@
     font-size: 12px;
   }
 
-  #perfil-conteudo .perfil-cabecalho {
-    min-height: 0;
-    padding: 22px 18px !important;
-  }
-
-  #perfil-conteudo .perfil__grupo-4 {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  #perfil-conteudo .perfil__perfil-identidade-estrutura {
-    text-align: center;
-  }
-
-  #perfil-conteudo .perfil__grupo-9,
-  #perfil-conteudo .perfil__grupo-10 {
-    justify-content: center;
-    align-items: center;
-  }
-
-  #perfil-conteudo .perfil__grupo-sair-da-conta {
-    width: 100%;
-    margin-top: 14px;
-  }
-
-  #perfil-conteudo .perfil__elemento-sair-da-conta {
-    width: 100%;
-  }
-
-  #perfil-conteudo .perfil__grupo-15,
-  #perfil-conteudo .perfil__grupo-14 {
-    grid-template-columns: 1fr;
-  }
-
-  #perfil-conteudo .perfil__elemento-cargo-setor {
-    grid-column: auto;
-  }
-
-  #perfil-conteudo .perfil__elemento-11 {
-    width: 100%;
-    margin-left: 0;
-  }
-
   #perfil-conteudo input:not([type="checkbox"]):not([type="radio"]),
   #perfil-conteudo textarea,
   #perfil-conteudo select,
   #perfil-conteudo .menu-suspenso__gatilho {
     width: 100%;
     min-width: 0;
-    min-height: 46px;
     font-size: 16px;
   }
 }
 
 @media (max-width: 560px) {
-  #perfil-conteudo.pagina-perfil { padding: 10px 0 24px; }
   #perfil-conteudo .perfil__cabecalho-pagina { align-items: flex-start; }
   #perfil-conteudo .perfil__cabecalho-pagina-textos { min-width: 0; }
-  #perfil-conteudo .perfil__grupo-informacoes-pessoais,
-  #perfil-conteudo .perfil__grupo-11 { padding-inline: 14px; }
 }
 
 /* ============================================================
@@ -1822,4 +1760,740 @@
   display: block !important;
   width: 14px !important;
   height: 14px !important;
+}
+
+/* ==========================================================================
+   PERFIL — mobile/tablet (< 1024px). Referência aprovada. Desktop inalterado.
+   ========================================================================== */
+@media (max-width: 1023px) {
+  #perfil-conteudo.pagina-perfil {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 16px 16px max(104px, var(--cedro-folga-navegacao-inferior, 104px));
+    background: #f5f8f6;
+    overflow-x: hidden;
+  }
+
+  #perfil-conteudo .perfil__grupo {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  #perfil-conteudo .perfil__grupo > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 18px;
+  }
+
+  #perfil-conteudo .perfil__cards-rapidos {
+    display: none;
+  }
+
+  #perfil-conteudo .perfil__hero-principal,
+  #perfil-conteudo .perfil__elemento-informacoes-pessoais,
+  #perfil-conteudo .perfil__elemento-resumo-do-perfil,
+  #perfil-conteudo .cedro-card-premium,
+  #perfil-conteudo .perfil__grupo-informacoes-pessoais,
+  #perfil-conteudo .perfil__grupo-11 {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  #perfil-conteudo .perfil__perfil-dados-estrutura {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  #perfil-conteudo .perfil__grupo-informacoes-pessoais {
+    order: 1;
+    grid-column: auto;
+  }
+
+  #perfil-conteudo .perfil__grupo-11 {
+    order: 2;
+    grid-column: auto;
+  }
+
+  /* --- Card perfil (hero) — vertical, verde refinado --- */
+  #perfil-conteudo .perfil-cabecalho.perfil__hero-principal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    min-height: 0;
+    padding: 24px 18px 20px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #075618 0%, #064a14 100%);
+    border: 0;
+    border-radius: 24px;
+    box-shadow: 0 10px 26px rgba(7, 86, 24, 0.18);
+  }
+
+  #perfil-conteudo .perfil-cabecalho.perfil__hero-principal::before {
+    content: "";
+    position: absolute;
+    left: -40px;
+    top: -50px;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 68%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #perfil-conteudo .perfil__grupo-2,
+  #perfil-conteudo .perfil-cabecalho.perfil__hero-principal .perfil__grupo-3 {
+    display: none;
+  }
+
+  #perfil-conteudo .perfil__hero-acoes-mobile {
+    display: none;
+  }
+
+  #perfil-conteudo .perfil__grupo-4 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    z-index: 1;
+  }
+
+  #perfil-conteudo .perfil__perfil-avatar-estrutura {
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  #perfil-conteudo .perfil__grupo-5 {
+    width: 118px;
+    height: 118px;
+    padding: 0;
+    border: 4px solid #ffffff;
+    outline: 2px solid rgba(34, 197, 94, 0.55);
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  }
+
+  #perfil-conteudo .perfil__grupo-6,
+  #perfil-conteudo .perfil__imagem {
+    border-radius: 50%;
+  }
+
+  #perfil-conteudo .perfil__elemento-modificar-imagem {
+    right: 0;
+    bottom: 0;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    background: #075618;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #perfil-conteudo .perfil__elemento-modificar-imagem svg,
+  #perfil-conteudo .perfil__elemento-modificar-imagem .lucide-camera {
+    width: 15px;
+    height: 15px;
+    color: #ffffff;
+    stroke: #ffffff;
+  }
+
+  #perfil-conteudo .perfil__perfil-identidade-estrutura {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    margin-top: 0;
+    padding: 0;
+    text-align: center;
+  }
+
+  #perfil-conteudo .perfil__perfil-identidade-estrutura > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0;
+  }
+
+  #perfil-conteudo .perfil__grupo-9 {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  #perfil-conteudo .perfil__grupo-9 .perfil__elemento-ativo {
+    display: none;
+  }
+
+  #perfil-conteudo.pagina-perfil .perfil-cabecalho.perfil__hero-principal h2.perfil__titulo-secao {
+    margin: 18px 0 0;
+    width: 100%;
+    color: #ffffff;
+    font-family: Lato, sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    text-align: center;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: normal;
+    text-transform: none;
+  }
+
+  #perfil-conteudo .perfil__faixa-setor-cargo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+
+  #perfil-conteudo .perfil__faixa-setor-cargo::before {
+    content: none;
+    display: none;
+  }
+
+  #perfil-conteudo .perfil__faixa-setor {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    padding: 0;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.35;
+    word-break: normal;
+    overflow-wrap: break-word;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+
+  #perfil-conteudo .perfil__faixa-cargo {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 12px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.3;
+    max-width: 100%;
+    word-break: normal;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  }
+
+  #perfil-conteudo .perfil__faixa-cargo::before {
+    content: none;
+  }
+
+  #perfil-conteudo .perfil__faixa-sem-atribuicao {
+    margin-top: 10px;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  #perfil-conteudo .perfil__badge-ativo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: #d6f5da;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: none;
+  }
+
+  #perfil-conteudo .perfil__badge-ativo::before {
+    content: "";
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.16);
+    flex-shrink: 0;
+  }
+
+  #perfil-conteudo .perfil__atribuicoes-hero-detalhe {
+    display: none;
+  }
+
+  #perfil-conteudo .perfil__grupo-sair-da-conta--hero {
+    width: 100%;
+    margin-top: 22px;
+    padding-top: 22px;
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    z-index: 1;
+  }
+
+  #perfil-conteudo .perfil__grupo-sair-da-conta--hero .perfil__elemento-sair-da-conta {
+    width: 100%;
+    height: 54px;
+    min-height: 54px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(255, 77, 79, 0.35);
+    border-radius: 14px;
+    color: #ef2b2d;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: none;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+    transition: background-color 150ms ease;
+  }
+
+  #perfil-conteudo .perfil__grupo-sair-da-conta--hero .perfil__elemento-sair-da-conta:hover {
+    background: #fff5f5;
+  }
+
+  #perfil-conteudo .perfil__grupo-sair-da-conta--hero .perfil__elemento-sair-da-conta svg {
+    color: #ef2b2d;
+    width: 18px;
+    height: 18px;
+  }
+
+  /* --- Cards informações + resumo --- */
+  #perfil-conteudo .perfil__elemento-informacoes-pessoais,
+  #perfil-conteudo .perfil__elemento-resumo-do-perfil {
+    padding: 18px 18px 20px;
+    background: #ffffff;
+    border: 1px solid #dde6df;
+    border-radius: 22px;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045);
+  }
+
+  #perfil-conteudo .perfil__grupo-informacoes-pessoais-2,
+  #perfil-conteudo .perfil__grupo-resumo-do-perfil {
+    display: block;
+    margin: 0 0 18px;
+    padding: 0 0 12px;
+    border-bottom: 1px solid #e5ece7;
+  }
+
+  #perfil-conteudo .perfil__grupo-informacoes-pessoais-2::before,
+  #perfil-conteudo .perfil__grupo-resumo-do-perfil::before {
+    content: none;
+    display: none;
+  }
+
+  #perfil-conteudo .perfil__titulo-bloco-informacoes-pessoais,
+  #perfil-conteudo .perfil__titulo-item-resumo-do-perfil {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    color: #075618;
+    font-family: Lato, sans-serif;
+    font-size: 19px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-transform: none;
+  }
+
+  #perfil-conteudo .perfil__titulo-bloco-informacoes-pessoais::before {
+    content: "";
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    background-color: #075618;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E") center / contain no-repeat;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+
+  #perfil-conteudo .perfil__titulo-item-resumo-do-perfil::before {
+    content: "";
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    background-color: #075618;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2'/%3E%3Cpath d='M7 7h10'/%3E%3Cpath d='M7 12h10'/%3E%3Cpath d='M7 17h10'/%3E%3C/svg%3E") center / contain no-repeat;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2'/%3E%3Cpath d='M7 7h10'/%3E%3Cpath d='M7 12h10'/%3E%3Cpath d='M7 17h10'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+
+  /* --- Formulário --- */
+  #perfil-conteudo .perfil__grupo-14 {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    grid-template-columns: 1fr;
+  }
+
+  #perfil-conteudo .perfil__grupo-14 > .perfil__elemento-nome-completo,
+  #perfil-conteudo .perfil__grupo-14 > .perfil__elemento-cargo-setor {
+    display: block;
+    margin-bottom: 18px;
+  }
+
+  #perfil-conteudo .perfil__grupo-14 > .perfil__elemento-nome-completo::before,
+  #perfil-conteudo .perfil__grupo-14 > .perfil__elemento-cargo-setor::before {
+    content: none;
+    display: none;
+  }
+
+  #perfil-conteudo .perfil__elemento-nome-completo > :not([hidden]) ~ :not([hidden]),
+  #perfil-conteudo .perfil__elemento-cargo-setor > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0;
+  }
+
+  #perfil-conteudo .perfil__elemento-cargo-setor {
+    padding-top: 0;
+    grid-column: auto;
+  }
+
+  #perfil-conteudo .perfil__rotulo-nome-completo {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 7px;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.25;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  #perfil-conteudo .perfil__icone-user-2 {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    color: #075618;
+  }
+
+  #perfil-conteudo .perfil__campo-ex-carlos-ferreira,
+  #perfil-conteudo .perfil__campo {
+    box-sizing: border-box;
+    width: 100%;
+    height: 50px;
+    min-height: 50px;
+    padding: 0 14px;
+    border: 1px solid #d5ded8;
+    border-radius: 13px;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 600;
+    outline: none;
+    box-shadow: none;
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+
+  #perfil-conteudo .perfil__campo:disabled {
+    background: #f8faf9;
+    color: #475569;
+    opacity: 1;
+  }
+
+  #perfil-conteudo .perfil__campo-ex-carlos-ferreira:focus {
+    border-color: #075618;
+    box-shadow: 0 0 0 3px rgba(7, 86, 24, 0.07);
+  }
+
+  #perfil-conteudo .perfil__grupo-17 {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 50px;
+    padding: 8px 9px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    border: 1px solid #d5ded8;
+    border-radius: 13px;
+    background: #ffffff;
+  }
+
+  #perfil-conteudo .perfil__grupo-18 {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    width: auto;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  #perfil-conteudo .perfil__texto-3 {
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: rgba(7, 86, 24, 0.08);
+    color: #075618;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: none;
+    letter-spacing: 0;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  #perfil-conteudo .perfil__texto-4 {
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: #f2f5f8;
+    color: #556070;
+    font-size: 12px;
+    font-weight: 700;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  #perfil-conteudo .perfil__texto-4::before {
+    content: none;
+  }
+
+  #perfil-conteudo .perfil__grupo-15 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  #perfil-conteudo .perfil__grupo-16 {
+    padding: 12px;
+    border-radius: 13px;
+    background: #ffffff;
+    border: 1px solid #d3ded6;
+    box-shadow: none;
+  }
+
+  #perfil-conteudo .perfil__grupo-16 .menu-suspenso__gatilho {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 48px;
+    height: 48px;
+    padding: 0 14px 0 44px;
+    border: 1px solid #d3ded6;
+    border-radius: 13px;
+    background: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: none;
+  }
+
+  #perfil-conteudo .perfil__elemento-informacoes-pessoais form > div:last-child {
+    display: flex;
+    width: 100%;
+    margin-top: 10px;
+    justify-content: center;
+  }
+
+  #perfil-conteudo .perfil__elemento-11 {
+    box-sizing: border-box;
+    width: fit-content;
+    min-width: 220px;
+    max-width: 100%;
+    height: 48px;
+    min-height: 48px;
+    margin: 0 auto;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 13px;
+    background: #075618;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 800;
+    text-transform: none;
+    letter-spacing: 0;
+    box-shadow: 0 8px 18px rgba(7, 86, 24, 0.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  #perfil-conteudo .perfil__elemento-11 svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* --- Resumo da conta --- */
+  #perfil-conteudo .perfil__grupo-12 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0;
+  }
+
+  #perfil-conteudo .perfil__lista-resumo .perfil__elemento-3 {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    column-gap: 11px;
+    align-items: center;
+    min-height: 0;
+    padding: 14px 0;
+    border-bottom: 1px solid #e9eeea;
+    gap: 0;
+  }
+
+  #perfil-conteudo .perfil__lista-resumo .perfil__elemento-3:last-child {
+    border-bottom: 0;
+  }
+
+  #perfil-conteudo .perfil__lista-resumo .perfil__grupo-13 {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 11px;
+    background: rgba(7, 86, 24, 0.07);
+    color: #075618;
+    grid-row: 1 / 3;
+    align-self: start;
+    margin-top: 2px;
+  }
+
+  #perfil-conteudo .perfil__lista-resumo .perfil__grupo-13 svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  #perfil-conteudo .perfil__lista-resumo .perfil__elemento-3 > div:last-child {
+    display: block;
+    min-width: 0;
+  }
+
+  #perfil-conteudo .perfil__lista-resumo .perfil__descricao-usuario-desde {
+    margin: 0;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-transform: none;
+  }
+
+  #perfil-conteudo .perfil__lista-resumo .perfil__descricao {
+    display: block;
+    margin-top: 3px;
+    width: 100%;
+    text-align: left;
+    color: #17233c;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.35;
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
+
+  #perfil-conteudo .perfil__lista-resumo .perfil__nivel-acesso {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 5px;
+    padding: 6px 13px;
+    min-height: 0;
+    border-radius: 999px;
+    background: #edf8ed;
+    border: 1px solid rgba(7, 86, 24, 0.18);
+    color: #0d7a2a;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  #perfil-conteudo .perfil__grupo-11 {
+    margin-bottom: 0;
+  }
+
+  /* Sobrescreve legado (.cedro-profile-hero … span:last-child { color: #fff !important }) só no chip do hero */
+  #perfil-conteudo .perfil-cabecalho.perfil__hero-principal.cedro-profile-hero
+    .perfil-identidade
+    .perfil__faixa-setor-cargo
+    .perfil__faixa-cargo {
+    color: #334155 !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  #perfil-conteudo .perfil__hero-acoes-mobile,
+  #perfil-conteudo .perfil__badge-ativo,
+  #perfil-conteudo .perfil__faixa-setor-cargo,
+  #perfil-conteudo .perfil__faixa-setor,
+  #perfil-conteudo .perfil__faixa-cargo,
+  #perfil-conteudo .perfil__faixa-sem-atribuicao {
+    display: none;
+  }
+
+  #perfil-conteudo .perfil__atribuicoes-hero-detalhe {
+    display: flex;
+  }
+
+  #perfil-conteudo .perfil__grupo-11 {
+    order: 1;
+  }
+
+  #perfil-conteudo .perfil__grupo-informacoes-pessoais {
+    order: 2;
+  }
+}
+
+@media (max-width: 430px) {
+  #perfil-conteudo.pagina-perfil {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  #perfil-conteudo .perfil-cabecalho.perfil__hero-principal {
+    padding: 24px 16px 20px;
+  }
+
+  #perfil-conteudo .perfil__grupo-5 {
+    width: 108px;
+    height: 108px;
+  }
+
+  #perfil-conteudo.pagina-perfil .perfil-cabecalho.perfil__hero-principal h2.perfil__titulo-secao {
+    font-size: 22px;
+  }
+
+  #perfil-conteudo .perfil__titulo-bloco-informacoes-pessoais,
+  #perfil-conteudo .perfil__titulo-item-resumo-do-perfil {
+    font-size: 19px;
+  }
+
+  #perfil-conteudo .perfil__campo-ex-carlos-ferreira,
+  #perfil-conteudo .perfil__campo {
+    height: 50px;
+    min-height: 50px;
+  }
+
+  #perfil-conteudo .perfil__elemento-11 {
+    min-width: min(220px, 100%);
+    width: min(72%, 100%);
+  }
 }
