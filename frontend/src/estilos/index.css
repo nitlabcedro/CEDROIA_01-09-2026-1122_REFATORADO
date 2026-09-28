@@ -22,6 +22,7 @@
 @import "./estrutura/barra-lateral.css";
 @import "./estrutura/barra-superior.css";
 @import "./estrutura/menu-mobile.css";
+@import "./estrutura/navegacao-inferior.css";
 
 @import "./componentes/marca-cedro-ia.css";
 @import "./componentes/notificacoes.css";

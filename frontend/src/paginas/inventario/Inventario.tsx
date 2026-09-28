@@ -6,7 +6,7 @@
 import { ETAPAS_APROVACAO_OFICIAIS } from "@/constantes/fluxo-aprovacao";
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Search, Eye, ArrowUpDown, AlertTriangle, CheckCircle2, PlusCircle, Database, FileSpreadsheet, ChevronLeft, ChevronRight, RotateCcw, ClipboardList, ShieldCheck, MoreVertical, Pencil, XCircle } from "lucide-react";
+import { Search, Eye, ArrowUpDown, AlertTriangle, CheckCircle2, PlusCircle, Database, FileSpreadsheet, ChevronLeft, ChevronRight, ChevronDown, RotateCcw, ClipboardList, ShieldCheck, MoreVertical, Pencil, XCircle, SlidersHorizontal } from "lucide-react";
 import { IconeIA } from "@/componentes/comuns/IconeIA";
 import { IARecord, ApprovalWorkflow } from "@/tipos";
 import {
@@ -56,6 +56,11 @@ export default function Inventory({
   const [filterStatus, setFilterStatus] = useState("");
   const [sortField, setSortField] = useState<keyof IARecord | "">("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+  const [ordenacaoLista, setOrdenacaoLista] = useState<"recentes" | "antigas" | "nome">("recentes");
+  const [ehViewportMobile, setEhViewportMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches,
+  );
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
   const [actionMenuPosition, setActionMenuPosition] = useState({ top: 0, left: 0 });
@@ -110,6 +115,14 @@ export default function Inventory({
     window.addEventListener("keydown", fecharComEscape);
     return () => window.removeEventListener("keydown", fecharComEscape);
   }, [warningMessage, cancelTargetRecord, isCancelling]);
+
+  useEffect(() => {
+    const consulta = window.matchMedia("(max-width: 1023px)");
+    const atualizar = () => setEhViewportMobile(consulta.matches);
+    atualizar();
+    consulta.addEventListener("change", atualizar);
+    return () => consulta.removeEventListener("change", atualizar);
+  }, []);
 
   const obterWorkflow = (record: IARecord) =>
     encontrarWorkflowDoRegistro(workflows, record.id);
@@ -170,16 +183,31 @@ export default function Inventory({
 
       return matchesSearch && matchesSetor && matchesStatus;
     }).sort((a, b) => {
-      if (!sortField) return 0;
-      const valA = a[sortField];
-      const valB = b[sortField];
+      if (sortField) {
+        const valA = a[sortField];
+        const valB = b[sortField];
 
-      if (typeof valA === 'string' && typeof valB === 'string') {
-        return sortDirection === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        if (typeof valA === "string" && typeof valB === "string") {
+          return sortDirection === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+        return 0;
       }
-      return 0;
+
+      if (!ehViewportMobile) return 0;
+
+      if (ordenacaoLista === "nome") {
+        return a.nomeFerramenta.localeCompare(b.nomeFerramenta, "pt-BR");
+      }
+
+      const dataDe = (registro: IARecord) => {
+        const valor = registro.updatedAt || registro.createdAt || registro.dataRegistro;
+        const tempo = valor ? new Date(valor).getTime() : 0;
+        return Number.isNaN(tempo) ? 0 : tempo;
+      };
+      const delta = dataDe(b) - dataDe(a);
+      return ordenacaoLista === "antigas" ? -delta : delta;
     });
-  }, [records, searchTerm, filterSetor, filterStatus, sortField, sortDirection, workflows]);
+  }, [records, searchTerm, filterSetor, filterStatus, sortField, sortDirection, workflows, ehViewportMobile, ordenacaoLista]);
 
   const paginatedRecords = useMemo(() => {
     const startIdx = (currentPage - 1) * itemsPerPage;
@@ -452,6 +480,7 @@ export default function Inventory({
 
   const rangeStart = (currentPage - 1) * itemsPerPage + 1;
   const rangeEnd = Math.min(currentPage * itemsPerPage, filteredRecords.length);
+  const filtrosAtivos = Number(Boolean(filterStatus)) + Number(Boolean(filterSetor));
 
   return (
     <div id="inventario-conteudo" data-componente="pagina-inventario" className="pagina-inventario inventario-container cedro-page-premium">
@@ -515,7 +544,7 @@ export default function Inventory({
         </div>
       </div>
 
-      <div className="inventario-filtros">
+      <div className={`inventario-filtros${filtrosAbertos ? " inventario-filtros--aberto" : ""}`}>
         <div className="inventario-filtros__linha">
           <div className="inventario-busca">
             {/* <Search className="inventario-busca__icone" size={18} /> */}
@@ -531,42 +560,76 @@ export default function Inventory({
             />
           </div>
 
-          <label className="inventario-filtro">
-            <span className="inventario-filtro__rotulo">Status</span>
-            <select
-              value={filterStatus}
-              onChange={(e) => {
-                setFilterStatus(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="inventario-filtro__select"
+          <div className="inventario-filtros__painel">
+            <button
+              type="button"
+              className="inventario-filtros__gatilho"
+              aria-expanded={filtrosAbertos}
+              onClick={() => setFiltrosAbertos((aberto) => !aberto)}
             >
-              <option value="">Todos</option>
-              {STATUS_GERAIS_OFICIAIS.map((status) => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </select>
-          </label>
+              <SlidersHorizontal size={16} />
+              <span>Filtros</span>
+              {filtrosAtivos > 0 && (
+                <span className="inventario-filtros__badge">{filtrosAtivos}</span>
+              )}
+              <ChevronDown size={16} className={`inventario-filtros__seta${filtrosAbertos ? " inventario-filtros__seta--aberta" : ""}`} />
+            </button>
 
-          <label className="inventario-filtro">
-            <span className="inventario-filtro__rotulo">Setor</span>
-            <select
-              value={filterSetor}
-              onChange={(e) => {
-                setFilterSetor(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="inventario-filtro__select"
-            >
-              <option value="">Todos</option>
-              {setoresDisponiveis.map((setor) => (
-                <option key={setor} value={setor}>{setor}</option>
-              ))}
-            </select>
-          </label>
+            <label className="inventario-filtro">
+              <span className="inventario-filtro__rotulo">Status</span>
+              <select
+                value={filterStatus}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="inventario-filtro__select"
+              >
+                <option value="">Todos</option>
+                {STATUS_GERAIS_OFICIAIS.map((status) => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="inventario-filtro">
+              <span className="inventario-filtro__rotulo">Setor</span>
+              <select
+                value={filterSetor}
+                onChange={(e) => {
+                  setFilterSetor(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="inventario-filtro__select"
+              >
+                <option value="">Todos</option>
+                {setoresDisponiveis.map((setor) => (
+                  <option key={setor} value={setor}>{setor}</option>
+                ))}
+              </select>
+            </label>
+          </div>
 
           <div className="inventario-filtros__resultado">
-            <strong>{filteredRecords.length}</strong> {filteredRecords.length === 1 ? "resultado" : "resultados"}
+            <span className="inventario-filtros__contagem">
+              <strong>{filteredRecords.length}</strong> {filteredRecords.length === 1 ? "resultado" : "resultados"}
+            </span>
+            <label className="inventario-ordenacao">
+              <select
+                aria-label="Ordenação"
+                className="inventario-ordenacao__select"
+                value={ordenacaoLista}
+                onChange={(e) => {
+                  setOrdenacaoLista(e.target.value as "recentes" | "antigas" | "nome");
+                  setSortField("");
+                  setCurrentPage(1);
+                }}
+              >
+                <option value="recentes">Mais recentes</option>
+                <option value="antigas">Mais antigas</option>
+                <option value="nome">Nome</option>
+              </select>
+            </label>
           </div>
         </div>
 
@@ -601,31 +664,33 @@ export default function Inventory({
             </div>
 
             <div className="inventario__identidade-mobile">
-              <IconeIA nome={record.nomeFerramenta} tamanho={32} />
+              <IconeIA nome={record.nomeFerramenta} tamanho={36} />
               <div className="inventario__grupo-6">
                 <h3 className="inventario__titulo-bloco">
                   {record.nomeFerramenta}
                 </h3>
-                {record.fornecedor && record.fornecedor.toLowerCase().trim() !== "interno" &&
-              <p className="inventario__descricao-2">
-                    {record.fornecedor}
-                  </p>
-              }
+                <p className="inventario__setor-mobile">{record.unidadeSetor || "Não informado"}</p>
               </div>
             </div>
 
-            <div className="inventario__grupo-setor">
-              <div className="inventario__grupo-setor-2">
-                <p className="inventario__descricao-setor">Setor</p>
-                <p className="inventario__descricao-3">{record.unidadeSetor || "Não informado"}</p>
-              </div>
-              <div className="inventario__grupo-setor-2">
-                <p className="inventario__descricao-etapa-atual">Etapa atual</p>
-                <div className="inventario__grupo-7">{getWorkflowBadge(record)}</div>
-              </div>
+            <div className="inventario__etapa-mobile">
+              <p className="inventario__descricao-etapa-atual">Etapa atual</p>
+              <div className="inventario__grupo-7">{getWorkflowBadge(record)}</div>
             </div>
 
             <div className="inventario__grupo-ver-detalhes">
+              <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onView(record);
+              }}
+              className={`inventario__botao-ver-detalhes ${canCancel(record) ? "" : "inventario__botao-ver-detalhes-2"}`}>
+              
+                <Eye size={15} />
+                Ver detalhes
+                <ChevronRight size={15} />
+              </button>
               {canCancel(record) &&
             <button
               onClick={(e) => {
@@ -638,17 +703,6 @@ export default function Inventory({
                   Cancelar solicitação
                 </button>
             }
-              <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onView(record);
-              }}
-              className={`inventario__botao-ver-detalhes ${canCancel(record) ? "" : "inventario__botao-ver-detalhes-2"}`}>
-              
-                <Eye size={15} />
-                Ver detalhes
-              </button>
             </div>
           </article>
         )}

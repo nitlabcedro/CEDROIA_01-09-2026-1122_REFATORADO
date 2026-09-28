@@ -43,7 +43,7 @@ export function filtrarWorkflowsVisiveis(
   etapasAtribuidas: number[],
 ) {
   const etapas = new Set(etapasAtribuidas.map(Number));
-  const possuiAcompanhamentoGlobal = etapas.has(1) || etapas.has(2);
+  const possuiAcompanhamentoGlobal = etapas.has(1) || etapas.has(2) || etapas.has(4) || etapas.has(5);
 
   return workflows.filter((workflow) => {
     if (workflow.final_status !== "pendente") return false;

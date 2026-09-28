@@ -43,17 +43,17 @@ describe("Etapa 5B — visibilidade institucional da fila", () => {
     );
   });
 
-  it("Presidência só vê etapa 4 pendente e perde a solicitação após aprovar ou negar", () => {
+  it("Presidência acompanha todos os workflows ativos das etapas 1 a 5", () => {
     assert.deepEqual(
-      filtrarWorkflowsVisiveis(workflows, [4]).map((workflow) => workflow.id),
-      ["pendente-4"],
+      filtrarWorkflowsVisiveis(workflows, [4]).map((workflow) => workflow.current_step),
+      [1, 2, 3, 4, 5],
     );
   });
 
-  it("Financeiro só vê etapa 5 pendente e perde a solicitação após concluir", () => {
+  it("Financeiro acompanha todos os workflows ativos das etapas 1 a 5", () => {
     assert.deepEqual(
-      filtrarWorkflowsVisiveis(workflows, [5]).map((workflow) => workflow.id),
-      ["pendente-5"],
+      filtrarWorkflowsVisiveis(workflows, [5]).map((workflow) => workflow.current_step),
+      [1, 2, 3, 4, 5],
     );
   });
 

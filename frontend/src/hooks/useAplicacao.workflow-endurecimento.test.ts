@@ -50,7 +50,13 @@ describe("Etapa 5B — frontend usa exclusivamente a API do workflow", () => {
   });
 
   it("mantém os três filtros também para Presidência e Financeiro", () => {
+    const filtros = pagina.slice(
+      pagina.indexOf("const filteredRecords"),
+      pagina.indexOf("const stats"),
+    );
     assert.doesNotMatch(pagina, /setQueueFilter\("my_turn"\)/);
+    assert.doesNotMatch(pagina, /isFinalApprovalUser/);
+    assert.doesNotMatch(filtros, /currentStepNum !== 4 && currentStepNum !== 5/);
     assert.match(pagina, /\{ label: "Minha vez", value: "my_turn" \}/);
     assert.match(pagina, /\{ label: "Pendentes", value: "pending" \}/);
     assert.match(pagina, /\{ label: "Todos", value: "all" \}/);

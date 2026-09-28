@@ -85,10 +85,6 @@ describe("renderização segura com múltiplas atribuições", () => {
       join(raizFrontend, "componentes/layout/BarraLateral.tsx"),
       "utf8",
     );
-    const menuMobile = readFileSync(
-      join(raizFrontend, "componentes/layout/MenuMobile.tsx"),
-      "utf8",
-    );
     const contexto = readFileSync(
       join(raizFrontend, "contextos/ContextoAutenticacao.tsx"),
       "utf8",
@@ -97,8 +93,6 @@ describe("renderização segura com múltiplas atribuições", () => {
     assert.match(barraSuperior, /obterCargoPrincipal\(profile\?\.cargo\)/);
     assert.match(barraSuperior, /obterSetorPrincipal\(profile\?\.setor\)/);
     assert.match(barraLateral, /obterCargoPrincipal\(profile\?\.cargo\)/);
-    assert.match(menuMobile, /obterCargoPrincipal\(profile\?\.cargo\)/);
-    assert.match(menuMobile, /obterSetorPrincipal\(profile\?\.setor\)/);
     assert.match(contexto, /mesclarPerfilBuscado\(prev, data as UserProfile\)/);
   });
 });

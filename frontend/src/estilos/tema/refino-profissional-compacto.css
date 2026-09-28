@@ -232,10 +232,11 @@
   z-index: 9998 !important;
 }
 
+/* top/bottom ficam sem !important: o painel calcula em linha se abre para
+   baixo ou para cima e precisa vencer o posicionamento padrão. */
 .menu-suspenso__painel--portal {
   position: fixed !important;
   right: auto !important;
-  bottom: auto !important;
   z-index: 9999 !important;
   margin: 0 !important;
   padding: 5px !important;
