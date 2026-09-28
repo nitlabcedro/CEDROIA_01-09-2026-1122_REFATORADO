@@ -12,6 +12,7 @@ import {
 import { Sidebar } from "@/componentes/layout/BarraLateral";
 import { Topbar } from "@/componentes/layout/BarraSuperior";
 import MenuMobile from "@/componentes/layout/MenuMobile";
+import NavegacaoInferiorMobile from "@/componentes/layout/NavegacaoInferiorMobile";
 import FundoLaboratorio from "@/componentes/fundo/FundoLaboratorio";
 import CarregamentoPagina from "@/componentes/comuns/CarregamentoPagina";
 import { useAplicacao } from "@/hooks/useAplicacao";
@@ -287,10 +288,7 @@ export default function Aplicacao() {
         <MenuMobile
           activeTab={activeTab}
           navegarPara={navegarPara}
-          profile={profile}
-          isCurrentUserAdmin={isCurrentUserAdmin}
-          isCurrentUserPrivileged={isCurrentUserPrivileged}
-          unreadChatCount={unreadChatCount} />
+          profile={profile} />
         
 
         {/* 2. CONTEÚDO */}
@@ -314,6 +312,14 @@ export default function Aplicacao() {
             {renderConteudoAtivo()}
           </div>
         </main>
+
+        {/* 3. NAVEGAÇÃO INFERIOR (5 posições, botão central elevado) */}
+        <NavegacaoInferiorMobile
+          activeTab={activeTab}
+          navegarPara={navegarPara}
+          isCurrentUserAdmin={isCurrentUserAdmin}
+          isCurrentUserPrivileged={isCurrentUserPrivileged}
+          unreadChatCount={unreadChatCount} />
       </div>
       }
 

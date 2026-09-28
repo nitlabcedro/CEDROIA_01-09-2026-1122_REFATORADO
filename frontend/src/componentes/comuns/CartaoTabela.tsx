@@ -28,7 +28,9 @@ export const TableCard: React.FC<TableCardProps> = ({ title, subtitle, records, 
         {subtitle && <p className="cartao-tabela__subtitulo">{subtitle}</p>}
       </div>
       <button type="button" onClick={() => onNavigate("inventory")} className="cartao-tabela__ver-todas">
-        Abrir catálogo <ArrowRight size={13} />
+        <span className="cartao-tabela__ver-todas-rotulo">Abrir catálogo</span>
+        <span className="cartao-tabela__ver-todas-rotulo-mobile">Ver catálogo</span>
+        <ArrowRight size={13} />
       </button>
     </header>
 
@@ -45,22 +47,22 @@ export const TableCard: React.FC<TableCardProps> = ({ title, subtitle, records, 
         <>
           <div className="cartao-tabela__lista-mobile">
             {records.map((record) => (
-              <button type="button" key={record.id} onClick={() => onViewRecord(record)} className="cartao-tabela__item-mobile">
-                <IconeIA nome={record.nomeFerramenta} tamanho={36} />
-                <span className="cartao-tabela__item-mobile-conteudo">
-                  <span className="cartao-tabela__item-mobile-cabecalho">
-                    <span>
-                      <strong>{record.nomeFerramenta}</strong>
-                      <small>{record.unidadeSetor || "Setor não informado"}</small>
-                    </span>
-                    <ChevronRight size={18} />
+              <article key={record.id} className="cartao-tabela__item-mobile">
+                <div className="cartao-tabela__item-mobile-topo">
+                  <IconeIA nome={record.nomeFerramenta} tamanho={36} />
+                  <span className="cartao-tabela__item-mobile-identidade">
+                    <strong>{record.nomeFerramenta}</strong>
+                    <small>{record.unidadeSetor || "Setor não informado"}</small>
                   </span>
-                  <span className="cartao-tabela__indicadores">
-                    <StatusBadge status={obterStatusGeralDoRegistro(record, workflows.find((workflow) => workflow.iaRecordId === record.id))} />
-                  </span>
-                  <span className="cartao-tabela__item-mobile-rodape"><small>{record.id}</small><strong>Analisar</strong></span>
-                </span>
-              </button>
+                </div>
+                <div className="cartao-tabela__item-mobile-rodape">
+                  <StatusBadge status={obterStatusGeralDoRegistro(record, workflows.find((workflow) => workflow.iaRecordId === record.id))} />
+                  <button type="button" onClick={() => onViewRecord(record)} className="cartao-tabela__analisar">
+                    Analisar
+                    <ChevronRight size={14} aria-hidden="true" />
+                  </button>
+                </div>
+              </article>
             ))}
           </div>
 

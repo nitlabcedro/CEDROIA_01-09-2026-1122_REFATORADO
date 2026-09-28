@@ -329,6 +329,7 @@ export default function Dashboard({
                     dataKey="Total de IAs"
                     stroke="#075618"
                     strokeWidth={2.5}
+                    dot={{ r: 3.5, fill: "#075618", stroke: "#ffffff", strokeWidth: 1.5 }}
                     fillOpacity={1}
                     fill="url(#colorTotal)" />
                 </AreaChart>

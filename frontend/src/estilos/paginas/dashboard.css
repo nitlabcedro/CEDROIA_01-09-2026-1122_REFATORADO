@@ -330,10 +330,10 @@
     max-width: 100%;
   }
 
+  /* O Recharts 3 envolve o gráfico num div de largura 0; forçar 100% no
+     wrapper/svg os colapsa. Apenas o container responsivo pode ser fluido. */
   .pagina-dashboard canvas,
-  .pagina-dashboard .recharts-responsive-container,
-  .pagina-dashboard .recharts-wrapper,
-  .pagina-dashboard .recharts-surface {
+  .pagina-dashboard .recharts-responsive-container {
     width: 100% !important;
     max-width: 100% !important;
   }
@@ -753,4 +753,307 @@
   .acesso-rapido__item {
     min-height: 68px;
   }
+}
+
+/* Os pontos da série existem só na composição mobile. */
+@media (min-width: 1024px) {
+  .pagina-dashboard .painel__grupo .recharts-area-dots {
+    display: none;
+  }
+}
+
+/* Dashboard mobile: composição própria abaixo de 1024px. O desktop permanece nas regras anteriores. */
+@media (max-width: 1023px) {
+  .pagina-dashboard {
+    gap: 12px !important;
+    padding-inline: 4px;
+    padding-bottom: 8px;
+  }
+
+  .pagina-dashboard .painel__painel-indicadores-estrutura {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+    gap: 12px !important;
+  }
+
+  .pagina-dashboard .cartao-kpi {
+    height: 100%;
+    min-height: 92px !important;
+    padding: 14px !important;
+  }
+
+  .pagina-dashboard .cartao-kpi__conteudo {
+    align-items: center;
+  }
+
+  .pagina-dashboard .cartao-kpi__rotulo {
+    margin-bottom: 6px !important;
+    font-size: 9px;
+  }
+
+  .pagina-dashboard .cartao-kpi__valor {
+    font-size: 30px !important;
+  }
+
+  .pagina-dashboard .cartao-kpi__icone {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .pagina-dashboard .painel__painel-resumo-estrutura {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px !important;
+  }
+
+  .pagina-dashboard .painel__painel-cartao-estrutura,
+  .pagina-dashboard .painel__painel-cartao-estrutura-2 {
+    display: flex !important;
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 0;
+    height: auto;
+    justify-content: flex-start;
+    padding: 16px !important;
+    border-radius: 16px !important;
+  }
+
+  .pagina-dashboard .painel__grupo-evolucao-do-inventario {
+    margin-bottom: 10px;
+  }
+
+  .pagina-dashboard .painel__grupo {
+    height: 196px;
+    min-height: 0;
+    padding: 8px 4px 0;
+  }
+
+  .pagina-dashboard .painel__status-conteudo {
+    display: grid;
+    height: auto;
+    grid-template-columns: 136px minmax(0, 1fr);
+    grid-template-areas:
+      "cabecalho cabecalho"
+      "donut legenda";
+    align-items: center;
+    column-gap: 16px;
+  }
+
+  .pagina-dashboard .painel__grupo-status-de-aprovacao {
+    grid-area: cabecalho;
+    margin-bottom: 12px;
+  }
+
+  .pagina-dashboard .painel__estado-vazio-status {
+    grid-column: 1 / -1;
+    min-height: 180px;
+  }
+
+  .pagina-dashboard .painel__grupo-2 {
+    grid-area: donut;
+    width: 136px;
+    height: 136px;
+    margin: 0;
+  }
+
+  .pagina-dashboard .painel__texto {
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .pagina-dashboard .painel__texto-total {
+    margin-top: 2px;
+  }
+
+  .pagina-dashboard .painel__grupo-3 {
+    grid-area: legenda;
+    width: 100%;
+    max-width: 340px;
+    grid-template-columns: 1fr;
+    align-content: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .pagina-dashboard .painel__grupo-4 {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 40px;
+    padding: 8px 10px;
+    background: #fbfcfb;
+    border-color: #e6ede7;
+    border-radius: 12px;
+    text-align: left;
+  }
+
+  .pagina-dashboard .painel__texto-2 {
+    width: auto;
+    min-width: 0;
+    justify-content: flex-start;
+    gap: 7px;
+    color: #43564a;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: none;
+    white-space: nowrap;
+  }
+
+  .pagina-dashboard .painel__texto-3 {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+  }
+
+  .pagina-dashboard .painel__texto-4 {
+    margin-top: 0;
+    flex-shrink: 0;
+    font-size: 13px;
+  }
+
+  .pagina-dashboard .painel__texto-5 {
+    margin-left: 4px;
+    font-size: 10px;
+  }
+
+  .pagina-dashboard .painel__grupo-6 {
+    display: none !important;
+  }
+
+  .pagina-dashboard .painel__grupo-5 {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .pagina-dashboard .cartao-tabela {
+    min-height: 0;
+    padding: 16px !important;
+    border-radius: 16px !important;
+  }
+
+  .pagina-dashboard .cartao-tabela__conteudo {
+    margin-top: 12px;
+  }
+
+  .pagina-dashboard .cartao-tabela__tabela {
+    display: none;
+  }
+
+  .pagina-dashboard .cartao-tabela__lista-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .pagina-dashboard .cartao-tabela__ver-todas-rotulo {
+    display: none;
+  }
+
+  .pagina-dashboard .cartao-tabela__ver-todas-rotulo-mobile {
+    display: inline;
+  }
+
+  .pagina-dashboard .cartao-tabela__item-mobile {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 72px;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #dce6de;
+    border-radius: 14px;
+  }
+
+  .pagina-dashboard .cartao-tabela__item-mobile-topo {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .pagina-dashboard .cartao-tabela__item-mobile-topo > :first-child {
+    flex: 0 0 auto;
+  }
+
+  .pagina-dashboard .cartao-tabela__item-mobile-identidade {
+    min-width: 0;
+  }
+
+  .pagina-dashboard .cartao-tabela__item-mobile-identidade strong,
+  .pagina-dashboard .cartao-tabela__item-mobile-identidade small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pagina-dashboard .cartao-tabela__item-mobile-identidade strong {
+    color: #183d23;
+    font-size: 13.5px;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .pagina-dashboard .cartao-tabela__item-mobile-identidade small {
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 11.5px;
+    line-height: 1.3;
+  }
+
+  .pagina-dashboard .cartao-tabela__item-mobile-rodape {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .pagina-dashboard .cartao-tabela__item-mobile .status-badge,
+  .pagina-dashboard .cartao-tabela__item-mobile .indicador-status {
+    font-size: 10px;
+  }
+
+  .pagina-dashboard .cartao-tabela__item-mobile .cartao-tabela__analisar {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 2px;
+    padding: 7px 8px 7px 11px;
+    border-radius: 10px;
+    font-size: 11.5px;
+  }
+}
+
+@media (max-width: 359px) {
+  .pagina-dashboard .painel__status-conteudo {
+    column-gap: 10px;
+  }
+
+  .pagina-dashboard .painel__grupo-4 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .pagina-dashboard .cartao-tabela__item-mobile {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .pagina-dashboard .cartao-tabela__item-mobile-rodape {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    padding-left: 46px;
+  }
+}
+
+.cartao-tabela__ver-todas-rotulo-mobile {
+  display: none;
 }

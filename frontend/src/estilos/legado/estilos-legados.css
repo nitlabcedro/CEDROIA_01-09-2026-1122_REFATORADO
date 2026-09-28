@@ -386,8 +386,7 @@ img {
 }
 
 /* Cabeçalho mobile premium */
-.cedro-mobile-header,
-.cedro-drawer-header {
+.cedro-mobile-header {
   position: relative;
   overflow: hidden;
   background-image:
@@ -397,8 +396,7 @@ img {
   box-shadow: 0 8px 28px rgba(4, 58, 18, 0.24);
 }
 
-.cedro-mobile-header::after,
-.cedro-drawer-header::after {
+.cedro-mobile-header::after {
   content: "";
   position: absolute;
   inset: 0;

@@ -60,6 +60,11 @@ import {
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
 import { aplicarPapelNaListaPerfis } from "@/utilitarios/perfil-usuario";
 import {
+  ABAS_PRIVILEGIADAS,
+  ABAS_SOMENTE_ADMIN,
+  abaPermitida,
+} from "@/utilitarios/permissoes-navegacao";
+import {
   decidirAtualizacaoWorkflows,
   encontrarWorkflowDoRegistro,
   normalizarListaWorkflows,
@@ -74,21 +79,8 @@ export interface OpcoesNavegarPara {
 
 export type NavegarPara = (destino: AbaAplicacao, opcoes?: OpcoesNavegarPara) => void;
 
-const ABAS_SOMENTE_ADMIN = new Set<AbaAplicacao>(["sectors", "sectors_mgr"]);
-const ABAS_PRIVILEGIADAS = new Set<AbaAplicacao>(["approval_queue", "admin"]);
-
 function abaAplicacaoValida(valor: string | null): valor is AbaAplicacao {
   return Boolean(valor && (ABAS_APLICACAO as readonly string[]).includes(valor));
-}
-
-function abaPermitida(
-  aba: AbaAplicacao,
-  isAdmin: boolean,
-  isPrivileged: boolean,
-): boolean {
-  if (ABAS_SOMENTE_ADMIN.has(aba)) return isAdmin;
-  if (ABAS_PRIVILEGIADAS.has(aba)) return isPrivileged;
-  return true;
 }
 
 export function useAplicacao() {

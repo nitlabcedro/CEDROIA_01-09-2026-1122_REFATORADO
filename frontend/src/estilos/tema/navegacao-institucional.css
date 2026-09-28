@@ -263,7 +263,7 @@
   .barra-lateral__navegacao { padding-inline: 10px; }
 }
 
-/* Marca responsiva no cabeçalho e no painel de navegação mobile. */
+/* Marca responsiva no cabeçalho mobile. */
 @media (max-width: 767px) {
   .menu-mobile__marca .marca-cedro {
     width: min(38vw, 156px);
@@ -281,28 +281,10 @@
     max-height: 40px;
     object-fit: contain;
   }
-
-  .menu-mobile__painel-cabecalho .marca-cedro {
-    width: clamp(150px, 47vw, 190px);
-  }
-
-  .menu-mobile__painel-cabecalho .marca-cedro__icone {
-    width: 100%;
-    height: 56px;
-    overflow: visible;
-  }
-
-  .menu-mobile__painel-cabecalho .marca-cedro__imagem {
-    width: 100%;
-    height: auto;
-    max-height: 56px;
-    object-fit: contain;
-  }
 }
 
 @media (max-width: 380px) {
   .menu-mobile__marca .marca-cedro { width: min(34vw, 128px); }
-  .menu-mobile__painel-cabecalho .marca-cedro { width: 148px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

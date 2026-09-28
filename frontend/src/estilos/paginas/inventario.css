@@ -2301,3 +2301,373 @@ s-estrutura {
     overflow: hidden;
   }
 }
+
+/* O gatilho e a ordenação existem só na composição mobile. */
+.inventario-filtros__gatilho,
+.inventario-ordenacao {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .inventario-filtros__painel {
+    display: contents;
+  }
+}
+
+/* Minhas IAs no mobile: composição própria abaixo de 1024px. */
+@media (max-width: 1023px) {
+  .pagina-inventario.inventario-container {
+    gap: 12px !important;
+    padding: 4px 4px 96px;
+  }
+
+  .pagina-inventario .inventario-resumo {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .pagina-inventario .inventario-resumo__card {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    height: 100%;
+    min-height: 96px;
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .pagina-inventario .inventario-resumo__icone {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+    border-radius: 8px;
+  }
+
+  .pagina-inventario .inventario-resumo__icone svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .pagina-inventario .inventario-resumo__conteudo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    width: 100%;
+  }
+
+  .pagina-inventario .inventario-resumo__valor {
+    order: -1;
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .pagina-inventario .inventario-resumo__rotulo {
+    font-size: 9px;
+    line-height: 1.25;
+    letter-spacing: 0.03em;
+  }
+
+  .pagina-inventario .inventario-resumo__legenda {
+    display: none;
+  }
+
+  .pagina-inventario .inventario-filtros {
+    gap: 12px;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .pagina-inventario .inventario-filtros__linha {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .pagina-inventario .inventario-busca,
+  .pagina-inventario .inventario-filtros__painel,
+  .pagina-inventario .inventario-filtros__resultado {
+    width: 100%;
+    align-self: stretch;
+  }
+
+  #inventario-conteudo .inventario-busca__campo {
+    width: 100% !important;
+    min-height: 44px !important;
+    height: 44px !important;
+    padding: 0 14px !important;
+    border-radius: 12px !important;
+    font-size: 14px !important;
+  }
+
+  #inventario-conteudo .inventario-filtro__select {
+    min-height: 0 !important;
+    height: 36px !important;
+    padding: 0 22px 0 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    font-size: 13px !important;
+  }
+
+  .pagina-inventario .inventario-filtros__painel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #e1e8e3;
+    border-radius: 14px;
+    box-shadow: 0 6px 16px rgba(24, 49, 31, 0.04);
+  }
+
+  .pagina-inventario .inventario-filtros__gatilho {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 46px;
+    padding: 0 14px;
+    color: #183d23;
+    background: transparent;
+    border: 0;
+    font-size: 14px;
+    font-weight: 800;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .pagina-inventario .inventario-filtros__badge {
+    display: inline-grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    color: #fff;
+    background: #075618;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .pagina-inventario .inventario-filtros__seta {
+    margin-left: auto;
+    color: #6d7c72;
+    transition: transform 160ms ease;
+  }
+
+  .pagina-inventario .inventario-filtros__seta--aberta {
+    transform: rotate(180deg);
+  }
+
+  .pagina-inventario .inventario-filtros:not(.inventario-filtros--aberto) .inventario-filtro {
+    display: none;
+  }
+
+  .pagina-inventario .inventario-filtros--aberto .inventario-filtros__gatilho {
+    margin-bottom: 10px;
+    border-bottom: 1px solid #e7eee9;
+  }
+
+  .pagina-inventario .inventario-filtros--aberto .inventario-filtro {
+    margin: 0 12px 10px;
+  }
+
+  .pagina-inventario .inventario-filtros--aberto .inventario-filtro:last-child {
+    margin-bottom: 12px;
+  }
+
+  .pagina-inventario .inventario-filtros__resultado {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-height: 0;
+    padding: 0;
+    color: #5c6b62;
+    background: transparent !important;
+    border: 0 !important;
+    font-size: 13px;
+    white-space: normal;
+  }
+
+  .pagina-inventario .inventario-filtros__contagem {
+    white-space: nowrap;
+  }
+
+  .pagina-inventario .inventario-ordenacao {
+    display: block;
+    min-width: 0;
+  }
+
+  .pagina-inventario .inventario-ordenacao__select {
+    max-width: 168px;
+    height: 34px;
+    padding: 0 28px 0 10px;
+    color: #183d23;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236d7c72' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center;
+    border: 1px solid #d7e2d9;
+    border-radius: 10px;
+    outline: none;
+    font-size: 13px;
+    font-weight: 750;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .pagina-inventario .inventario__inventario-lista-mobile-estrutura > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 10px;
+  }
+
+  .pagina-inventario .inventario-card-mobile {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px 8px !important;
+    border-radius: 16px !important;
+  }
+
+  .pagina-inventario .inventario-card-mobile .inventario__grupo-5 {
+    align-items: center;
+  }
+
+  .pagina-inventario .inventario-card-mobile .inventario__texto-11 {
+    padding: 0;
+    color: #7d8b82;
+    background: transparent;
+    border: 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .pagina-inventario .inventario-card-mobile .inventario-status {
+    min-height: 24px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .pagina-inventario .inventario-card-mobile .inventario__identidade-mobile {
+    margin-top: 10px;
+    gap: 10px;
+  }
+
+  .pagina-inventario .inventario-card-mobile .inventario__titulo-bloco {
+    color: #173021;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    text-transform: none;
+  }
+
+  .pagina-inventario .inventario__setor-mobile {
+    margin: 2px 0 0;
+    overflow: hidden;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pagina-inventario .inventario__etapa-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 8px 10px;
+    background: #f7faf8;
+    border: 1px solid #e6eee8;
+    border-radius: 12px;
+  }
+
+  .pagina-inventario .inventario__etapa-mobile .inventario__descricao-etapa-atual {
+    margin: 0;
+    color: #8b978f;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+
+  .pagina-inventario .inventario__etapa-mobile .inventario__grupo-aprovada-final,
+  .pagina-inventario .inventario__etapa-mobile .inventario__grupo-analise-inicial {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pagina-inventario .inventario__etapa-mobile .inventario__texto-etapa,
+  .pagina-inventario .inventario__etapa-mobile .inventario__texto-analise-inicial,
+  .pagina-inventario .inventario__etapa-mobile .inventario__texto-aprovada-final,
+  .pagina-inventario .inventario__etapa-mobile .inventario__texto-reprovada {
+    font-size: 12px;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .pagina-inventario .inventario-card-mobile .inventario__grupo-ver-detalhes {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #eef3ef;
+  }
+
+  .pagina-inventario .inventario-card-mobile .inventario__botao-ver-detalhes {
+    display: inline-flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    width: auto;
+    min-height: 32px !important;
+    padding: 0 !important;
+    color: #075618 !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+  }
+
+  .pagina-inventario .inventario-card-mobile .inventario__botao-ver-detalhes svg:last-child {
+    margin-left: auto;
+  }
+
+  .pagina-inventario .inventario-card-mobile .inventario__botao-cancelar-solicitacao {
+    flex: 0 1 auto;
+    width: auto;
+    min-height: 32px !important;
+    padding: 0 !important;
+    color: #9a560a !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+  }
+
+  .pagina-inventario .inventario-lista-mobile .inventario__grupo-8 {
+    gap: 8px;
+    padding: 6px 2px 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .pagina-inventario .inventario-lista-mobile .inventario__grupo-9 {
+    font-size: 12px;
+  }
+}
