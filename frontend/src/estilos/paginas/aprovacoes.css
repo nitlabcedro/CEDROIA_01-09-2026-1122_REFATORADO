@@ -6497,3 +6497,365 @@
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+
+/* ==========================================================================
+   APROVAÇÃO — MOBILE SOFISTICADO (< 1024px)
+   Filtros Minha vez / Pendentes / Todos + página da fila
+   ========================================================================== */
+@media (max-width: 1023px) {
+  .pagina-aprovacoes.aprovacao-container {
+    gap: 0;
+    background: linear-gradient(180deg, #f2f6f3 0%, #f8faf9 100px, #ffffff 100%);
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 12px 14px max(18px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas,
+  .aprovacoes__grupo-aprovacao-de-sistemas-2,
+  .aprovacoes__grupo-solicitacoes-na-fila,
+  .aprovacoes__grupo-solicitacoes-na-fila > *,
+  .aprovacoes__grupo-2,
+  .aprovacoes__grupo-3 {
+    box-sizing: border-box;
+  }
+
+  .aprovacoes__grupo-solicitacoes-na-fila {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .aprovacoes__grupo-solicitacoes-na-fila > * {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 14px;
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas-2.aprovacao-cabecalho {
+    padding: 2px 2px 12px;
+    border-bottom: 0;
+  }
+
+  .aprovacoes__titulo-principal-aprovacao-de-sistemas {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #075618;
+    letter-spacing: -0.03em;
+    text-transform: none;
+    line-height: 1.15;
+  }
+
+  .aprovacoes__grupo-minha-vez-pendentes {
+    width: 100%;
+    margin-top: 12px;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .aprovacoes__grupo-minha-vez-pendentes .cedro-mini-stat {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 11px 13px;
+    border: 1px solid rgba(7, 86, 24, 0.1);
+    border-left: 3px solid #075618;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #f5faf7 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 8px 20px -14px rgba(15, 45, 24, 0.16);
+  }
+
+  .aprovacoes__grupo-minha-vez-pendentes .cedro-mini-stat span {
+    color: #5f7267;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .aprovacoes__grupo-minha-vez-pendentes .cedro-mini-stat strong {
+    margin-top: 2px;
+    color: #075618;
+    font-size: 1.45rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .aprovacoes__grupo-minha-vez-pendentes .cedro-mini-stat-amber {
+    border-left-color: #e8a317;
+  }
+
+  .aprovacoes__grupo-minha-vez-pendentes .cedro-mini-stat-amber strong {
+    color: #c87609;
+  }
+
+  .aprovacoes__grupo-solicitacoes-na-fila.aprovacao-fila.cedro-card-premium {
+    padding: 14px 12px 16px;
+    border: 1px solid rgba(7, 86, 24, 0.1);
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 12px 32px -18px rgba(15, 45, 24, 0.14);
+  }
+
+  .aprovacoes__grupo-solicitacoes-na-fila > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 12px;
+  }
+
+  .aprovacoes__titulo-secao-solicitacoes-na-fila {
+    margin: 0;
+    color: #3d4f44;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacao-filtros.cedro-segmented.aprovacoes__grupo {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    align-self: stretch !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box;
+    gap: 8px !important;
+    padding: 8px !important;
+    margin-top: 14px;
+    overflow: hidden !important;
+    background: linear-gradient(165deg, #f4f9f6 0%, #e8f2eb 100%);
+    border: 1px solid rgba(7, 86, 24, 0.12);
+    border-left: 4px solid #075618;
+    border-radius: 16px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 10px 24px -16px rgba(15, 45, 24, 0.14);
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacao-filtros .aprovacoes__botao {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    justify-self: stretch !important;
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    min-height: 50px;
+    padding: 10px 6px;
+    border: 1px solid rgba(7, 86, 24, 0.08);
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.55);
+    color: #4a5c51;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    text-transform: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    transition:
+      background 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.15s ease,
+      color 0.2s ease;
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacao-filtros .aprovacoes__botao-3:active {
+    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacao-filtros .aprovacoes__botao-2,
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacao-filtros .aprovacoes__botao-3 {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacao-filtros .aprovacoes__botao-2 {
+    color: #ffffff;
+    background: linear-gradient(165deg, #0c9230 0%, #075618 52%, #054d17 100%);
+    border-color: #054d17;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 8px 20px -6px rgba(7, 86, 24, 0.45);
+    font-weight: 800;
+    font-size: 13px;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacao-filtros .aprovacoes__botao-2:active {
+    transform: scale(0.98);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      0 4px 12px -4px rgba(7, 86, 24, 0.35);
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacoes__grupo-2 {
+    margin-top: 12px;
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacoes__campo-buscar-ferramenta-id-setor {
+    width: 100%;
+    max-width: 100%;
+    min-height: 46px;
+    padding: 0 14px 0 2.75rem;
+    border: 1px solid rgba(7, 86, 24, 0.12);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #fafcfb 100%);
+    color: #1a2b22;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.98),
+      0 8px 22px -16px rgba(15, 45, 24, 0.14);
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacoes__campo-buscar-ferramenta-id-setor:focus {
+    border-color: rgba(7, 86, 24, 0.28);
+    background: #ffffff;
+    box-shadow:
+      0 0 0 3px rgba(7, 86, 24, 0.08),
+      0 10px 26px -14px rgba(7, 86, 24, 0.12);
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacoes__icone-search {
+    left: 14px;
+    color: #5a7a62;
+  }
+
+  .aprovacoes__grupo-3 {
+    padding-top: 10px;
+  }
+
+  .aprovacoes__grupo-3 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 10px;
+  }
+
+  .aprovacoes__grupo-4.aprovacao-item-fila {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid #e2ebe5;
+    border-left: 3px solid #cfe0d4;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 6px 18px -14px rgba(15, 45, 24, 0.12);
+  }
+
+  .aprovacoes__grupo-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 10px;
+  }
+
+  .aprovacoes__titulo-bloco {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: none;
+    letter-spacing: -0.02em;
+  }
+
+  .aprovacoes__descricao {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacoes__grupo-4 .aprovacoes__grupo-ver-detalhes {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    margin: 8px 0 0;
+    padding: 10px 0 0 !important;
+    border-top: 1px solid rgba(7, 86, 24, 0.08);
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacoes__botao-ver-detalhes,
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacoes__botao-registrar-parecer {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: none !important;
+    align-self: stretch !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+    min-height: 50px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    text-transform: none;
+    transition:
+      background 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.15s ease;
+  }
+
+  .aprovacoes__botao-ver-detalhes {
+    border: 1.5px solid #b8d4c0;
+    background: linear-gradient(180deg, #ffffff 0%, #f0f7f2 100%);
+    color: #075618;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 6px 16px -10px rgba(7, 86, 24, 0.2);
+  }
+
+  .aprovacoes__botao-ver-detalhes:active {
+    transform: scale(0.99);
+    background: #eef6f0;
+  }
+
+  .aprovacoes__botao-registrar-parecer {
+    border: 1.5px solid #054d17;
+    color: #ffffff;
+    background: linear-gradient(165deg, #0c9230 0%, #075618 50%, #054d17 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      0 10px 24px -8px rgba(7, 86, 24, 0.5);
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+  }
+
+  .aprovacoes__botao-registrar-parecer:active {
+    transform: scale(0.99);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 6px 16px -6px rgba(7, 86, 24, 0.4);
+  }
+}
+
+@media (max-width: 380px) {
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacao-filtros .aprovacoes__botao {
+    min-height: 48px;
+    font-size: 11px;
+    padding-inline: 4px;
+  }
+
+  .aprovacoes__grupo-aprovacao-de-sistemas .aprovacao-filtros .aprovacoes__botao-2 {
+    font-size: 11.5px;
+  }
+}

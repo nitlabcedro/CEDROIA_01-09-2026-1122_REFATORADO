@@ -8,19 +8,21 @@ import {
   Database,
   Clock,
   CheckCircle2,
-  XCircle } from
-"lucide-react";
+  XCircle,
+  TrendingUp,
+} from "lucide-react";
 import {
   AreaChart,
   Area,
   XAxis,
   YAxis,
   Tooltip,
+  CartesianGrid,
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell } from
-"recharts";
+  Cell,
+} from "recharts";
 import { IARecord } from "@/tipos";
 import {
   KPICard,
@@ -283,12 +285,22 @@ export default function Dashboard({
         <div className="painel-cartao painel-grafico cedro-card-premium painel__painel-cartao-estrutura">
           <div className="painel__grupo-evolucao-do-inventario">
             <div className="painel__grupo-evolucao-do-inventario-crescim">
-              <h2 className="painel__titulo-secao-evolucao-do-inventario">Evolução do catálogo</h2>
-              <p className="painel__descricao-crescimento-acumulado-das-ias-">Total acumulado de IAs cadastradas nos últimos seis meses</p>
+              <div className="painel__evolucao-cabecalho-linha">
+                <span className="painel__evolucao-icone" aria-hidden="true">
+                  <TrendingUp size={18} strokeWidth={2.25} />
+                </span>
+                <div className="painel__evolucao-textos">
+                  <h2 className="painel__titulo-secao-evolucao-do-inventario">Evolução do catálogo</h2>
+                  <p className="painel__descricao-crescimento-acumulado-das-ias-">
+                    Total acumulado de IAs cadastradas nos últimos seis meses
+                  </p>
+                </div>
+              </div>
+              <span className="painel__evolucao-periodo">Últimos 6 meses</span>
             </div>
           </div>
 
-          <div className="painel__grupo">
+          <div className="painel__grupo painel__grupo--evolucao">
             {records.length === 0 ? (
               <div className="painel__estado-vazio-grafico">
                 <span className="painel__estado-vazio-icone"><Database size={22} /></span>
@@ -297,39 +309,73 @@ export default function Dashboard({
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={evolutionData} margin={{ top: 12, right: 12, left: -16, bottom: 0 }}>
+                <AreaChart
+                  data={evolutionData}
+                  margin={{ top: 14, right: 16, left: 2, bottom: 6 }}>
                   <defs>
                     <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#075618" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#075618" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#0a7a24" stopOpacity={0.32} />
+                      <stop offset="45%" stopColor="#075618" stopOpacity={0.12} />
+                      <stop offset="100%" stopColor="#075618" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="strokeTotal" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#034012" />
+                      <stop offset="100%" stopColor="#1fa842" />
                     </linearGradient>
                   </defs>
+                  <CartesianGrid
+                    strokeDasharray="4 7"
+                    stroke="#d8e6dc"
+                    vertical={false} />
                   <XAxis
                     dataKey="name"
                     tickLine={false}
-                    axisLine={false}
-                    tick={{ fill: "#718078", fontSize: 11, fontWeight: "600" }} />
+                    axisLine={{ stroke: "#e2ebe4", strokeWidth: 1 }}
+                    tick={{ fill: "#5f7267", fontSize: 11, fontWeight: "650" }}
+                    dy={6} />
                   <YAxis
                     allowDecimals={false}
+                    width={34}
                     tickLine={false}
                     axisLine={false}
-                    tick={{ fill: "#718078", fontSize: 11, fontWeight: "600" }} />
+                    tick={{ fill: "#5f7267", fontSize: 11, fontWeight: "650" }}
+                    dx={-2} />
                   <Tooltip
+                    cursor={{
+                      stroke: "#075618",
+                      strokeWidth: 1,
+                      strokeDasharray: "5 5",
+                      strokeOpacity: 0.45,
+                    }}
                     contentStyle={{
                       backgroundColor: "#ffffff",
-                      border: "1px solid #dce7de",
-                      borderRadius: "10px",
-                      boxShadow: "0 10px 24px rgba(18, 56, 28, 0.08)",
+                      border: "1px solid #c8dbd0",
+                      borderRadius: "12px",
+                      boxShadow: "0 12px 28px rgba(15, 45, 24, 0.12)",
                       fontSize: "12px",
-                      fontWeight: "600",
-                      color: "#1e293b"
-                    }} />
+                      fontWeight: "650",
+                      color: "#1a3324",
+                      padding: "10px 12px",
+                    }}
+                    labelStyle={{ color: "#5a6b60", fontWeight: "700", marginBottom: 4 }}
+                    itemStyle={{ color: "#075618", fontWeight: "800" }} />
                   <Area
                     type="monotone"
                     dataKey="Total de IAs"
-                    stroke="#075618"
-                    strokeWidth={2.5}
-                    dot={{ r: 3.5, fill: "#075618", stroke: "#ffffff", strokeWidth: 1.5 }}
+                    stroke="url(#strokeTotal)"
+                    strokeWidth={3}
+                    dot={{
+                      r: 4,
+                      fill: "#ffffff",
+                      stroke: "#075618",
+                      strokeWidth: 2.5,
+                    }}
+                    activeDot={{
+                      r: 6,
+                      fill: "#075618",
+                      stroke: "#ffffff",
+                      strokeWidth: 2.5,
+                    }}
                     fillOpacity={1}
                     fill="url(#colorTotal)" />
                 </AreaChart>
@@ -391,7 +437,10 @@ export default function Dashboard({
                   {donutData.map((item, idx) => {
                     const pct = stats.total ? Math.round(item.value / stats.total * 100) : 0;
                     return (
-                      <div key={idx} className="painel__grupo-4">
+                      <div
+                        key={idx}
+                        className="painel__grupo-4"
+                        style={{ "--status-cor": item.color } as React.CSSProperties}>
                         <span className="painel__texto-2">
                           <span className="painel__texto-3" style={{ backgroundColor: item.color }}></span>
                           {item.name}
@@ -410,7 +459,9 @@ export default function Dashboard({
       <div className="painel-resumo painel__painel-resumo-estrutura">
         <div className="painel__grupo-5">
           <TableCard
+            variant="dashboard"
             title="Catálogo de IAs"
+            subtitle="Principais IAs priorizadas para acompanhamento rápido"
             records={priorityPedings}
             workflows={workflows}
             onNavigate={onNavigate}

@@ -6,7 +6,7 @@
 import { ETAPAS_APROVACAO_OFICIAIS } from "@/constantes/fluxo-aprovacao";
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Search, Eye, ArrowUpDown, AlertTriangle, CheckCircle2, PlusCircle, Database, FileSpreadsheet, ChevronLeft, ChevronRight, ChevronDown, RotateCcw, ClipboardList, ShieldCheck, MoreVertical, Pencil, XCircle, SlidersHorizontal } from "lucide-react";
+import { Search, Eye, ArrowUpDown, AlertTriangle, CheckCircle2, PlusCircle, Database, ChevronLeft, ChevronRight, ChevronDown, RotateCcw, ClipboardList, ShieldCheck, MoreVertical, Pencil, XCircle, SlidersHorizontal, LayoutGrid } from "lucide-react";
 import { IconeIA } from "@/componentes/comuns/IconeIA";
 import { IARecord, ApprovalWorkflow } from "@/tipos";
 import {
@@ -223,107 +223,6 @@ export default function Inventory({
       setSortField(field);
       setSortDirection("asc");
     }
-  };
-
-  const exportExcel = async () => {
-    const [{ default: ExcelJS }, { saveAs }] = await Promise.all([
-      import("exceljs"),
-      import("file-saver"),
-    ]);
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Minhas IAs Cedro");
-
-    const brandGreen = "00C875";
-    const labDark = "0F172A";
-
-    worksheet.mergeCells('A1:F1');
-    const titleCell = worksheet.getRow(1).getCell(1);
-    titleCell.value = "LABORATÓRIO CEDRO - INVENTÁRIO DE INTELIGÊNCIA ARTIFICIAL";
-    titleCell.font = { size: 16, bold: true, color: { argb: 'FFFFFF' } };
-    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: labDark } };
-    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
-    worksheet.getRow(1).height = 40;
-
-    worksheet.mergeCells('A2:F2');
-    const subTitleRow = worksheet.getRow(2);
-    subTitleRow.getCell(1).value = `Relatório gerado em: ${new Date().toLocaleString('pt-BR')}`;
-    subTitleRow.getCell(1).font = { italic: true, color: { argb: '64748B' } };
-    subTitleRow.getCell(1).alignment = { horizontal: 'center' };
-    subTitleRow.height = 20;
-
-    worksheet.addRow([]);
-
-    const headerRowIndex = 4;
-    const columns = [
-    { header: "ID", key: "id", width: 18 },
-    { header: "NOME DA FERRAMENTA", key: "nome", width: 35 },
-    { header: "FORNECEDOR", key: "fornecedor", width: 25 },
-    { header: "SETOR", key: "setor", width: 25 },
-    { header: "STATUS", key: "status", width: 22 },
-    { header: "DATA DE REGISTRO", key: "data", width: 20 }];
-
-
-    const headerRow = worksheet.getRow(headerRowIndex);
-    headerRow.values = columns.map((c) => c.header);
-    headerRow.height = 35;
-
-    headerRow.eachCell((cell, colNumber) => {
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: brandGreen }
-      };
-      cell.font = {
-        color: { argb: '000000' },
-        bold: true,
-        size: 11
-      };
-      cell.alignment = { vertical: 'middle', horizontal: 'center' };
-      cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'medium' },
-        right: { style: 'thin' }
-      };
-
-      worksheet.getColumn(colNumber).width = columns[colNumber - 1].width;
-    });
-
-    filteredRecords.forEach((r) => {
-      const row = worksheet.addRow([
-      r.id,
-      r.nomeFerramenta,
-      r.fornecedor,
-      r.unidadeSetor,
-      obterStatus(r),
-      r.dataRegistro]
-      );
-
-      row.height = 25;
-      row.eachCell((cell, colNumber) => {
-        cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true, indent: 1 };
-        cell.border = {
-          bottom: { style: 'thin', color: { argb: 'E2E8F0' } },
-          left: { style: 'thin', color: { argb: 'E2E8F0' } },
-          right: { style: 'thin', color: { argb: 'E2E8F0' } }
-        };
-
-        if (colNumber === 5) {
-          const statusGeral = obterStatus(r);
-          if (statusGeral === "Aprovada") {
-            cell.font = { color: { argb: '059669' }, bold: true };
-          } else if (statusGeral === "Cancelada" || statusGeral === "Não aprovada") {
-            cell.font = { color: { argb: 'F29222' }, bold: true };
-          }
-        }
-      });
-    });
-
-    worksheet.views = [{ state: 'frozen', ySplit: 4 }];
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    saveAs(blob, `inventario_ia_cedro_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const getStatusBadge = (record: IARecord) => {
@@ -544,10 +443,12 @@ export default function Inventory({
         </div>
       </div>
 
-      <div className={`inventario-filtros${filtrosAbertos ? " inventario-filtros--aberto" : ""}`}>
+      <section className="inventario-secao inventario-secao--ferramentas">
+        <div className={`inventario-filtros inventario-secao__painel${filtrosAbertos ? " inventario-filtros--aberto" : ""}`}>
         <div className="inventario-filtros__linha">
           <div className="inventario-busca">
             {/* <Search className="inventario-busca__icone" size={18} /> */}
+            <Search className="inventario-busca__icone" size={18} aria-hidden="true" />
             <input
               type="text"
               placeholder="Pesquisar por nome, fornecedor ou ID..."
@@ -647,7 +548,8 @@ export default function Inventory({
             <span>Limpar filtros</span>
           </button>
         )}
-      </div>
+        </div>
+      </section>
 
       <div className="inventario-lista-mobile inventario__inventario-lista-mobile-estrutura">
         {paginatedRecords.map((record) =>
@@ -765,6 +667,36 @@ export default function Inventory({
         </div>
       </div>
 
+      <section className="inventario-secao inventario-secao--listagem cedro-card-premium">
+        <header className="inventario-secao__cabecalho">
+          <div className="inventario-secao__cabecalho-principal">
+            <div className="inventario-secao__cabecalho-linha">
+              <span className="inventario-secao__icone" aria-hidden="true">
+                <LayoutGrid size={18} strokeWidth={2.25} />
+              </span>
+              <div className="inventario-secao__textos">
+                <h2 className="inventario-secao__titulo">Listagem do catálogo</h2>
+                <p className="inventario-secao__descricao">
+                  Todas as IAs registradas na sua conta
+                </p>
+              </div>
+            </div>
+            <div className="inventario-secao__cabecalho-acoes">
+              <span className="inventario-secao__badge">
+                {totalIAs} {totalIAs === 1 ? "IA no catálogo" : "IAs no catálogo"}
+              </span>
+              <button
+                type="button"
+                onClick={onAdd}
+                className="inventario-secao__botao inventario-secao__botao--primario">
+                <PlusCircle size={16} aria-hidden="true" />
+                <span>Novo registro</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div className="inventario-secao__painel inventario-secao__painel--tabela">
       <div className="inventario-tabela-container inventario__inventario-tabela-container-estrutura">
         <div className="rolagem-personalizada inventario__grupo-11">
           <table id="tabelaInventarioIA" className="inventario-tabela inventario__inventario-tabela-estrutura">
@@ -993,6 +925,8 @@ export default function Inventory({
           }
         </div>
       </div>
+        </div>
+      </section>
 
       {warningMessage &&
       <div

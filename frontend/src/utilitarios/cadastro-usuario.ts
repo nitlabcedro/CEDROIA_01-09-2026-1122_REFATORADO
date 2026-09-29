@@ -21,6 +21,28 @@ export interface MetadataCadastro {
   atribuicoes: AtribuicaoCadastro[];
 }
 
+const CARACTERES_NAO_PERMITIDOS_NOME = /[^\p{L}\s]/gu;
+const NOME_COMPLETO_VALIDO = /^[\p{L}\s]+$/u;
+
+/** Mantém apenas letras (com acentos) e espaços para o nome completo no cadastro. */
+export function filtrarNomeCompletoCadastro(valor: string): string {
+  return valor.replace(CARACTERES_NAO_PERMITIDOS_NOME, "");
+}
+
+export function validarNomeCompletoCadastro(nome: string): string | null {
+  const limpo = nome.trim();
+  if (!limpo) {
+    return "Informe o nome completo.";
+  }
+  if (!NOME_COMPLETO_VALIDO.test(limpo)) {
+    return "O nome completo deve conter apenas letras e acentos.";
+  }
+  if (!/\p{L}/u.test(limpo)) {
+    return "Informe um nome válido.";
+  }
+  return null;
+}
+
 export function normalizarSetoresAtivos(dados: unknown): SetorCadastro[] {
   if (!Array.isArray(dados)) return [];
 

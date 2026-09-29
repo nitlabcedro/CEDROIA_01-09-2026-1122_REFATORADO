@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import {
   criarMetadataCadastro,
+  filtrarNomeCompletoCadastro,
   manterCargoAoTrocarSetor,
   normalizarSetoresAtivos,
   podeEnviarAtribuicoesCadastro,
@@ -10,6 +11,7 @@ import {
   serializarAtribuicoesCadastro,
   validarAtribuicaoCadastro,
   validarAtribuicoesCadastro,
+  validarNomeCompletoCadastro,
 } from "./cadastro-usuario";
 
 const setores = normalizarSetoresAtivos([
@@ -231,6 +233,17 @@ describe("cadastro de usuário", () => {
       setor: "NIT",
       cargo: "Coordenador",
     });
+  });
+
+  it("filtra e valida nome completo apenas com letras e acentos", () => {
+    assert.equal(filtrarNomeCompletoCadastro("João123 Silva!"), "João Silva");
+    assert.equal(filtrarNomeCompletoCadastro("José María Ção"), "José María Ção");
+    assert.equal(validarNomeCompletoCadastro("  Maria José  "), null);
+    assert.equal(validarNomeCompletoCadastro(""), "Informe o nome completo.");
+    assert.equal(
+      validarNomeCompletoCadastro("Ana2"),
+      "O nome completo deve conter apenas letras e acentos.",
+    );
   });
 
   it("permite o mesmo setor e o mesmo cargo em contas independentes", () => {
