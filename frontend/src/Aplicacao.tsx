@@ -66,6 +66,7 @@ export default function Aplicacao() {
     systemAlerts,
     activeUnreadAlertsCount,
     unreadChatCount,
+    approvalMyTurnCount,
     toasts,
     removeToast,
     handleEdit,
@@ -319,6 +320,7 @@ export default function Aplicacao() {
           navegarPara={navegarPara}
           isCurrentUserAdmin={isCurrentUserAdmin}
           isCurrentUserPrivileged={isCurrentUserPrivileged}
+          pendingMyTurnCount={approvalMyTurnCount}
           unreadChatCount={unreadChatCount} />
       </div>
       }
@@ -337,6 +339,7 @@ export default function Aplicacao() {
           profile={profile}
           isCurrentUserAdmin={isCurrentUserAdmin}
           isCurrentUserPrivileged={isCurrentUserPrivileged}
+          pendingMyTurnCount={approvalMyTurnCount}
           unreadChatCount={unreadChatCount} />
         
 

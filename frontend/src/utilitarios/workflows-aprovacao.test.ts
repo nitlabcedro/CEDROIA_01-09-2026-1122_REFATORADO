@@ -4,11 +4,14 @@ import { describe, it } from "node:test";
 import { resolve } from "node:path";
 import type { ApprovalWorkflow } from "@/tipos";
 import { obterEstadoVisualEtapaFluxo } from "./etapa-atual-workflow";
+import type { IARecord } from "@/tipos";
 import {
+  contarAprovacoesNaMinhaEtapa,
   decidirAtualizacaoWorkflows,
   encontrarWorkflowDoRegistro,
   mesclarEtapasEmFluxos,
   normalizarListaWorkflows,
+  solicitacaoNaMinhaEtapaAprovacao,
 } from "./workflows-aprovacao";
 
 /** Resposta real de GET /api/workflow/list (linhas de fluxos_aprovacao com embed steps). */
@@ -157,6 +160,43 @@ describe("Associação entre registro e fluxo de aprovação persistido", () => 
       { step_number: 1, status: "aguardando", ia_record_id: "IA-00000023" },
     ]));
     assert.equal(semWorkflowId[0].steps.length, 1);
+  });
+
+  it("K. conta solicitações na etapa atual em que o usuário é responsável", () => {
+    const record: IARecord = {
+      id: "IA-00000023",
+      createdAt: "",
+      updatedAt: "",
+      unidadeSetor: "NIT",
+      responsavelPreenchimento: "Teste",
+      cargo: "Coordenador",
+      dataRegistro: "",
+      utilizaIA: "Sim",
+      statusUso: "Em análise",
+      nomeFerramenta: "Ferramenta",
+    };
+    const workflows = normalizarListaWorkflows([
+      {
+        ia_record_id: "IA-00000023",
+        current_step: 2,
+        final_status: "pendente",
+        steps: [
+          { step_number: 1, status: "aprovado", assigned_user_id: "outro" },
+          { step_number: 2, status: "aguardando", assigned_user_id: "user-meu" },
+        ],
+      },
+    ]);
+    assert.ok(workflows[0]);
+    assert.equal(
+      solicitacaoNaMinhaEtapaAprovacao(record, workflows, "user-meu"),
+      true,
+    );
+    assert.equal(
+      solicitacaoNaMinhaEtapaAprovacao(record, workflows, "outro"),
+      false,
+    );
+    assert.equal(contarAprovacoesNaMinhaEtapa([record], workflows, "user-meu"), 1);
+    assert.equal(contarAprovacoesNaMinhaEtapa([record], workflows, "outro"), 0);
   });
 
   it("J. o hook só confia na API e não infere etapa pelo status_uso", () => {

@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
+import { resolve } from "node:path";
 
 import {
   acaoCentralAtiva,
@@ -55,5 +57,15 @@ describe("navegação inferior mobile", () => {
     assert.equal(painelMaisAtivo("sectors_mgr", true), true);
     assert.equal(painelMaisAtivo("dashboard", false), false);
     assert.equal(painelMaisAtivo("chat", true), false);
+  });
+
+  it("só exibe bolinha de minha etapa no botão central de Aprovação", () => {
+    const fonte = readFileSync(
+      resolve(process.cwd(), "frontend/src/componentes/layout/NavegacaoInferiorMobile.tsx"),
+      "utf8",
+    );
+    assert.match(fonte, /mostrarPontoAprovacao/);
+    assert.match(fonte, /acaoCentral\.aba === "approval_queue" && pendingMyTurnCount > 0/);
+    assert.match(fonte, /navegacao-inferior-mobile__ponto-aprovacao/);
   });
 });
