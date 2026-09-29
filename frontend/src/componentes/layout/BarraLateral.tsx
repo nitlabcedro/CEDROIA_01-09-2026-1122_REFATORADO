@@ -39,7 +39,6 @@ interface SidebarProps {
   isCurrentUserPrivileged?: boolean;
   isAdmin?: boolean;
   recordsCount?: number;
-  pendingCount?: number;
   pendingMyTurnCount?: number;
   unreadChatCount?: number;
 }
@@ -50,6 +49,7 @@ type ItemMenuLateral = {
   icon: React.ComponentType<{size?: number;className?: string;}>;
   badge: React.ReactNode | null;
   badgeTipo?: "padrao" | "alerta" | "novo";
+  indicadorMinhaEtapa?: boolean;
   description: string;
   adminOnly?: boolean;
   privilegedOnly?: boolean;
@@ -67,7 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCurrentUserPrivileged = false,
   isAdmin = false,
   recordsCount = 0,
-  pendingCount = 0,
+  pendingMyTurnCount = 0,
   unreadChatCount = 0
 }) => {
   const [internalCollapsed, setInternalCollapsed] = useState(false);
@@ -122,8 +122,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     label: "Aprovação de IAs",
     icon: ShieldCheck,
     privilegedOnly: true,
-    badge: pendingCount > 0 ? pendingCount : null,
-    badgeTipo: "alerta",
+    badge: null,
+    indicadorMinhaEtapa: pendingMyTurnCount > 0,
     description: "Fila de aprovação e governança"
   },
   {
@@ -305,12 +305,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           onMouseEnter={() => setHoveredItemId(item.id)}
                           onMouseLeave={() => setHoveredItemId(null)}
                           className={`barra-lateral__item ${active ? "barra-lateral__item--ativo" : ""} ${visuallyCollapsed ? "barra-lateral__item--recolhido" : ""}`}
-                          aria-current={active ? "page" : undefined}>
+                          aria-current={active ? "page" : undefined}
+                          aria-label={
+                            item.indicadorMinhaEtapa
+                              ? `${item.label}, há solicitações na sua etapa`
+                              : item.label
+                          }>
                           
                             {active && <span className="barra-lateral__indicador-ativo" />}
 
                             <span className="barra-lateral__item-icone">
                               <Icon size={19} />
+                              {item.indicadorMinhaEtapa && (
+                                <span
+                                  className="barra-lateral__ponto-icone"
+                                  title="Solicitações aguardando sua decisão"
+                                  aria-hidden="true"
+                                />
+                              )}
                             </span>
 
                             {!visuallyCollapsed &&

@@ -65,6 +65,7 @@ import {
   abaPermitida,
 } from "@/utilitarios/permissoes-navegacao";
 import {
+  contarAprovacoesNaMinhaEtapa,
   decidirAtualizacaoWorkflows,
   encontrarWorkflowDoRegistro,
   normalizarListaWorkflows,
@@ -540,6 +541,11 @@ export function useAplicacao() {
   const activeUnreadAlertsCount = useMemo(() => {
     return systemAlerts.filter(a => a.status === "Ativo").length;
   }, [systemAlerts]);
+
+  const approvalMyTurnCount = useMemo(
+    () => contarAprovacoesNaMinhaEtapa(records, workflows, user?.id),
+    [records, workflows, user?.id],
+  );
 
   // Contador global de mensagens de chat ainda não visualizadas.
   // A leitura é controlada localmente por conversa e compartilhada com Chat/sidebars via evento.
@@ -1411,6 +1417,7 @@ export function useAplicacao() {
     triggerAlertsRefresh,
     systemAlerts,
     activeUnreadAlertsCount,
+    approvalMyTurnCount,
     unreadChatCount,
     toasts,
     removeToast,

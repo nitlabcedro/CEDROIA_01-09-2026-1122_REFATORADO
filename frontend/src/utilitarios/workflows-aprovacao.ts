@@ -4,7 +4,8 @@
  */
 
 import { NOMES_ETAPAS_CURTOS } from "@/constantes/fluxo-aprovacao";
-import type { ApprovalStep, ApprovalWorkflow } from "@/tipos";
+import type { ApprovalStep, ApprovalWorkflow, IARecord } from "@/tipos";
+import { fluxoEncerrado, obterStatusGeralDoRegistro } from "@/utilitarios/status-solicitacao";
 
 export type LinhaWorkflow = Record<string, unknown>;
 
@@ -131,4 +132,40 @@ export function decidirAtualizacaoWorkflows(
 ): ApprovalWorkflow[] {
   if (origemConfiavel || carregados.length > 0) return [...carregados];
   return [...atuais];
+}
+
+function registroPendenteNaFilaAprovacao(
+  record: IARecord,
+  workflow?: ApprovalWorkflow | null,
+): boolean {
+  const status = obterStatusGeralDoRegistro(record, workflow);
+  return status === "Em análise" || status === "Em teste";
+}
+
+/** Solicitação na etapa atual do fluxo em que o usuário logado é o responsável configurado. */
+export function solicitacaoNaMinhaEtapaAprovacao(
+  record: IARecord,
+  workflows: readonly ApprovalWorkflow[],
+  currentUserId: string | null | undefined,
+): boolean {
+  if (!currentUserId) return false;
+
+  const workflow = encontrarWorkflowDoRegistro(workflows, record.id);
+  if (fluxoEncerrado(record, workflow)) return false;
+  if (!registroPendenteNaFilaAprovacao(record, workflow)) return false;
+
+  const currentStepNum = workflow?.currentStep ?? 1;
+  const wfStep = workflow?.steps?.find((step) => step.stepNumber === currentStepNum);
+  return wfStep?.assignedUserId === currentUserId;
+}
+
+export function contarAprovacoesNaMinhaEtapa(
+  records: readonly IARecord[],
+  workflows: readonly ApprovalWorkflow[],
+  currentUserId: string | null | undefined,
+): number {
+  if (!currentUserId) return 0;
+  return records.filter((record) =>
+    solicitacaoNaMinhaEtapaAprovacao(record, workflows, currentUserId),
+  ).length;
 }

@@ -96,6 +96,7 @@
   bottom: 22px;
   display: grid;
   place-items: center;
+  overflow: visible;
   width: 64px;
   height: 64px;
   color: #fff;
@@ -127,6 +128,20 @@
   position: relative;
   display: grid;
   place-items: center;
+}
+
+.navegacao-inferior-mobile__ponto-aprovacao {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+  width: 11px;
+  height: 11px;
+  background: #ffb33c;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
 }
 
 .navegacao-inferior-mobile__selo {

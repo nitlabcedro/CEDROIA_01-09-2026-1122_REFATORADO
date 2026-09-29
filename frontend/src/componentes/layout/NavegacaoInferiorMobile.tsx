@@ -23,6 +23,7 @@ interface NavegacaoInferiorMobileProps {
   navegarPara: NavegarPara;
   isCurrentUserAdmin: boolean;
   isCurrentUserPrivileged: boolean;
+  pendingMyTurnCount?: number;
   unreadChatCount?: number;
 }
 
@@ -31,6 +32,7 @@ export default function NavegacaoInferiorMobile({
   navegarPara,
   isCurrentUserAdmin,
   isCurrentUserPrivileged,
+  pendingMyTurnCount = 0,
   unreadChatCount = 0,
 }: NavegacaoInferiorMobileProps) {
   const [maisAberto, setMaisAberto] = useState(false);
@@ -39,6 +41,8 @@ export default function NavegacaoInferiorMobile({
   const centralAtiva = acaoCentralAtiva(activeTab, isCurrentUserPrivileged);
   const maisAtivo = painelMaisAtivo(activeTab, isCurrentUserPrivileged);
   const IconeCentral = acaoCentral.aba === "approval_queue" ? ShieldCheck : PlusCircle;
+  const mostrarPontoAprovacao =
+    acaoCentral.aba === "approval_queue" && pendingMyTurnCount > 0;
   const seloChat = unreadChatCount > 99 ? "99+" : unreadChatCount;
 
   const irPara = (aba: AbaAplicacao) => {
@@ -80,7 +84,11 @@ export default function NavegacaoInferiorMobile({
         <button
           type="button"
           className="navegacao-inferior-mobile__item navegacao-inferior-mobile__item--central"
-          aria-label={acaoCentral.rotulo}
+          aria-label={
+            mostrarPontoAprovacao
+              ? `${acaoCentral.rotulo}, há solicitações na sua etapa`
+              : acaoCentral.rotulo
+          }
           aria-current={centralAtiva ? "page" : undefined}
           onClick={() => irPara(acaoCentral.aba)}
         >
@@ -89,6 +97,9 @@ export default function NavegacaoInferiorMobile({
             aria-hidden="true"
           >
             <IconeCentral size={26} />
+            {mostrarPontoAprovacao && (
+              <span className="navegacao-inferior-mobile__ponto-aprovacao" />
+            )}
           </span>
           <span
             className={`navegacao-inferior-mobile__rotulo ${centralAtiva ? "navegacao-inferior-mobile__rotulo--ativo" : ""}`}
