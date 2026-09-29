@@ -4,7 +4,7 @@
  */
 
 import React from "react";
-import { ArrowRight, CheckCircle2, ChevronRight } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronRight, LayoutGrid } from "lucide-react";
 import { ApprovalWorkflow, IARecord } from "@/tipos";
 import { StatusBadge } from "./IndicadoresStatus";
 import { IconeIA } from "./IconeIA";
@@ -18,23 +18,71 @@ interface TableCardProps {
   workflows?: ApprovalWorkflow[];
   onNavigate: NavegarPara;
   onViewRecord: (record: IARecord) => void;
+  variant?: "default" | "dashboard";
 }
 
-export const TableCard: React.FC<TableCardProps> = ({ title, subtitle, records, workflows = [], onNavigate, onViewRecord }) => (
-  <article className="cartao-tabela cedro-card-premium" data-componente="cartao-tabela">
-    <header className="cartao-tabela__cabecalho">
-      <div>
-        <h3 className="cartao-tabela__titulo">{title}</h3>
-        {subtitle && <p className="cartao-tabela__subtitulo">{subtitle}</p>}
-      </div>
-      <button type="button" onClick={() => onNavigate("inventory")} className="cartao-tabela__ver-todas">
-        <span className="cartao-tabela__ver-todas-rotulo">Abrir catálogo</span>
-        <span className="cartao-tabela__ver-todas-rotulo-mobile">Ver catálogo</span>
-        <ArrowRight size={13} />
-      </button>
+export const TableCard: React.FC<TableCardProps> = ({
+  title,
+  subtitle,
+  records,
+  workflows = [],
+  onNavigate,
+  onViewRecord,
+  variant = "default",
+}) => {
+  const isDashboard = variant === "dashboard";
+  const badgeRotulo =
+    records.length === 0
+      ? "Nenhuma IA"
+      : records.length === 1
+        ? "1 IA listada"
+        : `${records.length} IAs listadas`;
+
+  return (
+  <article
+    className={`cartao-tabela cedro-card-premium${isDashboard ? " cartao-tabela--dashboard" : ""}`}
+    data-componente="cartao-tabela">
+    <header
+      className={`cartao-tabela__cabecalho${isDashboard ? " cartao-tabela__cabecalho--dashboard" : ""}`}>
+      {isDashboard ? (
+        <>
+          <div className="cartao-tabela__cabecalho-principal">
+            <div className="cartao-tabela__cabecalho-linha">
+              <span className="cartao-tabela__icone-destaque" aria-hidden="true">
+                <LayoutGrid size={18} strokeWidth={2.25} />
+              </span>
+              <div className="cartao-tabela__textos-destaque">
+                <h3 className="cartao-tabela__titulo">{title}</h3>
+                {subtitle && <p className="cartao-tabela__subtitulo">{subtitle}</p>}
+              </div>
+            </div>
+            <div className="cartao-tabela__cabecalho-acoes">
+              <span className="cartao-tabela__destaque-badge">{badgeRotulo}</span>
+              <button type="button" onClick={() => onNavigate("inventory")} className="cartao-tabela__ver-todas">
+                <span className="cartao-tabela__ver-todas-rotulo">Abrir catálogo</span>
+                <span className="cartao-tabela__ver-todas-rotulo-mobile">Ver catálogo</span>
+                <ArrowRight size={13} />
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div>
+            <h3 className="cartao-tabela__titulo">{title}</h3>
+            {subtitle && <p className="cartao-tabela__subtitulo">{subtitle}</p>}
+          </div>
+          <button type="button" onClick={() => onNavigate("inventory")} className="cartao-tabela__ver-todas">
+            <span className="cartao-tabela__ver-todas-rotulo">Abrir catálogo</span>
+            <span className="cartao-tabela__ver-todas-rotulo-mobile">Ver catálogo</span>
+            <ArrowRight size={13} />
+          </button>
+        </>
+      )}
     </header>
 
-    <div className="cartao-tabela__conteudo rolagem-personalizada">
+    <div
+      className={`cartao-tabela__conteudo rolagem-personalizada${isDashboard ? " cartao-tabela__conteudo--dashboard" : ""}`}>
       {records.length === 0 ? (
         <div className="cartao-tabela__vazio">
           <span className="cartao-tabela__vazio-icone"><CheckCircle2 size={24} /></span>
@@ -100,4 +148,5 @@ export const TableCard: React.FC<TableCardProps> = ({ title, subtitle, records, 
       )}
     </div>
   </article>
-);
+  );
+};

@@ -15,10 +15,12 @@ import { useAuth } from "@/contextos/ContextoAutenticacao";
 import { CustomDropdown } from "@/componentes/comuns/MenuSuspenso";
 import {
   criarMetadataCadastro,
+  filtrarNomeCompletoCadastro,
   manterCargoAoTrocarSetor,
   podeEnviarAtribuicoesCadastro,
   serializarAtribuicoesCadastro,
   validarAtribuicoesCadastro,
+  validarNomeCompletoCadastro,
   type SetorCadastro,
 } from "@/utilitarios/cadastro-usuario";
 import { obterMensagemErroUsuario } from "@/utilitarios/mensagens-erro";
@@ -142,6 +144,13 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
             type: "error",
             text: `Apenas e-mails institucionais (${DOMINIO_EMAIL_INSTITUCIONAL}) podem se cadastrar na plataforma.`
           });
+          setLoading(false);
+          return;
+        }
+
+        const erroNome = validarNomeCompletoCadastro(fullName);
+        if (erroNome) {
+          setMessage({ type: "error", text: erroNome });
           setLoading(false);
           return;
         }
@@ -281,8 +290,11 @@ export const Auth: React.FC<AuthProps> = ({ onAuthSuccess, mensagemInicial }) =>
                         autoComplete="name"
                         required
                         value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
+                        onChange={(e) => setFullName(filtrarNomeCompletoCadastro(e.target.value))}
                         className="autenticacao-campo__input"
+                        inputMode="text"
+                        autoCapitalize="words"
+                        spellCheck={false}
                       />
                     </div>
                   </div>
