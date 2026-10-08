@@ -310,6 +310,21 @@ export function usuarioPodeConsultarInteracoesTI(dados: {
     || dados.responsavelTiId === dados.userId;
 }
 
+export function selecionarWorkflowIdsResponsavelTI(
+  workflows: Array<{ id: string }>,
+  etapas: Array<{ workflow_id: string; assigned_user_id?: string | null }>,
+  userId: string,
+): string[] {
+  const atribuidos = new Set(
+    etapas
+      .filter((etapa) => etapa.assigned_user_id === userId)
+      .map((etapa) => etapa.workflow_id),
+  );
+  return workflows
+    .map((workflow) => workflow.id)
+    .filter((workflowId) => atribuidos.has(workflowId));
+}
+
 export function adaptarMensagensLegadasTI(row: any) {
   const mensagens: any[] = [];
   const perguntas = (row.questions || row.perguntas || [])
@@ -714,7 +729,7 @@ export async function listarPendenciasSolicitanteTI(req: Request, res: Response)
 
 export async function listarPendenciasResponsavelTI(req: Request, res: Response) {
   try {
-    const { user, role } = await obterUsuarioAutenticado(req);
+    const { user } = await obterUsuarioAutenticado(req);
     const supabaseAdmin = obterClienteSupabase();
 
     const { data: workflows, error: workflowsError } = await supabaseAdmin
@@ -724,16 +739,16 @@ export async function listarPendenciasResponsavelTI(req: Request, res: Response)
       .eq("current_step", 2);
     if (workflowsError) throw workflowsError;
 
-    let workflowIds = (workflows || []).map((workflow: any) => workflow.id);
-    if (!papelEhAdmin(role) && workflowIds.length > 0) {
+    let workflowIds: string[] = [];
+    const workflowsAtivos = workflows || [];
+    if (workflowsAtivos.length > 0) {
       const { data: etapas, error: etapasError } = await supabaseAdmin
         .from(TABELAS_SUPABASE.ETAPAS_APROVACAO)
-        .select("workflow_id")
-        .in("workflow_id", workflowIds)
-        .eq("step_number", 2)
-        .eq("assigned_user_id", user.id);
+        .select("workflow_id, assigned_user_id")
+        .in("workflow_id", workflowsAtivos.map((workflow: any) => workflow.id))
+        .eq("step_number", 2);
       if (etapasError) throw etapasError;
-      workflowIds = (etapas || []).map((etapa: any) => etapa.workflow_id);
+      workflowIds = selecionarWorkflowIdsResponsavelTI(workflowsAtivos, etapas || [], user.id);
     }
 
     if (workflowIds.length === 0) return res.json({ interactions: [] });

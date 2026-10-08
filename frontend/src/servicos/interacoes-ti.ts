@@ -12,25 +12,8 @@ import { workflowApiBloqueadaPorAutenticacao } from "@/servicos/autenticacao-api
 import { requisicaoApi } from "@/servicos/api";
 import type { SolicitacaoInformacoesTI } from "@/tipos";
 
-const CACHE_PENDENCIAS_MS = 30000;
-let pendenciasCache: SolicitacaoInformacoesTI[] | null = null;
-let pendenciasCacheEm = 0;
 let requisicaoPendencias: Promise<SolicitacaoInformacoesTI[]> | null = null;
-let pendenciasResponsavelCache: SolicitacaoInformacoesTI[] | null = null;
-let pendenciasResponsavelCacheEm = 0;
 let requisicaoPendenciasResponsavel: Promise<SolicitacaoInformacoesTI[]> | null = null;
-
-export function invalidarCachesInteracoesTI() {
-  pendenciasCache = null;
-  pendenciasCacheEm = 0;
-  pendenciasResponsavelCache = null;
-  pendenciasResponsavelCacheEm = 0;
-}
-
-function invalidarCachePendenciasSolicitanteTI() {
-  pendenciasCache = null;
-  pendenciasCacheEm = 0;
-}
 
 async function lerJson<T>(response: Response): Promise<T> {
   const payload = await response.json().catch(() => ({}));
@@ -56,17 +39,12 @@ export async function listarInteracoesTI(recordId: string): Promise<SolicitacaoI
 
 export async function listarPendenciasTI(): Promise<SolicitacaoInformacoesTI[]> {
   if (requisicaoPendencias) return requisicaoPendencias;
-  if (pendenciasCache && Date.now() - pendenciasCacheEm < CACHE_PENDENCIAS_MS) {
-    return [...pendenciasCache];
-  }
 
   requisicaoPendencias = (async () => {
     if (workflowApiBloqueadaPorAutenticacao()) return [];
     const response = await requisicaoApi(ROTAS_API.TI_INTERACOES_PENDENTES);
     const payload = await lerJson<{ interactions: SolicitacaoInformacoesTI[] }>(response);
-    pendenciasCache = payload.interactions || [];
-    pendenciasCacheEm = Date.now();
-    return [...pendenciasCache];
+    return payload.interactions || [];
   })().finally(() => {
     requisicaoPendencias = null;
   });
@@ -76,20 +54,12 @@ export async function listarPendenciasTI(): Promise<SolicitacaoInformacoesTI[]> 
 
 export async function listarPendenciasResponsavelTI(): Promise<SolicitacaoInformacoesTI[]> {
   if (requisicaoPendenciasResponsavel) return requisicaoPendenciasResponsavel;
-  if (
-    pendenciasResponsavelCache
-    && Date.now() - pendenciasResponsavelCacheEm < CACHE_PENDENCIAS_MS
-  ) {
-    return [...pendenciasResponsavelCache];
-  }
 
   requisicaoPendenciasResponsavel = (async () => {
     if (workflowApiBloqueadaPorAutenticacao()) return [];
     const response = await requisicaoApi(ROTAS_API.TI_INTERACOES_PENDENTES_RESPONSAVEL);
     const payload = await lerJson<{ interactions: SolicitacaoInformacoesTI[] }>(response);
-    pendenciasResponsavelCache = payload.interactions || [];
-    pendenciasResponsavelCacheEm = Date.now();
-    return [...pendenciasResponsavelCache];
+    return payload.interactions || [];
   })().finally(() => {
     requisicaoPendenciasResponsavel = null;
   });
@@ -113,7 +83,6 @@ export async function criarBlocoPerguntasTI(
     body: JSON.stringify({ recordId, perguntas }),
   });
   const payload = await lerJson<{ interaction: SolicitacaoInformacoesTI }>(response);
-  invalidarCachesInteracoesTI();
   return payload.interaction;
 }
 
@@ -127,7 +96,6 @@ export async function salvarRespostaBlocoTI(
     body: JSON.stringify({ resposta }),
   });
   const payload = await lerJson<{ interaction: SolicitacaoInformacoesTI }>(response);
-  invalidarCachePendenciasSolicitanteTI();
   return payload.interaction;
 }
 
@@ -138,7 +106,6 @@ export async function finalizarBlocoRespostasTI(
     method: "POST",
   });
   const payload = await lerJson<{ interaction: SolicitacaoInformacoesTI }>(response);
-  invalidarCachesInteracoesTI();
   return payload.interaction;
 }
 
@@ -151,7 +118,6 @@ export async function criarConversaComunicacaoTI(
     body: JSON.stringify({ recordId, mensagem }),
   });
   const payload = await lerJson<{ interaction: SolicitacaoInformacoesTI }>(response);
-  invalidarCachesInteracoesTI();
   return payload.interaction;
 }
 
@@ -164,7 +130,6 @@ export async function enviarMensagemComunicacaoTI(
     body: JSON.stringify({ mensagem }),
   });
   const payload = await lerJson<{ interaction: SolicitacaoInformacoesTI }>(response);
-  invalidarCachesInteracoesTI();
   return payload.interaction;
 }
 
@@ -175,7 +140,6 @@ export async function encerrarConversaComunicacaoTI(
     method: "POST",
   });
   const payload = await lerJson<{ interaction: SolicitacaoInformacoesTI }>(response);
-  invalidarCachesInteracoesTI();
   return payload.interaction;
 }
 
@@ -199,6 +163,5 @@ export async function enviarRespostasTI(
     body: JSON.stringify({ respostas }),
   });
   const payload = await lerJson<{ interaction: SolicitacaoInformacoesTI }>(response);
-  invalidarCachesInteracoesTI();
   return payload.interaction;
 }

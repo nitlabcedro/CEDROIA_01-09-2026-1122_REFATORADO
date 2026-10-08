@@ -7,7 +7,6 @@ import {
   encerrarConversaComunicacaoTI,
   enviarMensagemComunicacaoTI,
   finalizarBlocoRespostasTI,
-  invalidarCachesInteracoesTI,
   listarPendenciasResponsavelTI,
   listarPendenciasTI,
   salvarRespostaBlocoTI,
@@ -37,11 +36,10 @@ const fetchOriginal = globalThis.fetch;
 
 afterEach(() => {
   globalThis.fetch = fetchOriginal;
-  invalidarCachesInteracoesTI();
 });
 
 describe("serviço de interações TI", () => {
-  it("usa caches separados para pendências do solicitante e do responsável", async () => {
+  it("não reaproveita resultados de pendências entre consultas concluídas", async () => {
     const chamadas: string[] = [];
     globalThis.fetch = (async (entrada) => {
       chamadas.push(String(entrada));
@@ -56,11 +54,38 @@ describe("serviço de interações TI", () => {
     await listarPendenciasResponsavelTI();
     await listarPendenciasResponsavelTI();
 
-    assert.equal(chamadas.filter((url) => url.endsWith("/pending")).length, 1);
-    assert.equal(chamadas.filter((url) => url.endsWith("/pending-ti")).length, 1);
+    assert.equal(chamadas.filter((url) => url.endsWith("/pending")).length, 2);
+    assert.equal(chamadas.filter((url) => url.endsWith("/pending-ti")).length, 2);
   });
 
-  it("invalida pendências depois de enviar mensagem e encerrar", async () => {
+  it("deduplica somente consultas simultâneas de pendências", async () => {
+    let liberarResposta!: () => void;
+    const respostaPendente = new Promise<void>((resolve) => {
+      liberarResposta = resolve;
+    });
+    let chamadas = 0;
+
+    globalThis.fetch = (async () => {
+      chamadas += 1;
+      await respostaPendente;
+      return new Response(JSON.stringify({ interactions: [interacao] }), { status: 200 });
+    }) as typeof fetch;
+
+    const primeira = listarPendenciasResponsavelTI();
+    const segunda = listarPendenciasResponsavelTI();
+    for (let tentativa = 0; tentativa < 10 && chamadas === 0; tentativa += 1) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+    assert.equal(chamadas, 1);
+
+    liberarResposta();
+    await Promise.all([primeira, segunda]);
+
+    await listarPendenciasResponsavelTI();
+    assert.equal(chamadas, 2);
+  });
+
+  it("consulta novamente as pendências depois de enviar mensagem e encerrar", async () => {
     let consultasPendencias = 0;
     globalThis.fetch = (async (entrada) => {
       const url = String(entrada);
