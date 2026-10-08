@@ -3,7 +3,10 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { usuarioPodeConsultarInteracoesTI } from "./interacoes-ti.servico";
+import {
+  selecionarWorkflowIdsResponsavelTI,
+  usuarioPodeConsultarInteracoesTI,
+} from "./interacoes-ti.servico";
 
 const ler = (relativo: string) => readFileSync(
   fileURLToPath(new URL(relativo, import.meta.url)),
@@ -87,5 +90,20 @@ describe("autenticação das rotas de interações TI", () => {
       ownerId: "solicitante-1",
       responsavelTiId: "ti-1",
     }), false);
+  });
+  it("notifica somente os workflows atribuídos ao responsável autenticado", () => {
+    const workflows = [
+      { id: "workflow-do-usuario" },
+      { id: "workflow-de-outro" },
+    ];
+    const etapas = [
+      { workflow_id: "workflow-do-usuario", assigned_user_id: "admin-1" },
+      { workflow_id: "workflow-de-outro", assigned_user_id: "admin-2" },
+    ];
+
+    assert.deepEqual(
+      selecionarWorkflowIdsResponsavelTI(workflows, etapas, "admin-1"),
+      ["workflow-do-usuario"],
+    );
   });
 });
